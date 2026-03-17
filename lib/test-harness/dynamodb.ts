@@ -15,6 +15,7 @@ function dynamoConfig(): DynamoDBClientConfig {
       : undefined);
   const accessKeyId = process.env.AWS_ACCESS_KEY_ID?.trim();
   const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY?.trim();
+  const sessionToken = process.env.AWS_SESSION_TOKEN?.trim();
 
   return {
     region: process.env.AWS_REGION || "us-east-1",
@@ -28,6 +29,7 @@ function dynamoConfig(): DynamoDBClientConfig {
         ? {
             accessKeyId,
             secretAccessKey,
+            sessionToken,
           }
       : undefined,
   };
