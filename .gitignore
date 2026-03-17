@@ -32,6 +32,7 @@ yarn-error.log*
 /.local
 /.idea/
 /.trash_icons
+/app/favicon.ico
 
 # vercel
 .vercel
