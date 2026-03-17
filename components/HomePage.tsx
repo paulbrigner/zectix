@@ -1,61 +1,98 @@
+import Link from "next/link";
 import { EventList } from "@/components/EventList";
 
 export function HomePage() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
-      <main className="flex-1">
-        <section className="w-full py-12 md:py-20 lg:py-24">
-          <div className="container mx-auto px-4 md:px-6 max-w-7xl">
-            {/* Hero Section */}
-            <div className="text-center mb-12 md:mb-16">
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-gray-900 dark:text-white mb-4">
-                NYC Basketball Club
+    <div className="home-shell">
+      <main className="home-main">
+        <section className="home-hero card">
+          <div className="home-hero-grid">
+            <div className="home-hero-copy">
+              <p className="home-badge">Luma + CipherPay + Zcash</p>
+              <h1 className="home-display">
+                Accept Zcash for event registrations without leaving your app.
               </h1>
-              <p className="text-lg md:text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-                Join our community of basketball enthusiasts who meet regularly
-                to play and socialize in New York City.
+              <p className="home-lede">
+                LumaZcash is a local test integration that creates CipherPay
+                invoices for Luma events, renders an in-app payment flow, and
+                tracks registration state from payment through attendee ticket
+                delivery.
               </p>
-              <div className="mt-6 flex gap-4 justify-center">
-                <a
-                  href="/calendar"
-                  className="inline-flex items-center px-6 py-3 rounded-lg bg-pink-500 text-white font-medium hover:bg-pink-600 transition-colors"
-                >
-                  View Full Calendar
+
+              <div className="home-actions">
+                <a className="button" href="#upcoming-events">
+                  Browse upcoming events
                 </a>
-                <a
-                  href="https://luma.com/nycbball"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center px-6 py-3 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                >
-                  Follow on Luma
-                </a>
+                <Link className="button button-secondary" href="/dashboard">
+                  Open dashboard
+                </Link>
+                <Link className="button button-ghost" href="/admin">
+                  Configure integration
+                </Link>
               </div>
             </div>
 
-            {/* Events Section */}
-            <div className="mt-16 max-w-2xl mx-auto">
-              <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-8 text-center">
-                Upcoming Events
-              </h2>
+            <aside className="home-hero-panel">
+              <div className="home-panel-card">
+                <p className="home-panel-label">What This App Does</p>
+                <div className="home-flow-list">
+                  <div className="home-flow-item">
+                    <span className="home-flow-step">1</span>
+                    <div>
+                      <strong>Create a Luma-backed checkout session</strong>
+                      <p>Pull event and ticket pricing from Luma, then create the matching CipherPay invoice.</p>
+                    </div>
+                  </div>
+                  <div className="home-flow-item">
+                    <span className="home-flow-step">2</span>
+                    <div>
+                      <strong>Collect Zcash through CipherPay</strong>
+                      <p>Show the buyer a native payment screen with QR, payment URI, and live status updates.</p>
+                    </div>
+                  </div>
+                  <div className="home-flow-item">
+                    <span className="home-flow-step">3</span>
+                    <div>
+                      <strong>Confirm the Luma registration outcome</strong>
+                      <p>Persist local state, inspect webhooks, and verify the final attendee pass in one place.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </aside>
+          </div>
 
-              <EventList />
+          <div className="home-summary-card home-summary-wide">
+            <div className="home-summary-grid">
+              <article className="home-summary-item">
+                <span>Checkout</span>
+                <strong>In-app Zcash QR, URI, and wallet deep link</strong>
+              </article>
+              <article className="home-summary-item">
+                <span>Registration</span>
+                <strong>Luma guest creation after CipherPay acceptance</strong>
+              </article>
+              <article className="home-summary-item">
+                <span>Ops</span>
+                <strong>Local dashboard, webhook logs, and admin config</strong>
+              </article>
             </div>
           </div>
         </section>
-      </main>
 
-      {/* Footer */}
-      <footer className="py-8 text-center">
-        <a
-          href="https://github.com/luma-team/basketball-club-example"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
-        >
-          View on GitHub
-        </a>
-      </footer>
+        <section className="home-events-section" id="upcoming-events">
+          <div className="home-section-heading">
+            <h2 className="home-display">Start from a live Luma event.</h2>
+            <p className="subtle-text">
+              Choose an upcoming event to create a CipherPay invoice and walk
+              through the complete Zcash purchase and registration flow.
+            </p>
+            <p className="eyebrow">Upcoming Events</p>
+          </div>
+
+          <EventList />
+        </section>
+      </main>
     </div>
   );
 }

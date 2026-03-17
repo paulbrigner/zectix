@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="LumaZcash icon">
+  <defs>
+    <linearGradient id="bg" x1="18" x2="112" y1="16" y2="116" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1c2435"/>
+      <stop offset="1" stop-color="#0d1320"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="24" x2="96" y1="20" y2="108" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffcb45"/>
+      <stop offset="1" stop-color="#f7931a"/>
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="28" fill="url(#bg)"/>
+  <circle cx="64" cy="64" r="37" fill="none" opacity=".95" stroke="url(#glow)" stroke-width="10"/>
+  <path fill="#ffcb45" d="M81.6 42.2H52.8l-.7 8.9h16.4L46.1 79.9v5.9h29.3l.8-8.8H58.8l22.8-28.2z"/>
+  <rect x="60.5" y="28" width="7" height="14" rx="3.5" fill="#ffcb45"/>
+  <rect x="60.5" y="86" width="7" height="14" rx="3.5" fill="#ffcb45"/>
+</svg>

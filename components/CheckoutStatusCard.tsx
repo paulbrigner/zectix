@@ -1,0 +1,983 @@
+"use client";
+
+import QRCode from "qrcode";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { LocalDateTime } from "@/components/LocalDateTime";
+import { appApiPath, readJsonOrThrow } from "@/app/(console)/client-utils";
+import { TestStatusPill } from "@/app/(console)/status-pill";
+import type { LumaEvent } from "@/lib/luma";
+import type { TestSession } from "@/lib/test-harness/types";
+import { formatFiatAmount } from "@/lib/test-harness/utils";
+
+type SyncResponse = {
+  session: TestSession;
+};
+
+type CheckoutStatusCardProps = {
+  initialSession: TestSession;
+  event: LumaEvent | null;
+  lumaEventUrl: string | null;
+};
+
+function findAttendeeTicketUrl(
+  value: Record<string, unknown> | null | undefined,
+): string | null {
+  if (!value) return null;
+
+  const direct =
+    typeof value.ticket_url === "string"
+      ? value.ticket_url
+      : typeof value.ticket_details_url === "string"
+        ? value.ticket_details_url
+      : typeof value.registration_url === "string"
+        ? value.registration_url
+        : typeof value.guest_url === "string"
+          ? value.guest_url
+          : typeof value.attendee_ticket_url === "string"
+            ? value.attendee_ticket_url
+          : null;
+  if (direct) {
+    return direct;
+  }
+
+  for (const nested of Object.values(value)) {
+    if (Array.isArray(nested)) {
+      for (const entry of nested) {
+        if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+          continue;
+        }
+
+        const nestedUrl = findAttendeeTicketUrl(
+          entry as Record<string, unknown>,
+        );
+        if (nestedUrl) {
+          return nestedUrl;
+        }
+      }
+
+      continue;
+    }
+
+    if (!nested || typeof nested !== "object") {
+      continue;
+    }
+
+    const nestedUrl = findAttendeeTicketUrl(
+      nested as Record<string, unknown>,
+    );
+    if (nestedUrl) {
+      return nestedUrl;
+    }
+  }
+
+  return null;
+}
+
+function readRegistrationGuest(value: Record<string, unknown> | null | undefined) {
+  if (!value) return null;
+  const candidate = value.guest_lookup;
+  if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) {
+    return null;
+  }
+
+  const guest = (candidate as Record<string, unknown>).guest;
+  if (!guest || typeof guest !== "object" || Array.isArray(guest)) {
+    return null;
+  }
+
+  return guest as Record<string, unknown>;
+}
+
+function zecAmountLabel(priceZec: number | null) {
+  if (priceZec == null) return "Quoted by CipherPay after invoice creation";
+  return `${priceZec.toFixed(8)} ZEC`;
+}
+
+function formatPrintDate(value: string | null) {
+  if (!value) return "Processing";
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(parsed);
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+}
+
+function statusMessage(session: TestSession) {
+  if (session.registration_status === "registered") {
+    return "Payment was accepted and the Luma registration has been completed.";
+  }
+
+  if (session.registration_status === "failed") {
+    return "Payment was accepted, but Luma registration still needs another retry.";
+  }
+
+  if (session.status === "confirmed") {
+    return "Payment is confirmed. Waiting for the Luma registration call to finish.";
+  }
+
+  if (session.status === "detected") {
+    return "Payment has been accepted. Creating your Luma ticket now.";
+  }
+
+  if (session.status === "underpaid") {
+    return "CipherPay marked the payment as underpaid. Review the amount sent and use the payment details below for the remaining balance.";
+  }
+
+  if (session.status === "expired") {
+    return "This invoice expired before payment was confirmed.";
+  }
+
+  if (session.status === "refunded") {
+    return "This invoice was refunded in CipherPay.";
+  }
+
+  return "Waiting for payment to be detected from the QR code, wallet link, or copied address below.";
+}
+
+export function CheckoutStatusCard({
+  initialSession,
+  event,
+  lumaEventUrl,
+}: CheckoutStatusCardProps) {
+  const [session, setSession] = useState(initialSession);
+  const [copyNotice, setCopyNotice] = useState<string | null>(null);
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string | null>(null);
+  const [entryQrDataUrl, setEntryQrDataUrl] = useState<string | null>(null);
+  const paymentAccepted =
+    session.status === "detected" ||
+    session.status === "confirmed" ||
+    session.registration_status === "registered" ||
+    session.registration_status === "failed";
+  const registrationGuest = readRegistrationGuest(session.luma_registration_json);
+  const attendeeTicketUrl = findAttendeeTicketUrl(session.luma_registration_json);
+  const checkInQrUrl =
+    registrationGuest && typeof registrationGuest.check_in_qr_code === "string"
+      ? registrationGuest.check_in_qr_code
+      : null;
+  const registeredTicket =
+    registrationGuest &&
+    registrationGuest.event_ticket &&
+    typeof registrationGuest.event_ticket === "object" &&
+    !Array.isArray(registrationGuest.event_ticket)
+      ? (registrationGuest.event_ticket as Record<string, unknown>)
+      : null;
+  const lumaTicketName =
+    (registeredTicket && typeof registeredTicket.name === "string"
+      ? registeredTicket.name
+      : null) ||
+    session.ticket_type_name ||
+    "Registered ticket";
+  const lumaRegisteredAt =
+    (registrationGuest && typeof registrationGuest.registered_at === "string"
+      ? registrationGuest.registered_at
+      : null) || session.registered_at;
+
+  const shouldPoll = useMemo(() => {
+    const awaitingPayment =
+      session.status === "draft" ||
+      session.status === "pending" ||
+      session.status === "underpaid" ||
+      session.status === "detected" ||
+      session.status === "unknown";
+    const awaitingRegistration =
+      session.status === "confirmed" && session.registration_status === "pending";
+    const awaitingGuestPass =
+      session.registration_status === "registered" && !registrationGuest;
+
+    return awaitingPayment || awaitingRegistration || awaitingGuestPass;
+  }, [registrationGuest, session.registration_status, session.status]);
+
+  const refreshSession = useCallback(async () => {
+    try {
+      const response = await readJsonOrThrow<SyncResponse>(
+        await fetch(
+          appApiPath(`/api/sessions/${encodeURIComponent(session.session_id)}`),
+          {
+          cache: "no-store",
+          },
+        ),
+      );
+      setSession(response.session);
+    } catch {
+      // Ignore passive refresh failures and wait for the next local refresh.
+    }
+  }, [session.session_id]);
+
+  useEffect(() => {
+    setSession(initialSession);
+  }, [initialSession]);
+
+  useEffect(() => {
+    if (!shouldPoll) return undefined;
+
+    const timeoutId = window.setTimeout(() => {
+      void refreshSession();
+    }, 2500);
+
+    const intervalId = window.setInterval(() => {
+      void refreshSession();
+    }, 8000);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      window.clearInterval(intervalId);
+    };
+  }, [refreshSession, session.session_id, shouldPoll]);
+
+  useEffect(() => {
+    if (!session.cipherpay_zcash_uri) {
+      setQrCodeDataUrl(null);
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    void QRCode.toDataURL(session.cipherpay_zcash_uri, {
+      errorCorrectionLevel: "M",
+      margin: 1,
+      width: 320,
+      color: {
+        dark: "#111827",
+        light: "#FFFFFF",
+      },
+    })
+      .then((dataUrl: string) => {
+        if (!cancelled) {
+          setQrCodeDataUrl(dataUrl);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setQrCodeDataUrl(null);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [session.cipherpay_zcash_uri]);
+
+  useEffect(() => {
+    if (!checkInQrUrl) {
+      setEntryQrDataUrl(null);
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    void QRCode.toDataURL(checkInQrUrl, {
+      errorCorrectionLevel: "M",
+      margin: 1,
+      width: 320,
+      color: {
+        dark: "#0f172a",
+        light: "#ffffff",
+      },
+    })
+      .then((dataUrl: string) => {
+        if (!cancelled) {
+          setEntryQrDataUrl(dataUrl);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setEntryQrDataUrl(null);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [checkInQrUrl]);
+
+  const copyValue = useCallback(async (value: string | null, label: string) => {
+    if (!value) return;
+
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopyNotice(`${label} copied.`);
+    } catch {
+      setCopyNotice(`Could not copy ${label.toLowerCase()}.`);
+    }
+  }, []);
+
+  const openPrintView = useCallback(() => {
+    if (!registrationGuest || !entryQrDataUrl) return;
+
+    const attendeeName =
+      (typeof registrationGuest.user_name === "string"
+        ? registrationGuest.user_name
+        : null) || session.attendee_name;
+    const attendeeEmail =
+      (typeof registrationGuest.user_email === "string"
+        ? registrationGuest.user_email
+        : null) || session.attendee_email;
+    const approvalStatus =
+      typeof registrationGuest.approval_status === "string"
+        ? registrationGuest.approval_status
+        : "approved";
+    const guestId =
+      typeof registrationGuest.id === "string" ? registrationGuest.id : "pending";
+    const printWindow = window.open("", "_blank", "width=960,height=1100");
+
+    if (!printWindow) {
+      setCopyNotice("Could not open print view.");
+      return;
+    }
+
+    const escapedEventName = escapeHtml(session.event_name);
+    const escapedTicketName = escapeHtml(lumaTicketName);
+    const escapedAttendeeName = escapeHtml(attendeeName);
+    const escapedAttendeeEmail = escapeHtml(attendeeEmail);
+    const escapedApprovalStatus = escapeHtml(approvalStatus);
+    const escapedGuestId = escapeHtml(guestId);
+    const escapedAmount = escapeHtml(
+      formatFiatAmount(session.amount, session.currency),
+    );
+    const escapedRegisteredAt = escapeHtml(formatPrintDate(lumaRegisteredAt));
+    const escapedSessionStatus = escapeHtml(session.status);
+    const escapedRegistrationStatus = escapeHtml(session.registration_status);
+    const escapedInvoiceId = escapeHtml(session.cipherpay_invoice_id);
+    const escapedMemo = escapeHtml(session.cipherpay_memo_code || "not assigned yet");
+    const escapedCreatedAt = escapeHtml(formatPrintDate(session.created_at));
+    const escapedDetectedAt = escapeHtml(formatPrintDate(session.detected_at));
+    const escapedConfirmedAt = escapeHtml(formatPrintDate(session.confirmed_at));
+    const escapedEventDescription = escapeHtml(event?.description || "No additional event description provided.");
+    const escapedEventStart = escapeHtml(formatPrintDate(event?.start_at || session.created_at));
+    const escapedEventEnd = escapeHtml(formatPrintDate(event?.end_at || null));
+    const escapedEventTimezone = escapeHtml(event?.timezone || "America/New_York");
+    const escapedEventLocation = escapeHtml(event?.location_label || "Location details will be available on Luma.");
+    const escapedEventLocationNote = event?.location_note
+      ? escapeHtml(event.location_note)
+      : "";
+
+    printWindow.document.write(`<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Luma Entry Pass</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      :root {
+        color-scheme: light;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: Inter, system-ui, sans-serif;
+        background: #f8fafc;
+        color: #0f172a;
+      }
+      .sheet {
+        max-width: 760px;
+        margin: 0 auto;
+        padding: 32px 24px 48px;
+      }
+      .pass {
+        border: 1px solid #cbd5e1;
+        border-radius: 24px;
+        background: white;
+        padding: 24px;
+        margin-bottom: 20px;
+      }
+      .eyebrow {
+        margin: 0 0 8px;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: #166534;
+      }
+      h1 {
+        margin: 0 0 20px;
+        font-size: 28px;
+        line-height: 1.1;
+      }
+      h2 {
+        margin: 0 0 16px;
+        font-size: 24px;
+        line-height: 1.15;
+      }
+      .qr {
+        display: block;
+        width: min(100%, 320px);
+        border: 1px solid #e2e8f0;
+        border-radius: 20px;
+        margin: 0 0 16px;
+      }
+      .note {
+        margin: 0 0 24px;
+        color: #475569;
+        line-height: 1.5;
+      }
+      .session-grid,
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+      }
+      .session-grid {
+        margin-top: 8px;
+      }
+      .item span {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #64748b;
+      }
+      .item strong,
+      .item p {
+        margin: 0;
+        overflow-wrap: anywhere;
+      }
+      .item p {
+        margin-top: 4px;
+        color: #475569;
+      }
+      .divider {
+        height: 1px;
+        margin: 18px 0 20px;
+        background: #e2e8f0;
+      }
+      .actions {
+        margin-top: 20px;
+      }
+      .print-button {
+        display: inline-block;
+        padding: 10px 16px;
+        border-radius: 999px;
+        border: 1px solid #cbd5e1;
+        background: white;
+        color: #0f172a;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      @media print {
+        body {
+          background: white;
+        }
+        .sheet {
+          padding: 0;
+        }
+        .pass {
+          border: none;
+          border-radius: 0;
+          padding: 0;
+        }
+        .actions {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="sheet">
+      <section class="pass">
+        <p class="eyebrow">Checkout Session</p>
+        <h2>${escapedEventName}</h2>
+        <div class="session-grid">
+          <div class="item">
+            <span>Attendee</span>
+            <strong>${escapedAttendeeName}</strong>
+            <p>${escapedAttendeeEmail}</p>
+          </div>
+          <div class="item">
+            <span>Ticket</span>
+            <strong>${escapedTicketName}</strong>
+            <p>${escapedAmount}</p>
+          </div>
+          <div class="item">
+            <span>Invoice ID</span>
+            <strong>${escapedInvoiceId}</strong>
+            <p>Memo ${escapedMemo}</p>
+          </div>
+          <div class="item">
+            <span>Registration</span>
+            <strong>${escapedRegistrationStatus}</strong>
+            <p>Status ${escapedSessionStatus}</p>
+          </div>
+          <div class="item">
+            <span>Created</span>
+            <strong>${escapedCreatedAt}</strong>
+          </div>
+          <div class="item">
+            <span>Detected</span>
+            <strong>${escapedDetectedAt}</strong>
+          </div>
+          <div class="item">
+            <span>Confirmed</span>
+            <strong>${escapedConfirmedAt}</strong>
+          </div>
+        </div>
+      </section>
+      <section class="pass">
+        <p class="eyebrow">Event Details</p>
+        <h2>${escapedEventName}</h2>
+        <div class="grid">
+          <div class="item">
+            <span>Starts</span>
+            <strong>${escapedEventStart}</strong>
+            <p>${escapedEventTimezone}</p>
+          </div>
+          <div class="item">
+            <span>Ends</span>
+            <strong>${escapedEventEnd}</strong>
+          </div>
+          <div class="item">
+            <span>Location</span>
+            <strong>${escapedEventLocation}</strong>
+            ${escapedEventLocationNote ? `<p>${escapedEventLocationNote}</p>` : ""}
+          </div>
+        </div>
+        <div class="divider"></div>
+        <p class="note">${escapedEventDescription}</p>
+      </section>
+      <section class="pass">
+        <p class="eyebrow">Luma Entry Pass</p>
+        <h1>Payment Accepted</h1>
+        <div class="divider"></div>
+        <img class="qr" src="${entryQrDataUrl}" alt="Luma entry QR code" />
+        <p class="note">Present this code at event check-in.</p>
+        <div class="grid">
+          <div class="item">
+            <span>Event</span>
+            <strong>${escapedEventName}</strong>
+            <p>Paid via CipherPay</p>
+          </div>
+          <div class="item">
+            <span>Ticket</span>
+            <strong>${escapedTicketName}</strong>
+            <p>${escapedAmount}</p>
+          </div>
+          <div class="item">
+            <span>Entry</span>
+            <strong>${escapedApprovalStatus}</strong>
+            <p>Guest ID ${escapedGuestId}</p>
+          </div>
+          <div class="item">
+            <span>Attendee</span>
+            <strong>${escapedAttendeeName}</strong>
+            <p>${escapedAttendeeEmail}</p>
+          </div>
+          <div class="item">
+            <span>Registered</span>
+            <strong>${escapedRegisteredAt}</strong>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="print-button" onclick="window.print()">Print / Save PDF</button>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>`);
+    printWindow.document.close();
+    printWindow.focus();
+  }, [
+    entryQrDataUrl,
+    lumaRegisteredAt,
+    lumaTicketName,
+    registrationGuest,
+    session.amount,
+    session.attendee_email,
+    session.attendee_name,
+    session.cipherpay_invoice_id,
+    session.cipherpay_memo_code,
+    session.confirmed_at,
+    session.created_at,
+    session.currency,
+    session.detected_at,
+    session.event_name,
+    event?.description,
+    event?.end_at,
+    event?.location_label,
+    event?.location_note,
+    event?.start_at,
+    event?.timezone,
+    session.registration_status,
+    session.status,
+    setCopyNotice,
+  ]);
+
+  useEffect(() => {
+    if (!copyNotice) return undefined;
+
+    const timeoutId = window.setTimeout(() => {
+      setCopyNotice(null);
+    }, 2400);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [copyNotice]);
+
+  return (
+    <div className="checkout-status-grid">
+      <div className="checkout-main-stack">
+        <section className="checkout-main-card">
+          <div className="checkout-status-header">
+            <div>
+              <p className="eyebrow">Checkout session</p>
+              <h2>{session.event_name}</h2>
+            </div>
+            <TestStatusPill status={session.status} />
+          </div>
+
+          <p className="checkout-status-message">{statusMessage(session)}</p>
+
+          <div className="checkout-key-grid">
+            <div className="checkout-key-value">
+              <span>Attendee</span>
+              <strong>{session.attendee_name}</strong>
+              <p className="subtle-text">{session.attendee_email}</p>
+            </div>
+            <div className="checkout-key-value">
+              <span>Ticket</span>
+              <strong>{session.ticket_type_name || "Default Luma ticket"}</strong>
+              <p className="subtle-text">
+                {formatFiatAmount(session.amount, session.currency)}
+              </p>
+            </div>
+            <div className="checkout-key-value">
+              <span>Invoice ID</span>
+              <strong className="checkout-mono">{session.cipherpay_invoice_id}</strong>
+              <p className="subtle-text">
+                Memo {session.cipherpay_memo_code || "not assigned yet"}
+              </p>
+            </div>
+            <div className="checkout-key-value">
+              <span>Luma registration</span>
+              <strong>{session.registration_status}</strong>
+              <p className="subtle-text">
+                {session.registered_at ? (
+                  <>
+                    Registered <LocalDateTime iso={session.registered_at} />
+                  </>
+                ) : session.registration_error ? (
+                  session.registration_error
+                ) : (
+                  "Waiting for payment confirmation"
+                )}
+              </p>
+            </div>
+          </div>
+
+          <div className="checkout-submit-row">
+            {!paymentAccepted && session.cipherpay_zcash_uri ? (
+              <a
+                className="button"
+                href={session.cipherpay_zcash_uri}
+              >
+                Open wallet
+              </a>
+            ) : null}
+          </div>
+
+          <div className="checkout-timeline">
+            <div className="checkout-key-value">
+              <span>Created</span>
+              <strong>
+                {session.created_at ? <LocalDateTime iso={session.created_at} /> : "n/a"}
+              </strong>
+            </div>
+            <div className="checkout-key-value">
+              <span>Detected</span>
+              <strong>
+                {session.detected_at ? <LocalDateTime iso={session.detected_at} /> : "n/a"}
+              </strong>
+            </div>
+            <div className="checkout-key-value">
+              <span>Confirmed</span>
+              <strong>
+                {session.confirmed_at ? (
+                  <LocalDateTime iso={session.confirmed_at} />
+                ) : (
+                  "n/a"
+                )}
+              </strong>
+            </div>
+            {!paymentAccepted ? (
+              <div className="checkout-key-value">
+                <span>Invoice expiry</span>
+                <strong>
+                  {session.cipherpay_expires_at ? (
+                    <LocalDateTime iso={session.cipherpay_expires_at} />
+                  ) : (
+                    "n/a"
+                  )}
+                </strong>
+              </div>
+            ) : null}
+          </div>
+        </section>
+
+        <section className="checkout-main-card">
+          <p className="eyebrow">Event Details</p>
+          <h2>Event Details</h2>
+          <div className="checkout-key-grid">
+            <div className="checkout-key-value">
+              <span>Starts</span>
+              <strong>
+                {event?.start_at ? <LocalDateTime iso={event.start_at} /> : "n/a"}
+              </strong>
+              <p className="subtle-text">{event?.timezone || "America/New_York"}</p>
+            </div>
+            <div className="checkout-key-value">
+              <span>Ends</span>
+              <strong>
+                {event?.end_at ? <LocalDateTime iso={event.end_at} /> : "n/a"}
+              </strong>
+            </div>
+            <div className="checkout-key-value">
+              <span>Location</span>
+              <strong>{event?.location_label || "View the Luma event for venue details"}</strong>
+              {event?.location_note ? (
+                <p className="subtle-text">{event.location_note}</p>
+              ) : null}
+            </div>
+          </div>
+          <p className="checkout-status-message">
+            {event?.description || "Event logistics will continue to be available on the Luma event page."}
+          </p>
+        </section>
+      </div>
+
+      <aside className="checkout-sidebar">
+        <section className="checkout-sidebar-card">
+          {paymentAccepted ? (
+            <div className="checkout-payment-accepted">
+              <p className="eyebrow">Payment Accepted</p>
+              <div className="checkout-payment-title-row">
+                <h3>Payment Accepted</h3>
+                <button
+                  aria-label="Open printer-friendly pass"
+                  className="checkout-print-button"
+                  disabled={!registrationGuest || !entryQrDataUrl}
+                  onClick={() => void openPrintView()}
+                  type="button"
+                >
+                  <svg
+                    aria-hidden="true"
+                    fill="none"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    width="18"
+                  >
+                    <path
+                      d="M7 9V4h10v5M7 14H5a2 2 0 0 1-2-2v-1.5A2.5 2.5 0 0 1 5.5 8h13A2.5 2.5 0 0 1 21 10.5V12a2 2 0 0 1-2 2h-2M7 12h10v8H7v-8Z"
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="1.7"
+                    />
+                    <circle cx="17.5" cy="10.5" fill="currentColor" r="1" />
+                  </svg>
+                </button>
+              </div>
+              <p className="subtle-text">
+                Your payment has been received. Luma will send your ticket and
+                calendar invite by email.
+              </p>
+
+              {lumaEventUrl ? (
+                <div className="checkout-link-stack">
+                  <a
+                    className="button button-secondary"
+                    href={lumaEventUrl}
+                    rel="noreferrer noopener"
+                    target="_blank"
+                  >
+                    Open Luma event
+                  </a>
+                </div>
+              ) : null}
+
+              {registrationGuest ? (
+                <div className="checkout-luma-pass">
+                  <div className="checkout-luma-pass-qr">
+                    <span className="checkout-pass-label">Entry QR</span>
+                    {entryQrDataUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        alt="Luma entry QR code"
+                        className="checkout-qr-image"
+                        src={entryQrDataUrl}
+                      />
+                    ) : (
+                      <div className="checkout-qr-fallback">
+                        Luma check-in QR will appear here once the guest record
+                        includes it.
+                      </div>
+                    )}
+                    <p className="subtle-text">
+                      Present this code at event check-in.
+                    </p>
+                  </div>
+
+                  <div className="checkout-luma-pass-body">
+                    <div className="checkout-payment-grid">
+                      <div className="checkout-key-value">
+                        <span>Event</span>
+                        <strong>{session.event_name}</strong>
+                        <p className="subtle-text">Paid via CipherPay</p>
+                      </div>
+                      <div className="checkout-key-value">
+                        <span>Ticket</span>
+                        <strong>{lumaTicketName}</strong>
+                        <p className="subtle-text">
+                          {formatFiatAmount(session.amount, session.currency)}
+                        </p>
+                      </div>
+                      <div className="checkout-key-value">
+                        <span>Attendee</span>
+                        <strong>
+                          {(typeof registrationGuest.user_name === "string"
+                            ? registrationGuest.user_name
+                            : null) || session.attendee_name}
+                        </strong>
+                        <p className="subtle-text">
+                          {(typeof registrationGuest.user_email === "string"
+                            ? registrationGuest.user_email
+                            : null) || session.attendee_email}
+                        </p>
+                      </div>
+                      <div className="checkout-key-value">
+                        <span>Entry</span>
+                        <strong>
+                          {typeof registrationGuest.approval_status === "string"
+                            ? registrationGuest.approval_status
+                            : "approved"}
+                        </strong>
+                        <p className="subtle-text">
+                          Guest ID{" "}
+                          {typeof registrationGuest.id === "string"
+                            ? registrationGuest.id
+                            : "pending"}
+                        </p>
+                      </div>
+                      <div className="checkout-key-value">
+                        <span>Registered</span>
+                        <strong>
+                          {lumaRegisteredAt ? (
+                            <LocalDateTime iso={lumaRegisteredAt} />
+                          ) : (
+                            "Processing"
+                          )}
+                        </strong>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
+              <div className="checkout-link-stack">
+                {attendeeTicketUrl ? (
+                  <a
+                    className="button"
+                    href={attendeeTicketUrl}
+                    rel="noreferrer noopener"
+                    target="_blank"
+                  >
+                    Open Luma ticket
+                  </a>
+                ) : null}
+                {!registrationGuest ? (
+                  <button
+                    className="button"
+                    disabled
+                    type="button"
+                  >
+                    Processing ticket details
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          ) : (
+            <>
+              <h3>Pay with Zcash</h3>
+              {qrCodeDataUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  alt="Zcash payment QR code"
+                  className="checkout-qr-image"
+                  src={qrCodeDataUrl}
+                />
+              ) : (
+                <div className="checkout-qr-fallback">
+                  QR code will appear once CipherPay returns the payment URI.
+                </div>
+              )}
+              <div className="checkout-detail-list">
+                <div className="checkout-key-value">
+                  <span>Quoted amount</span>
+                  <strong>{zecAmountLabel(session.cipherpay_price_zec)}</strong>
+                </div>
+                <div className="checkout-key-value">
+                  <span>Payment address</span>
+                  <strong className="checkout-mono">
+                    {session.cipherpay_payment_address || "Not returned yet"}
+                  </strong>
+                  <button
+                    className="button button-secondary button-small"
+                    disabled={!session.cipherpay_payment_address}
+                    onClick={() =>
+                      void copyValue(session.cipherpay_payment_address, "Payment address")
+                    }
+                    type="button"
+                  >
+                    Copy address
+                  </button>
+                </div>
+                <div className="checkout-key-value">
+                  <span>Zcash URI</span>
+                  <strong className="checkout-mono">
+                    {session.cipherpay_zcash_uri || "Not returned yet"}
+                  </strong>
+                  <div className="button-row">
+                    <button
+                      className="button button-secondary button-small"
+                      disabled={!session.cipherpay_zcash_uri}
+                      onClick={() =>
+                        void copyValue(session.cipherpay_zcash_uri, "Zcash URI")
+                      }
+                      type="button"
+                    >
+                      Copy URI
+                    </button>
+                    {session.cipherpay_zcash_uri ? (
+                      <a
+                        className="button button-secondary button-small"
+                        href={session.cipherpay_zcash_uri}
+                      >
+                        Open wallet
+                      </a>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+              {copyNotice ? <p className="test-valid-text">{copyNotice}</p> : null}
+            </>
+          )}
+        </section>
+
+      </aside>
+    </div>
+  );
+}
