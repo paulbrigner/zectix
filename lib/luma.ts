@@ -176,7 +176,16 @@ export async function listLumaTicketTypes(apiKey: string, eventApiId: string) {
 
   return entries
     .map(normalizeTicketType)
-    .filter((ticket): ticket is LumaTicketType => Boolean(ticket && ticket.active));
+    .filter((ticket): ticket is LumaTicketType => Boolean(ticket && ticket.active))
+    .sort((left, right) => {
+      const leftAmount = left.amount;
+      const rightAmount = right.amount;
+
+      if (leftAmount == null && rightAmount == null) return 0;
+      if (leftAmount == null) return 1;
+      if (rightAmount == null) return -1;
+      return rightAmount - leftAmount;
+    });
 }
 
 export async function addLumaGuest({
