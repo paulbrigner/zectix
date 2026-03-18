@@ -13,7 +13,19 @@ const spaceGrotesk = Space_Grotesk({
 export const metadata: Metadata = {
   title: "LumaZcash",
   description:
-    "A local test integration for selling Luma event registrations through CipherPay with Zcash.",
+    "Demo app for selling Luma event registrations with Zcash through CipherPay, including in-app checkout, webhook tracking, and Luma registration handoff.",
+  openGraph: {
+    title: "LumaZcash",
+    description:
+      "Demo app for selling Luma event registrations with Zcash through CipherPay, including in-app checkout, webhook tracking, and Luma registration handoff.",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "LumaZcash",
+    description:
+      "Demo app for selling Luma event registrations with Zcash through CipherPay, including in-app checkout, webhook tracking, and Luma registration handoff.",
+  },
   icons: {
     icon: appPath("/icon.png"),
     shortcut: appPath("/favicon.ico"),
