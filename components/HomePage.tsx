@@ -13,9 +13,9 @@ export function HomePage() {
                 Accept Zcash for event registrations without leaving your app.
               </h1>
               <p className="home-lede">
-                LumaZcash is a local test integration that creates CipherPay
-                invoices for Luma events, renders an in-app payment flow, and
-                tracks registration state from payment through attendee ticket
+                LumaZcash is a demo app that creates CipherPay invoices for
+                Luma events, renders an in-app payment flow, and tracks
+                registration state from payment through attendee ticket
                 delivery.
               </p>
 
