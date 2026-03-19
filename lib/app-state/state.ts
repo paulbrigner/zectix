@@ -30,6 +30,7 @@ import {
   toPublicConfig,
 } from "@/lib/app-state/utils";
 import { isExternalSecretManagementEnabled } from "@/lib/runtime-env";
+import { createSessionViewerToken } from "@/lib/session-viewer";
 
 const CONFIG_KEY = {
   pk: "CONFIG",
@@ -670,7 +671,13 @@ export async function getDashboardData(): Promise<DashboardData> {
       ).length,
       invalid_webhooks: webhooks.filter((event) => !event.signature_valid).length,
     },
-    sessions,
+    sessions: sessions.map((session) => ({
+      ...session,
+      viewer_token: createSessionViewerToken(
+        session.session_id,
+        session.attendee_email,
+      ),
+    })),
     recent_webhooks: webhooks,
   };
 }

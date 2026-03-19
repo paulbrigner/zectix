@@ -98,6 +98,10 @@ export type DashboardData = {
     failed_registrations: number;
     invalid_webhooks: number;
   };
-  sessions: CheckoutSession[];
+  sessions: Array<
+    CheckoutSession & {
+      viewer_token: string | null;
+    }
+  >;
   recent_webhooks: WebhookEvent[];
 };
