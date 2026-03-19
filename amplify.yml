@@ -14,6 +14,7 @@ frontend:
         - env | grep -e APP_BASE_PATH >> .env.production || true
         - env | grep -e ADMIN_PASSWORD_HASH >> .env.production || true
         - env | grep -e ADMIN_SESSION_SECRET >> .env.production || true
+        - env | grep -e SESSION_VIEWER_SECRET >> .env.production || true
         - env | grep -e DYNAMODB_TABLE_NAME >> .env.production || true
         - env | grep -e AWS_REGION >> .env.production || true
         - env | grep -e LUMA_API_KEY >> .env.production || true
@@ -30,4 +31,3 @@ frontend:
   cache:
     paths:
       - node_modules/**/*
-
