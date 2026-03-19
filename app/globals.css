@@ -1746,8 +1746,22 @@ select {
 
 .payment-panel-meta {
   display: flex;
+  align-items: center;
   justify-content: flex-start;
-  margin-top: 0.85rem;
+  flex-wrap: nowrap;
+  gap: 0.6rem;
+  margin-top: 0.2rem;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.payment-panel-meta::-webkit-scrollbar {
+  display: none;
+}
+
+.payment-panel-meta > * {
+  flex: 0 0 auto;
 }
 
 .status-pill-lite {

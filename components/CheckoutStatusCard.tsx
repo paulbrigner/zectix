@@ -696,16 +696,15 @@ export function CheckoutStatusCard({
                 <p className="eyebrow">Pay with Zcash</p>
                 <h3>Complete your ticket purchase</h3>
               </div>
-              <span className="public-status-chip">{paymentStateLabel(session)}</span>
-            </div>
-
-            {session.cipherpay_expires_at ? (
               <div className="payment-panel-meta">
+                <span className="public-status-chip">{paymentStateLabel(session)}</span>
+                {session.cipherpay_expires_at ? (
                 <span className="status-pill-lite">
                   Expires: <LocalDateTime iso={session.cipherpay_expires_at} />
                 </span>
+                ) : null}
               </div>
-            ) : null}
+            </div>
 
             <div className="payment-summary-row">
               <div className="checkout-key-value">
