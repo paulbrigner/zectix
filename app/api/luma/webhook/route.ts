@@ -1,6 +1,6 @@
 import { jsonError, jsonOk } from "@/lib/http";
-import { processLumaTicketRegisteredWebhook } from "@/lib/test-harness/service";
-import { asRecord, asString } from "@/lib/test-harness/utils";
+import { processLumaTicketRegisteredWebhook } from "@/lib/app-state/service";
+import { asRecord, asString } from "@/lib/app-state/utils";
 
 export const runtime = "nodejs";
 

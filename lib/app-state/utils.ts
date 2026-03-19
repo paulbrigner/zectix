@@ -1,9 +1,10 @@
 import type {
   CipherPayNetwork,
   CipherPaySessionStatus,
-  TestConfig,
-  TestConfigRecord,
-} from "@/lib/test-harness/types";
+  RuntimeConfig,
+  RuntimeConfigRecord,
+} from "@/lib/app-state/types";
+import { isExternalSecretManagementEnabled } from "@/lib/runtime-env";
 
 const SESSION_STATUSES = new Set<CipherPaySessionStatus>([
   "draft",
@@ -32,6 +33,10 @@ export function asString(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
+}
+
+export function normalizeEmailAddress(value: string | null | undefined) {
+  return value?.trim().toLowerCase() || "";
 }
 
 export function asFiniteNumber(value: unknown): number | null {
@@ -101,7 +106,7 @@ export function cipherPayDefaultsForNetwork(network: CipherPayNetwork) {
 
 export function defaultConfigRecord(
   network: CipherPayNetwork = "testnet",
-): TestConfigRecord {
+): RuntimeConfigRecord {
   const defaults = cipherPayDefaultsForNetwork(network);
 
   return {
@@ -123,11 +128,12 @@ export function maskSecretPreview(value: string | null | undefined): string | nu
   return `${text.slice(0, 6)}••••${text.slice(-4)}`;
 }
 
-export function toPublicConfig(record: TestConfigRecord): TestConfig {
+export function toPublicConfig(record: RuntimeConfigRecord): RuntimeConfig {
   return {
     network: record.network,
     api_base_url: record.api_base_url,
     checkout_base_url: record.checkout_base_url,
+    secrets_managed_externally: isExternalSecretManagementEnabled(),
     has_api_key: Boolean(asString(record.api_key)),
     api_key_preview: maskSecretPreview(record.api_key),
     has_webhook_secret: Boolean(asString(record.webhook_secret)),
@@ -139,10 +145,10 @@ export function toPublicConfig(record: TestConfigRecord): TestConfig {
   };
 }
 
-export function hasCoreTestSetup(
+export function hasCoreSetup(
   config:
-    | Pick<TestConfigRecord, "api_key" | "luma_api_key">
-    | Pick<TestConfig, "has_api_key" | "has_luma_api_key">,
+    | Pick<RuntimeConfigRecord, "api_key" | "luma_api_key">
+    | Pick<RuntimeConfig, "has_api_key" | "has_luma_api_key">,
 ) {
   if ("has_api_key" in config && "has_luma_api_key" in config) {
     return config.has_api_key && config.has_luma_api_key;

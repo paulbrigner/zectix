@@ -1,5 +1,5 @@
-import type { CipherPaySessionStatus, TestConfigRecord } from "@/lib/test-harness/types";
-import { asFiniteNumber, asIsoTimestamp, asRecord, asString } from "@/lib/test-harness/utils";
+import type { CipherPaySessionStatus, RuntimeConfigRecord } from "@/lib/app-state/types";
+import { asFiniteNumber, asIsoTimestamp, asRecord, asString } from "@/lib/app-state/utils";
 
 export type CipherPayInvoice = {
   invoice_id: string;
@@ -79,12 +79,12 @@ function normalizeCipherPayInvoice(value: unknown): CipherPayInvoice {
   };
 }
 
-export function buildCipherPayCheckoutUrl(config: TestConfigRecord, invoiceId: string) {
+export function buildCipherPayCheckoutUrl(config: RuntimeConfigRecord, invoiceId: string) {
   return `${config.checkout_base_url.replace(/\/+$/, "")}/pay/${encodeURIComponent(invoiceId)}`;
 }
 
 export async function createCipherPayInvoice(
-  config: TestConfigRecord,
+  config: RuntimeConfigRecord,
   input: CreateCipherPayInvoiceInput,
 ) {
   if (!config.api_key) {
@@ -112,7 +112,7 @@ export async function createCipherPayInvoice(
 }
 
 export async function getCipherPayInvoice(
-  config: TestConfigRecord,
+  config: RuntimeConfigRecord,
   invoiceId: string,
 ) {
   if (!config.api_key) {

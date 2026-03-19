@@ -4,7 +4,7 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 
 ## Project Overview
 
-Next.js app demonstrating a Luma + CipherPay Zcash checkout flow for event registrations.
+Next.js app for selling Luma event registrations through CipherPay with Zcash.
 
 ## Development Commands
 
@@ -22,6 +22,13 @@ npm run lint   # ESLint
 - **Language**: TypeScript (strict mode, `@/*` path alias)
 - **Styling**: Tailwind CSS v4
 - **UI**: Custom components + Radix UI primitives
+- **State**: DynamoDB-backed application state under `lib/app-state`
+
+### Application State
+
+- `lib/app-state/state.ts` manages runtime config, checkout sessions, webhook records, checkout lookup items, and lightweight rate-limit counters.
+- `lib/app-state/service.ts` coordinates the Luma + CipherPay workflow.
+- In production, integration secrets are expected to come from environment variables rather than mutable runtime storage unless `ALLOW_RUNTIME_SECRET_STORAGE=true` is explicitly set.
 
 ### Luma API Integration
 

@@ -1,5 +1,5 @@
 import { ensureAdminApiAccess } from "@/lib/admin-auth-server";
-import { getDashboardData } from "@/lib/test-harness/state";
+import { getDashboardData } from "@/lib/app-state/state";
 import { jsonError, jsonOk } from "@/lib/http";
 
 export const runtime = "nodejs";

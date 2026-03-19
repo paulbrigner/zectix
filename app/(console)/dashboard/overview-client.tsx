@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { LocalDateTime } from "@/components/LocalDateTime";
-import type { TestDashboardData } from "@/lib/test-harness/types";
-import { formatFiatAmount, hasCoreTestSetup } from "@/lib/test-harness/utils";
+import type { DashboardData } from "@/lib/app-state/types";
+import { formatFiatAmount, hasCoreSetup } from "@/lib/app-state/utils";
 import {
   appApiPath,
   cipherPayWebhookCallbackUrl,
@@ -22,16 +22,16 @@ function StatCard({
   detail: string;
 }) {
   return (
-    <article className="test-kpi-card">
-      <p className="test-kpi-label">{label}</p>
-      <p className="test-kpi-value">{value}</p>
-      <p className="subtle-text test-kpi-detail">{detail}</p>
+    <article className="console-kpi-card">
+      <p className="console-kpi-label">{label}</p>
+      <p className="console-kpi-value">{value}</p>
+      <p className="subtle-text console-kpi-detail">{detail}</p>
     </article>
   );
 }
 
 export function TestOverviewClient() {
-  const [data, setData] = useState<TestDashboardData | null>(null);
+  const [data, setData] = useState<DashboardData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [origin, setOrigin] = useState("");
@@ -40,7 +40,7 @@ export function TestOverviewClient() {
     setLoading(true);
     setError(null);
     try {
-      const nextData = await readJsonOrThrow<TestDashboardData>(
+      const nextData = await readJsonOrThrow<DashboardData>(
         await fetch(appApiPath("/api/dashboard"), { cache: "no-store" }),
       );
       setData(nextData);
@@ -66,12 +66,12 @@ export function TestOverviewClient() {
   const webhookUrl = origin
     ? cipherPayWebhookCallbackUrl(origin)
     : appApiPath("/api/cipherpay/webhook");
-  const configReady = config ? hasCoreTestSetup(config) : false;
+  const configReady = config ? hasCoreSetup(config) : false;
 
   return (
-    <div className="test-page-body">
-      <section className="test-section">
-        <header className="test-section-header">
+    <div className="console-page-body">
+      <section className="console-section">
+        <header className="console-section-header">
           <div>
             <h2>Overview</h2>
             <p className="subtle-text">
@@ -91,11 +91,11 @@ export function TestOverviewClient() {
         </header>
 
         {loading ? <p className="subtle-text">Loading dashboard…</p> : null}
-        {error ? <p className="test-error-text">{error}</p> : null}
+        {error ? <p className="console-error-text">{error}</p> : null}
 
         {data ? (
           <>
-            <div className="test-kpi-grid">
+            <div className="console-kpi-grid">
               <StatCard
                 label="Environment"
                 value={config?.network === "mainnet" ? "Mainnet" : "Testnet"}
@@ -122,10 +122,10 @@ export function TestOverviewClient() {
               />
             </div>
 
-            <div className="test-card-grid">
-              <article className="test-detail-card">
+            <div className="console-card-grid">
+              <article className="console-detail-card">
                 <h3>Webhook callback URL</h3>
-                <p className="test-inline-code">{webhookUrl}</p>
+                <p className="console-inline-code">{webhookUrl}</p>
                 <p className="subtle-text">
                   Save this in CipherPay so confirmed invoice events post back to
                   this app.
@@ -137,7 +137,7 @@ export function TestOverviewClient() {
                 </div>
               </article>
 
-              <article className="test-detail-card">
+              <article className="console-detail-card">
                 <h3>Stored secret previews</h3>
                 <p className="subtle-text">CipherPay API key: {config?.api_key_preview || "not saved yet"}</p>
                 <p className="subtle-text">Webhook secret: {config?.webhook_secret_preview || "not saved yet"}</p>
@@ -148,8 +148,8 @@ export function TestOverviewClient() {
         ) : null}
       </section>
 
-      <section className="test-section">
-        <header className="test-section-header">
+      <section className="console-section">
+        <header className="console-section-header">
           <div>
             <h2>Recent checkouts</h2>
             <p className="subtle-text">
@@ -163,8 +163,8 @@ export function TestOverviewClient() {
         ) : null}
 
         {sessions.length ? (
-          <div className="test-table-wrap">
-            <table className="test-table">
+          <div className="console-table-wrap">
+            <table className="console-table">
               <thead>
                 <tr>
                   <th>Event</th>
@@ -181,13 +181,13 @@ export function TestOverviewClient() {
                   <tr key={session.session_id}>
                     <td>
                       <strong>{session.event_name}</strong>
-                      <p className="subtle-text test-table-note">
+                      <p className="subtle-text console-table-note">
                         {session.ticket_type_name || "No ticket label"}
                       </p>
                     </td>
                     <td>
                       <strong>{session.attendee_name}</strong>
-                      <p className="subtle-text test-table-note">
+                      <p className="subtle-text console-table-note">
                         {session.attendee_email}
                       </p>
                     </td>
@@ -198,16 +198,16 @@ export function TestOverviewClient() {
                       <span
                         className={
                           session.registration_status === "registered"
-                            ? "test-valid-text"
+                            ? "console-valid-text"
                             : session.registration_status === "failed"
-                              ? "test-error-text"
+                              ? "console-error-text"
                               : "subtle-text"
                         }
                       >
                         {session.registration_status}
                       </span>
                       {session.registration_error ? (
-                        <p className="subtle-text test-table-note">
+                        <p className="subtle-text console-table-note">
                           {session.registration_error}
                         </p>
                       ) : null}
@@ -236,8 +236,8 @@ export function TestOverviewClient() {
         ) : null}
       </section>
 
-      <section className="test-section">
-        <header className="test-section-header">
+      <section className="console-section">
+        <header className="console-section-header">
           <div>
             <h2>Webhook log</h2>
             <p className="subtle-text">
@@ -252,8 +252,8 @@ export function TestOverviewClient() {
         ) : null}
 
         {webhooks.length ? (
-          <div className="test-table-wrap">
-            <table className="test-table">
+          <div className="console-table-wrap">
+            <table className="console-table">
               <thead>
                 <tr>
                   <th>Received</th>
@@ -274,26 +274,26 @@ export function TestOverviewClient() {
                       )}
                     </td>
                     <td>{event.event_type || "unknown"}</td>
-                    <td className="test-mono-cell">
+                    <td className="console-mono-cell">
                       {event.cipherpay_invoice_id || "n/a"}
                     </td>
                     <td>
                       <span
                         className={
                           event.signature_valid
-                            ? "test-valid-text"
-                            : "test-error-text"
+                            ? "console-valid-text"
+                            : "console-error-text"
                         }
                       >
                         {event.signature_valid ? "valid" : "invalid"}
                       </span>
                       {event.validation_error ? (
-                        <p className="subtle-text test-table-note">
+                        <p className="subtle-text console-table-note">
                           {event.validation_error}
                         </p>
                       ) : null}
                     </td>
-                    <td className="test-mono-cell">{event.txid || "n/a"}</td>
+                    <td className="console-mono-cell">{event.txid || "n/a"}</td>
                   </tr>
                 ))}
               </tbody>

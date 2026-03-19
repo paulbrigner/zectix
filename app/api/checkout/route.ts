@@ -1,5 +1,7 @@
-import { createCheckoutSession } from "@/lib/test-harness/service";
+import { createCheckoutSession } from "@/lib/app-state/service";
+import { consumeCheckoutRateLimit } from "@/lib/app-state/state";
 import { jsonError, jsonOk } from "@/lib/http";
+import { createSessionViewerToken } from "@/lib/session-viewer";
 
 export const runtime = "nodejs";
 
@@ -29,6 +31,22 @@ export async function POST(request: Request) {
     return jsonError("Event, attendee name, and attendee email are required.");
   }
 
+  const forwardedFor = request.headers.get("x-forwarded-for");
+  const ipAddress = forwardedFor?.split(",")[0]?.trim() || null;
+
+  const rateLimit = await consumeCheckoutRateLimit({
+    ipAddress,
+    attendeeEmail,
+    eventApiId,
+  });
+  if (!rateLimit.ok) {
+    return jsonError(rateLimit.reason || "Too many checkout attempts.", 429, {
+      headers: {
+        "retry-after": String(rateLimit.retry_after_seconds || 600),
+      },
+    });
+  }
+
   try {
     const result = await createCheckoutSession({
       attendee_email: attendeeEmail,
@@ -37,7 +55,13 @@ export async function POST(request: Request) {
       ticket_type_api_id: ticketTypeApiId,
     });
 
-    return jsonOk(result);
+    return jsonOk({
+      ...result,
+      viewer_token: createSessionViewerToken(
+        result.session.session_id,
+        result.session.attendee_email,
+      ),
+    });
   } catch (error) {
     return jsonError(
       error instanceof Error ? error.message : "Failed to create checkout session",
@@ -45,4 +69,3 @@ export async function POST(request: Request) {
     );
   }
 }
-

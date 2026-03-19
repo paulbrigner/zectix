@@ -44,13 +44,13 @@ export function AdminLoginForm() {
   }
 
   return (
-    <form className="test-form" onSubmit={handleSubmit}>
-      <div className="test-form-grid">
-        <label className="test-field">
-          <span>Demo admin password</span>
+    <form className="console-form" onSubmit={handleSubmit}>
+      <div className="console-form-grid">
+        <label className="console-field">
+          <span>Admin password</span>
           <input
             autoComplete="current-password"
-            className="test-input"
+            className="console-input"
             onChange={(event) => setPassword(event.target.value)}
             placeholder="Enter the shared admin password"
             required
@@ -60,7 +60,7 @@ export function AdminLoginForm() {
         </label>
       </div>
 
-      {error ? <p className="test-error-text">{error}</p> : null}
+      {error ? <p className="console-error-text">{error}</p> : null}
 
       <div className="button-row">
         <button className="button" disabled={loading} type="submit">
@@ -70,4 +70,3 @@ export function AdminLoginForm() {
     </form>
   );
 }
-

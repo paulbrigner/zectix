@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import type { TestConfig } from "@/lib/test-harness/types";
+import type { RuntimeConfig } from "@/lib/app-state/types";
 import {
   appApiPath,
   cipherPayWebhookCallbackUrl,
@@ -11,11 +11,11 @@ import {
 } from "@/app/(console)/client-utils";
 
 type ConfigResponse = {
-  config: TestConfig;
+  config: RuntimeConfig;
 };
 
 export function TestAdminClient() {
-  const [config, setConfig] = useState<TestConfig | null>(null);
+  const [config, setConfig] = useState<RuntimeConfig | null>(null);
   const [network, setNetwork] = useState<"testnet" | "mainnet">("testnet");
   const [apiBaseUrl, setApiBaseUrl] = useState("");
   const [checkoutBaseUrl, setCheckoutBaseUrl] = useState("");
@@ -104,67 +104,71 @@ export function TestAdminClient() {
     : appApiPath("/api/luma/webhook");
 
   return (
-    <div className="test-page-body">
-      <section className="test-section">
-        <header className="test-section-header">
+    <div className="console-page-body">
+      <section className="console-section">
+        <header className="console-section-header">
           <div>
             <h2>Admin</h2>
             <p className="subtle-text">
-              Store the local runtime settings for CipherPay and Luma.
-              This app defaults to local DynamoDB, so no env vars are required
-              for the normal local setup path.
+              Store the runtime settings for CipherPay and Luma.
+              Local development defaults to DynamoDB Local, while deployed environments
+              can provide secrets through environment configuration.
             </p>
           </div>
         </header>
 
         {loading ? <p className="subtle-text">Loading config…</p> : null}
-        {error ? <p className="test-error-text">{error}</p> : null}
-        {notice ? <p className="test-valid-text">{notice}</p> : null}
+        {error ? <p className="console-error-text">{error}</p> : null}
+        {notice ? <p className="console-valid-text">{notice}</p> : null}
 
-        <div className="test-card-grid">
-          <article className="test-detail-card">
+        <div className="console-card-grid">
+          <article className="console-detail-card">
             <h3>CipherPay webhook</h3>
-            <p className="test-inline-code">{webhookUrl}</p>
+            <p className="console-inline-code">{webhookUrl}</p>
             <p className="subtle-text">
               Save this as your CipherPay webhook URL while testing locally.
             </p>
           </article>
 
-          <article className="test-detail-card">
+          <article className="console-detail-card">
             <h3>Luma webhook</h3>
-            <p className="test-inline-code">{lumaWebhookUrl}</p>
+            <p className="console-inline-code">{lumaWebhookUrl}</p>
             <p className="subtle-text">
               Save this as your Luma webhook URL for guest and ticket registration events.
             </p>
           </article>
 
-          <article className="test-detail-card">
+          <article className="console-detail-card">
             <h3>Stored secret previews</h3>
-            <p className="subtle-text">CipherPay API key: {config?.api_key_preview || "not stored yet"}</p>
-            <p className="subtle-text">CipherPay webhook secret: {config?.webhook_secret_preview || "not stored yet"}</p>
-            <p className="subtle-text">Luma API key: {config?.luma_api_key_preview || "not stored yet"}</p>
+            <p className="subtle-text">CipherPay API key: {config?.api_key_preview || "not configured yet"}</p>
+            <p className="subtle-text">CipherPay webhook secret: {config?.webhook_secret_preview || "not configured yet"}</p>
+            <p className="subtle-text">Luma API key: {config?.luma_api_key_preview || "not configured yet"}</p>
+            {config?.secrets_managed_externally ? (
+              <p className="subtle-text">
+                Secrets are managed externally in this environment and are not written to the app state table.
+              </p>
+            ) : null}
           </article>
         </div>
       </section>
 
-      <section className="test-section">
-        <header className="test-section-header">
+      <section className="console-section">
+        <header className="console-section-header">
           <div>
             <h2>Configuration</h2>
             <p className="subtle-text">
-              Leave secret fields blank to keep the currently stored values.
-              The API keys saved here are used at runtime, so you do not need
-              to keep them in server env vars for local testing.
+              Leave secret fields blank to keep the current values.
+              In production, secret fields are managed through environment configuration instead of the app state table.
             </p>
           </div>
         </header>
 
-        <form className="test-form" onSubmit={handleSubmit}>
-          <div className="test-form-grid">
-            <label className="test-field">
+        <form className="console-form" onSubmit={handleSubmit}>
+          <div className="console-form-grid">
+            <label className="console-field">
               <span>Network</span>
               <select
-                className="test-input"
+                className="console-input"
                 onChange={(event) => {
                   const nextNetwork = event.target.value as "testnet" | "mainnet";
                   const defaults = cipherPayDefaultsForNetwork(nextNetwork);
@@ -179,20 +183,20 @@ export function TestAdminClient() {
               </select>
             </label>
 
-            <label className="test-field">
+            <label className="console-field">
               <span>API base URL</span>
               <input
-                className="test-input"
+                className="console-input"
                 onChange={(event) => setApiBaseUrl(event.target.value)}
                 type="url"
                 value={apiBaseUrl}
               />
             </label>
 
-            <label className="test-field">
+            <label className="console-field">
               <span>Checkout base URL</span>
               <input
-                className="test-input"
+                className="console-input"
                 onChange={(event) => setCheckoutBaseUrl(event.target.value)}
                 type="url"
                 value={checkoutBaseUrl}
@@ -201,35 +205,56 @@ export function TestAdminClient() {
 
           </div>
 
-          <div className="test-form-grid">
-            <label className="test-field">
+          <div className="console-form-grid">
+            <label className="console-field">
               <span>CipherPay API key</span>
               <input
-                className="test-input"
+                className="console-input"
+                disabled={config?.secrets_managed_externally}
                 onChange={(event) => setApiKey(event.target.value)}
-                placeholder={config?.has_api_key ? "Stored server-side. Paste a new key to replace it." : "cpay_sk_..."}
+                placeholder={
+                  config?.secrets_managed_externally
+                    ? "Managed through environment configuration."
+                    : config?.has_api_key
+                      ? "Stored server-side. Paste a new key to replace it."
+                      : "cpay_sk_..."
+                }
                 type="password"
                 value={apiKey}
               />
             </label>
 
-            <label className="test-field">
+            <label className="console-field">
               <span>CipherPay webhook secret</span>
               <input
-                className="test-input"
+                className="console-input"
+                disabled={config?.secrets_managed_externally}
                 onChange={(event) => setWebhookSecret(event.target.value)}
-                placeholder={config?.has_webhook_secret ? "Stored server-side. Paste a new secret to replace it." : "whsec_..."}
+                placeholder={
+                  config?.secrets_managed_externally
+                    ? "Managed through environment configuration."
+                    : config?.has_webhook_secret
+                      ? "Stored server-side. Paste a new secret to replace it."
+                      : "whsec_..."
+                }
                 type="password"
                 value={webhookSecret}
               />
             </label>
 
-            <label className="test-field">
+            <label className="console-field">
               <span>Luma API key</span>
               <input
-                className="test-input"
+                className="console-input"
+                disabled={config?.secrets_managed_externally}
                 onChange={(event) => setLumaApiKey(event.target.value)}
-                placeholder={config?.has_luma_api_key ? "Stored server-side. Paste a new key to replace it." : "Paste a Luma API key"}
+                placeholder={
+                  config?.secrets_managed_externally
+                    ? "Managed through environment configuration."
+                    : config?.has_luma_api_key
+                      ? "Stored server-side. Paste a new key to replace it."
+                      : "Paste a Luma API key"
+                }
                 type="password"
                 value={lumaApiKey}
               />

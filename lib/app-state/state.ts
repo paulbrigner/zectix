@@ -1,19 +1,20 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import {
   GetCommand,
   PutCommand,
   QueryCommand,
+  UpdateCommand,
 } from "@aws-sdk/lib-dynamodb";
 import {
   getDynamoDocumentClient,
-  testStateTableName,
-} from "@/lib/test-harness/dynamodb";
+  appStateTableName,
+} from "@/lib/app-state/dynamodb";
 import type {
-  TestConfigRecord,
-  TestDashboardData,
-  TestSession,
-  TestWebhookEvent,
-} from "@/lib/test-harness/types";
+  RuntimeConfigRecord,
+  DashboardData,
+  CheckoutSession,
+  WebhookEvent,
+} from "@/lib/app-state/types";
 import {
   asBoolean,
   asFiniteNumber,
@@ -21,12 +22,14 @@ import {
   asRecord,
   asString,
   defaultConfigRecord,
+  normalizeEmailAddress,
   normalizeCipherPayNetwork,
   normalizeCurrencyCode,
   nowIso,
   sortByIsoDateDesc,
   toPublicConfig,
-} from "@/lib/test-harness/utils";
+} from "@/lib/app-state/utils";
+import { isExternalSecretManagementEnabled } from "@/lib/runtime-env";
 
 const CONFIG_KEY = {
   pk: "CONFIG",
@@ -47,6 +50,33 @@ function webhookKey(eventId: string, receivedAt: string) {
   };
 }
 
+function sessionLookupPartition(eventApiId: string, attendeeEmail: string) {
+  return `SESSION_LOOKUP#${eventApiId}#${normalizeEmailAddress(attendeeEmail)}`;
+}
+
+function sessionTicketLookupPartition(
+  eventApiId: string,
+  attendeeEmail: string,
+  ticketTypeApiId: string | null | undefined,
+) {
+  return `${sessionLookupPartition(eventApiId, attendeeEmail)}#${ticketTypeApiId || "_"}`;
+}
+
+function sessionLookupSortKey(createdAt: string | null, sessionId: string) {
+  return `${createdAt || nowIso()}#${sessionId}`;
+}
+
+function checkoutRateLimitKey(scope: string, identifier: string, windowStart: string) {
+  return {
+    pk: `RATE_LIMIT#${scope}#${identifier}`,
+    sk: windowStart,
+  };
+}
+
+function hashIdentifier(value: string) {
+  return createHash("sha256").update(value).digest("hex").slice(0, 24);
+}
+
 function isMissingLocalStateError(error: unknown) {
   const candidate = error as { name?: string; message?: string } | null;
   const message = candidate?.message || "";
@@ -60,8 +90,8 @@ function isMissingLocalStateError(error: unknown) {
   );
 }
 
-function envConfigPatch(): Partial<TestConfigRecord> {
-  const patch: Partial<TestConfigRecord> = {};
+function envConfigPatch(): Partial<RuntimeConfigRecord> {
+  const patch: Partial<RuntimeConfigRecord> = {};
 
   if (process.env.CIPHERPAY_NETWORK === "mainnet") {
     patch.network = "mainnet";
@@ -97,16 +127,23 @@ function envConfigPatch(): Partial<TestConfigRecord> {
   return patch;
 }
 
-function normalizeConfigRecord(value: unknown): TestConfigRecord {
+function normalizeConfigRecord(value: unknown): RuntimeConfigRecord {
   const item = asRecord(value);
+  const envPatch = envConfigPatch();
   const fallback = defaultConfigRecord(
-    normalizeCipherPayNetwork(envConfigPatch().network),
+    normalizeCipherPayNetwork(envPatch.network),
   );
   const merged = {
     ...fallback,
     ...(item || {}),
-    ...envConfigPatch(),
+    ...envPatch,
   };
+
+  if (isExternalSecretManagementEnabled()) {
+    merged.api_key = envPatch.api_key || null;
+    merged.webhook_secret = envPatch.webhook_secret || null;
+    merged.luma_api_key = envPatch.luma_api_key || null;
+  }
 
   return {
     network: normalizeCipherPayNetwork(merged.network),
@@ -121,7 +158,7 @@ function normalizeConfigRecord(value: unknown): TestConfigRecord {
   };
 }
 
-function normalizeSession(value: unknown): TestSession | null {
+function normalizeSession(value: unknown): CheckoutSession | null {
   const item = asRecord(value);
   if (!item) return null;
 
@@ -174,7 +211,7 @@ function normalizeSession(value: unknown): TestSession | null {
       asString(item.status) === "confirmed" ||
       asString(item.status) === "expired" ||
       asString(item.status) === "refunded"
-        ? (item.status as TestSession["status"])
+        ? (item.status as CheckoutSession["status"])
         : "unknown",
     registration_status:
       item.registration_status === "registered"
@@ -197,7 +234,7 @@ function normalizeSession(value: unknown): TestSession | null {
   };
 }
 
-function normalizeWebhook(value: unknown): TestWebhookEvent | null {
+function normalizeWebhook(value: unknown): WebhookEvent | null {
   const item = asRecord(value);
   if (!item) return null;
 
@@ -222,7 +259,7 @@ async function queryAllSessions() {
   try {
     const response = await getDynamoDocumentClient().send(
       new QueryCommand({
-        TableName: testStateTableName(),
+        TableName: appStateTableName(),
         KeyConditionExpression: "pk = :pk",
         ExpressionAttributeValues: {
           ":pk": "SESSION",
@@ -231,7 +268,7 @@ async function queryAllSessions() {
     );
 
     return sortByIsoDateDesc(
-      (response.Items || []).map(normalizeSession).filter(Boolean) as TestSession[],
+      (response.Items || []).map(normalizeSession).filter(Boolean) as CheckoutSession[],
       (item) => item.created_at,
     );
   } catch (error) {
@@ -247,7 +284,7 @@ export async function getRuntimeConfig(options?: { allowMissingTable?: boolean }
   try {
     const response = await getDynamoDocumentClient().send(
       new GetCommand({
-        TableName: testStateTableName(),
+        TableName: appStateTableName(),
         Key: CONFIG_KEY,
       }),
     );
@@ -263,20 +300,28 @@ export async function getRuntimeConfig(options?: { allowMissingTable?: boolean }
 }
 
 export async function updateRuntimeConfig(
-  patch: Partial<TestConfigRecord>,
-): Promise<TestConfigRecord> {
+  patch: Partial<RuntimeConfigRecord>,
+): Promise<RuntimeConfigRecord> {
   const current = await getRuntimeConfig({ allowMissingTable: true });
   const timestamp = nowIso();
+  const nextPatch = isExternalSecretManagementEnabled()
+    ? {
+        ...patch,
+        api_key: null,
+        webhook_secret: null,
+        luma_api_key: null,
+      }
+    : patch;
   const next = normalizeConfigRecord({
     ...current,
-    ...patch,
+    ...nextPatch,
     created_at: current.created_at || timestamp,
     updated_at: timestamp,
   });
 
   await getDynamoDocumentClient().send(
     new PutCommand({
-      TableName: testStateTableName(),
+      TableName: appStateTableName(),
       Item: {
         ...CONFIG_KEY,
         ...next,
@@ -290,7 +335,7 @@ export async function updateRuntimeConfig(
 export async function getSession(sessionId: string) {
   const response = await getDynamoDocumentClient().send(
     new GetCommand({
-      TableName: testStateTableName(),
+      TableName: appStateTableName(),
       Key: sessionKey(sessionId),
     }),
   );
@@ -298,24 +343,54 @@ export async function getSession(sessionId: string) {
   return normalizeSession(response.Item || null);
 }
 
-export async function putSession(session: TestSession) {
-  await getDynamoDocumentClient().send(
-    new PutCommand({
-      TableName: testStateTableName(),
-      Item: {
-        ...sessionKey(session.session_id),
-        ...session,
-      },
-    }),
-  );
+export async function putSession(session: CheckoutSession) {
+  const lookupSortKey = sessionLookupSortKey(session.created_at, session.session_id);
+  await Promise.all([
+    getDynamoDocumentClient().send(
+      new PutCommand({
+        TableName: appStateTableName(),
+        Item: {
+          ...sessionKey(session.session_id),
+          ...session,
+        },
+      }),
+    ),
+    getDynamoDocumentClient().send(
+      new PutCommand({
+        TableName: appStateTableName(),
+        Item: {
+          pk: sessionLookupPartition(session.event_api_id, session.attendee_email),
+          sk: lookupSortKey,
+          session_id: session.session_id,
+          ticket_type_api_id: session.ticket_type_api_id,
+          created_at: session.created_at,
+        },
+      }),
+    ),
+    getDynamoDocumentClient().send(
+      new PutCommand({
+        TableName: appStateTableName(),
+        Item: {
+          pk: sessionTicketLookupPartition(
+            session.event_api_id,
+            session.attendee_email,
+            session.ticket_type_api_id,
+          ),
+          sk: lookupSortKey,
+          session_id: session.session_id,
+          created_at: session.created_at,
+        },
+      }),
+    ),
+  ]);
 
   return session;
 }
 
 export async function upsertSession(
   sessionId: string,
-  patch: Partial<TestSession>,
-): Promise<TestSession> {
+  patch: Partial<CheckoutSession>,
+): Promise<CheckoutSession> {
   const current = await getSession(sessionId);
   if (!current) {
     throw new Error(`Session ${sessionId} was not found`);
@@ -348,6 +423,23 @@ export async function listSessions(limit = 20) {
   return sessions.slice(0, limit);
 }
 
+async function latestSessionIdFromLookup(partition: string) {
+  const response = await getDynamoDocumentClient().send(
+    new QueryCommand({
+      TableName: appStateTableName(),
+      KeyConditionExpression: "pk = :pk",
+      ExpressionAttributeValues: {
+        ":pk": partition,
+      },
+      Limit: 1,
+      ScanIndexForward: false,
+    }),
+  );
+
+  const item = asRecord(response.Items?.[0]);
+  return asString(item?.session_id);
+}
+
 export async function findLatestSessionForAttendee({
   attendeeEmail,
   eventApiId,
@@ -357,36 +449,61 @@ export async function findLatestSessionForAttendee({
   eventApiId: string;
   ticketTypeApiId?: string | null;
 }) {
-  const normalizedEmail = attendeeEmail.trim().toLowerCase();
+  const exactPartition = ticketTypeApiId
+    ? sessionTicketLookupPartition(eventApiId, attendeeEmail, ticketTypeApiId)
+    : null;
+  const genericPartition = sessionLookupPartition(eventApiId, attendeeEmail);
+
+  const exactSessionId = exactPartition
+    ? await latestSessionIdFromLookup(exactPartition).catch(() => null)
+    : null;
+  if (exactSessionId) {
+    const exactSession = await getSession(exactSessionId);
+    if (exactSession) {
+      return exactSession;
+    }
+  }
+
+  const genericSessionId = await latestSessionIdFromLookup(genericPartition).catch(
+    () => null,
+  );
+  if (genericSessionId) {
+    const genericSession = await getSession(genericSessionId);
+    if (genericSession && (!ticketTypeApiId || genericSession.ticket_type_api_id === ticketTypeApiId)) {
+      return genericSession;
+    }
+  }
+
+  const normalizedEmail = normalizeEmailAddress(attendeeEmail);
   const sessions = await queryAllSessions();
-  const matches = sessions.filter((session) => {
-    if (session.event_api_id !== eventApiId) {
-      return false;
-    }
+  return (
+    sessions.find((session) => {
+      if (session.event_api_id !== eventApiId) {
+        return false;
+      }
 
-    if (session.attendee_email.trim().toLowerCase() !== normalizedEmail) {
-      return false;
-    }
+      if (normalizeEmailAddress(session.attendee_email) !== normalizedEmail) {
+        return false;
+      }
 
-    if (ticketTypeApiId && session.ticket_type_api_id !== ticketTypeApiId) {
-      return false;
-    }
+      if (ticketTypeApiId && session.ticket_type_api_id !== ticketTypeApiId) {
+        return false;
+      }
 
-    return true;
-  });
-
-  return matches[0] || null;
+      return true;
+    }) || null
+  );
 }
 
 export async function putWebhookEvent(
-  event: Omit<TestWebhookEvent, "event_id" | "received_at"> & {
+  event: Omit<WebhookEvent, "event_id" | "received_at"> & {
     event_id?: string;
     received_at?: string | null;
   },
 ) {
   const eventId = event.event_id || randomUUID();
   const receivedAt = event.received_at || nowIso();
-  const next: TestWebhookEvent = {
+  const next: WebhookEvent = {
     event_id: eventId,
     cipherpay_invoice_id: event.cipherpay_invoice_id,
     event_type: event.event_type,
@@ -401,7 +518,7 @@ export async function putWebhookEvent(
 
   await getDynamoDocumentClient().send(
     new PutCommand({
-      TableName: testStateTableName(),
+      TableName: appStateTableName(),
       Item: {
         ...webhookKey(eventId, receivedAt),
         ...next,
@@ -416,7 +533,7 @@ export async function listWebhookEvents(limit = 20) {
   try {
     const response = await getDynamoDocumentClient().send(
       new QueryCommand({
-        TableName: testStateTableName(),
+        TableName: appStateTableName(),
         KeyConditionExpression: "pk = :pk",
         ExpressionAttributeValues: {
           ":pk": "WEBHOOK",
@@ -427,7 +544,7 @@ export async function listWebhookEvents(limit = 20) {
     return sortByIsoDateDesc(
       (response.Items || [])
         .map(normalizeWebhook)
-        .filter(Boolean) as TestWebhookEvent[],
+        .filter(Boolean) as WebhookEvent[],
       (item) => item.received_at,
     ).slice(0, limit);
   } catch (error) {
@@ -439,7 +556,90 @@ export async function listWebhookEvents(limit = 20) {
   }
 }
 
-export async function getDashboardData(): Promise<TestDashboardData> {
+export async function consumeCheckoutRateLimit({
+  ipAddress,
+  attendeeEmail,
+  eventApiId,
+}: {
+  ipAddress: string | null;
+  attendeeEmail: string;
+  eventApiId: string;
+}) {
+  const now = Date.now();
+  const windowSeconds = 10 * 60;
+  const windowStart = new Date(
+    Math.floor(now / (windowSeconds * 1000)) * windowSeconds * 1000,
+  ).toISOString();
+  const expiresAt = new Date(now + windowSeconds * 1000).toISOString();
+  const timestamp = nowIso();
+  const ipIdentifier = hashIdentifier(ipAddress || "unknown");
+  const attendeeIdentifier = hashIdentifier(
+    `${normalizeEmailAddress(attendeeEmail)}#${eventApiId}`,
+  );
+
+  const [ipResult, attendeeResult] = await Promise.all([
+    getDynamoDocumentClient().send(
+      new UpdateCommand({
+        TableName: appStateTableName(),
+        Key: checkoutRateLimitKey("IP", ipIdentifier, windowStart),
+        UpdateExpression:
+          "SET request_count = if_not_exists(request_count, :zero) + :one, expires_at = :expires_at, updated_at = :updated_at, created_at = if_not_exists(created_at, :created_at)",
+        ExpressionAttributeValues: {
+          ":zero": 0,
+          ":one": 1,
+          ":expires_at": expiresAt,
+          ":updated_at": timestamp,
+          ":created_at": timestamp,
+        },
+        ReturnValues: "ALL_NEW",
+      }),
+    ),
+    getDynamoDocumentClient().send(
+      new UpdateCommand({
+        TableName: appStateTableName(),
+        Key: checkoutRateLimitKey("ATTENDEE", attendeeIdentifier, windowStart),
+        UpdateExpression:
+          "SET request_count = if_not_exists(request_count, :zero) + :one, expires_at = :expires_at, updated_at = :updated_at, created_at = if_not_exists(created_at, :created_at)",
+        ExpressionAttributeValues: {
+          ":zero": 0,
+          ":one": 1,
+          ":expires_at": expiresAt,
+          ":updated_at": timestamp,
+          ":created_at": timestamp,
+        },
+        ReturnValues: "ALL_NEW",
+      }),
+    ),
+  ]);
+
+  const ipCount = asFiniteNumber(asRecord(ipResult.Attributes)?.request_count) || 0;
+  if (ipCount > 12) {
+    return {
+      ok: false,
+      retry_after_seconds: windowSeconds,
+      reason: "Too many checkout attempts from this IP. Please wait a few minutes and try again.",
+    };
+  }
+
+  const attendeeCount =
+    asFiniteNumber(asRecord(attendeeResult.Attributes)?.request_count) || 0;
+  if (attendeeCount > 4) {
+    return {
+      ok: false,
+      retry_after_seconds: windowSeconds,
+      reason:
+        "Too many checkout attempts for this attendee and event. Please wait a few minutes and try again.",
+    };
+  }
+
+  return {
+    ok: true,
+    retry_after_seconds: null,
+    reason: null,
+  };
+}
+
+export async function getDashboardData(): Promise<DashboardData> {
   const [config, sessions, webhooks] = await Promise.all([
     getRuntimeConfig({ allowMissingTable: true }),
     listSessions(25),
