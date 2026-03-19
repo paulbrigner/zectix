@@ -4,7 +4,6 @@ import QRCode from "qrcode";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { LocalDateTime } from "@/components/LocalDateTime";
 import { appApiPath, readJsonOrThrow } from "@/app/(console)/client-utils";
-import { TestStatusPill } from "@/app/(console)/status-pill";
 import type { LumaEvent } from "@/lib/luma";
 import type { TestSession } from "@/lib/test-harness/types";
 import { formatFiatAmount } from "@/lib/test-harness/utils";
@@ -18,60 +17,6 @@ type CheckoutStatusCardProps = {
   event: LumaEvent | null;
   lumaEventUrl: string | null;
 };
-
-function findAttendeeTicketUrl(
-  value: Record<string, unknown> | null | undefined,
-): string | null {
-  if (!value) return null;
-
-  const direct =
-    typeof value.ticket_url === "string"
-      ? value.ticket_url
-      : typeof value.ticket_details_url === "string"
-        ? value.ticket_details_url
-      : typeof value.registration_url === "string"
-        ? value.registration_url
-        : typeof value.guest_url === "string"
-          ? value.guest_url
-          : typeof value.attendee_ticket_url === "string"
-            ? value.attendee_ticket_url
-          : null;
-  if (direct) {
-    return direct;
-  }
-
-  for (const nested of Object.values(value)) {
-    if (Array.isArray(nested)) {
-      for (const entry of nested) {
-        if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
-          continue;
-        }
-
-        const nestedUrl = findAttendeeTicketUrl(
-          entry as Record<string, unknown>,
-        );
-        if (nestedUrl) {
-          return nestedUrl;
-        }
-      }
-
-      continue;
-    }
-
-    if (!nested || typeof nested !== "object") {
-      continue;
-    }
-
-    const nestedUrl = findAttendeeTicketUrl(
-      nested as Record<string, unknown>,
-    );
-    if (nestedUrl) {
-      return nestedUrl;
-    }
-  }
-
-  return null;
-}
 
 function readRegistrationGuest(value: Record<string, unknown> | null | undefined) {
   if (!value) return null;
@@ -116,23 +61,23 @@ function escapeHtml(value: string) {
 
 function statusMessage(session: TestSession) {
   if (session.registration_status === "registered") {
-    return "Payment was accepted and the Luma registration has been completed.";
+    return "Your payment was accepted and your attendee pass is ready.";
   }
 
   if (session.registration_status === "failed") {
-    return "Payment was accepted, but Luma registration still needs another retry.";
+    return "Your payment was accepted. We are still finalizing the Luma registration.";
   }
 
   if (session.status === "confirmed") {
-    return "Payment is confirmed. Waiting for the Luma registration call to finish.";
+    return "Your payment is confirmed. Preparing the attendee pass now.";
   }
 
   if (session.status === "detected") {
-    return "Payment has been accepted. Creating your Luma ticket now.";
+    return "Your payment has been accepted. Creating your Luma ticket now.";
   }
 
   if (session.status === "underpaid") {
-    return "CipherPay marked the payment as underpaid. Review the amount sent and use the payment details below for the remaining balance.";
+    return "The payment is marked as underpaid. Use the details below to send the remaining balance.";
   }
 
   if (session.status === "expired") {
@@ -143,7 +88,20 @@ function statusMessage(session: TestSession) {
     return "This invoice was refunded in CipherPay.";
   }
 
-  return "Waiting for payment to be detected from the QR code, wallet link, or copied address below.";
+  return "Send the exact amount below using the QR code, copied address, or wallet button.";
+}
+
+function paymentStateLabel(session: TestSession) {
+  if (session.registration_status === "registered") return "Payment accepted";
+  if (session.registration_status === "failed") return "Registration pending";
+  if (session.status === "confirmed") return "Payment confirmed";
+  if (session.status === "detected") return "Payment accepted";
+  if (session.status === "underpaid") return "Underpaid";
+  if (session.status === "expired") return "Expired";
+  if (session.status === "refunded") return "Refunded";
+  if (session.status === "pending") return "Awaiting payment";
+  if (session.status === "draft") return "Awaiting payment";
+  return session.status;
 }
 
 export function CheckoutStatusCard({
@@ -161,7 +119,6 @@ export function CheckoutStatusCard({
     session.registration_status === "registered" ||
     session.registration_status === "failed";
   const registrationGuest = readRegistrationGuest(session.luma_registration_json);
-  const attendeeTicketUrl = findAttendeeTicketUrl(session.luma_registration_json);
   const checkInQrUrl =
     registrationGuest && typeof registrationGuest.check_in_qr_code === "string"
       ? registrationGuest.check_in_qr_code
@@ -629,20 +586,22 @@ export function CheckoutStatusCard({
   }, [copyNotice]);
 
   return (
-    <div className="checkout-status-grid">
-      <div className="checkout-main-stack">
-        <section className="checkout-main-card">
-          <div className="checkout-status-header">
+    <div className="status-layout">
+      <div className="status-main">
+        <section className="status-card">
+          <div className="status-card-head">
             <div>
               <p className="eyebrow">Checkout session</p>
               <h2>{session.event_name}</h2>
             </div>
-            <TestStatusPill status={session.status} />
+            <div className="status-badge-wrap">
+              <span className="public-status-chip">{paymentStateLabel(session)}</span>
+            </div>
           </div>
 
           <p className="checkout-status-message">{statusMessage(session)}</p>
 
-          <div className="checkout-key-grid">
+          <div className="status-detail-grid">
             <div className="checkout-key-value">
               <span>Attendee</span>
               <strong>{session.attendee_name}</strong>
@@ -650,7 +609,7 @@ export function CheckoutStatusCard({
             </div>
             <div className="checkout-key-value">
               <span>Ticket</span>
-              <strong>{session.ticket_type_name || "Default Luma ticket"}</strong>
+              <strong>{session.ticket_type_name || "Luma ticket"}</strong>
               <p className="subtle-text">
                 {formatFiatAmount(session.amount, session.currency)}
               </p>
@@ -663,34 +622,27 @@ export function CheckoutStatusCard({
               </p>
             </div>
             <div className="checkout-key-value">
-              <span>Luma registration</span>
-              <strong>{session.registration_status}</strong>
+              <span>Registration</span>
+              <strong>
+                {session.registration_status === "registered"
+                  ? "Ready"
+                  : session.registration_status}
+              </strong>
               <p className="subtle-text">
                 {session.registered_at ? (
                   <>
-                    Registered <LocalDateTime iso={session.registered_at} />
+                    Updated <LocalDateTime iso={session.registered_at} />
                   </>
                 ) : session.registration_error ? (
                   session.registration_error
                 ) : (
-                  "Waiting for payment confirmation"
+                  "Waiting for payment acceptance"
                 )}
               </p>
             </div>
           </div>
 
-          <div className="checkout-submit-row">
-            {!paymentAccepted && session.cipherpay_zcash_uri ? (
-              <a
-                className="button"
-                href={session.cipherpay_zcash_uri}
-              >
-                Open wallet
-              </a>
-            ) : null}
-          </div>
-
-          <div className="checkout-timeline">
+          <div className="status-timeline">
             <div className="checkout-key-value">
               <span>Created</span>
               <strong>
@@ -715,7 +667,7 @@ export function CheckoutStatusCard({
             </div>
             {!paymentAccepted ? (
               <div className="checkout-key-value">
-                <span>Invoice expiry</span>
+                <span>Invoice expires</span>
                 <strong>
                   {session.cipherpay_expires_at ? (
                     <LocalDateTime iso={session.cipherpay_expires_at} />
@@ -728,10 +680,10 @@ export function CheckoutStatusCard({
           </div>
         </section>
 
-        <section className="checkout-main-card">
-          <p className="eyebrow">Event Details</p>
-          <h2>Event Details</h2>
-          <div className="checkout-key-grid">
+        <section className="status-card">
+          <p className="eyebrow">Event details</p>
+          <h2>Event details</h2>
+          <div className="status-detail-grid">
             <div className="checkout-key-value">
               <span>Starts</span>
               <strong>
@@ -747,25 +699,119 @@ export function CheckoutStatusCard({
             </div>
             <div className="checkout-key-value">
               <span>Location</span>
-              <strong>{event?.location_label || "View the Luma event for venue details"}</strong>
+              <strong>
+                {event?.location_label || "View the Luma event for venue details"}
+              </strong>
               {event?.location_note ? (
                 <p className="subtle-text">{event.location_note}</p>
               ) : null}
             </div>
           </div>
           <p className="checkout-status-message">
-            {event?.description || "Event logistics will continue to be available on the Luma event page."}
+            {event?.description ||
+              "Event logistics will remain available on the Luma event page."}
           </p>
         </section>
       </div>
 
-      <aside className="checkout-sidebar">
-        <section className="checkout-sidebar-card">
-          {paymentAccepted ? (
-            <div className="checkout-payment-accepted">
-              <p className="eyebrow">Payment Accepted</p>
-              <div className="checkout-payment-title-row">
-                <h3>Payment Accepted</h3>
+      <aside className="status-sidebar">
+        {!paymentAccepted ? (
+          <section className="payment-panel">
+            <div className="payment-panel-head">
+              <div>
+                <p className="eyebrow">Pay with Zcash</p>
+                <h3>Complete your ticket purchase</h3>
+              </div>
+              {session.cipherpay_expires_at ? (
+                <span className="status-pill-lite">
+                  Expires <LocalDateTime iso={session.cipherpay_expires_at} />
+                </span>
+              ) : (
+                <span className="status-pill-lite">Awaiting payment</span>
+              )}
+            </div>
+
+            <div className="payment-summary-row">
+              <div className="checkout-key-value">
+                <span>Event</span>
+                <strong>{session.event_name}</strong>
+              </div>
+              <div className="checkout-key-value">
+                <span>Ticket</span>
+                <strong>{session.ticket_type_name || "Luma ticket"}</strong>
+              </div>
+            </div>
+
+            <div className="payment-qr-wrap">
+              {qrCodeDataUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  alt="Zcash payment QR code"
+                  className="checkout-qr-image"
+                  src={qrCodeDataUrl}
+                />
+              ) : (
+                <div className="checkout-qr-fallback">
+                  QR code will appear once CipherPay returns the payment URI.
+                </div>
+              )}
+            </div>
+
+            <div className="payment-key-list">
+              <div className="payment-key-row">
+                <div className="checkout-key-value">
+                  <span>Amount</span>
+                  <strong>{zecAmountLabel(session.cipherpay_price_zec)}</strong>
+                </div>
+              </div>
+              <div className="payment-key-row">
+                <div className="checkout-key-value">
+                  <span>Address</span>
+                  <strong className="checkout-mono">
+                    {session.cipherpay_payment_address || "Not returned yet"}
+                  </strong>
+                </div>
+                <button
+                  className="button button-secondary button-small"
+                  disabled={!session.cipherpay_payment_address}
+                  onClick={() =>
+                    void copyValue(session.cipherpay_payment_address, "Payment address")
+                  }
+                  type="button"
+                >
+                  Copy address
+                </button>
+              </div>
+            </div>
+
+            <div className="payment-action-stack">
+              {session.cipherpay_zcash_uri ? (
+                <a className="button" href={session.cipherpay_zcash_uri}>
+                  Open wallet
+                </a>
+              ) : null}
+              <button
+                className="button button-secondary"
+                disabled={!session.cipherpay_zcash_uri}
+                onClick={() =>
+                  void copyValue(session.cipherpay_zcash_uri, "Zcash URI")
+                }
+                type="button"
+              >
+                Copy payment URI
+              </button>
+            </div>
+
+            {copyNotice ? <p className="test-valid-text">{copyNotice}</p> : null}
+          </section>
+        ) : (
+          <section className="pass-shell">
+            <div className="pass-head">
+              <div>
+                <p className="eyebrow">Attendee pass</p>
+                <h3>You&apos;re in</h3>
+              </div>
+              <div className="pass-actions">
                 <button
                   aria-label="Open printer-friendly pass"
                   className="checkout-print-button"
@@ -790,193 +836,95 @@ export function CheckoutStatusCard({
                     <circle cx="17.5" cy="10.5" fill="currentColor" r="1" />
                   </svg>
                 </button>
-              </div>
-              <p className="subtle-text">
-                Your payment has been received. Luma will send your ticket and
-                calendar invite by email.
-              </p>
-
-              {lumaEventUrl ? (
-                <div className="checkout-link-stack">
+                {lumaEventUrl ? (
                   <a
-                    className="button button-secondary"
+                    className="button button-secondary button-small"
                     href={lumaEventUrl}
                     rel="noreferrer noopener"
                     target="_blank"
                   >
-                    Open Luma event
+                    Open event
                   </a>
-                </div>
-              ) : null}
-
-              {registrationGuest ? (
-                <div className="checkout-luma-pass">
-                  <div className="checkout-luma-pass-qr">
-                    <span className="checkout-pass-label">Entry QR</span>
-                    {entryQrDataUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        alt="Luma entry QR code"
-                        className="checkout-qr-image"
-                        src={entryQrDataUrl}
-                      />
-                    ) : (
-                      <div className="checkout-qr-fallback">
-                        Luma check-in QR will appear here once the guest record
-                        includes it.
-                      </div>
-                    )}
-                    <p className="subtle-text">
-                      Present this code at event check-in.
-                    </p>
-                  </div>
-
-                  <div className="checkout-luma-pass-body">
-                    <div className="checkout-payment-grid">
-                      <div className="checkout-key-value">
-                        <span>Event</span>
-                        <strong>{session.event_name}</strong>
-                        <p className="subtle-text">Paid via CipherPay</p>
-                      </div>
-                      <div className="checkout-key-value">
-                        <span>Ticket</span>
-                        <strong>{lumaTicketName}</strong>
-                        <p className="subtle-text">
-                          {formatFiatAmount(session.amount, session.currency)}
-                        </p>
-                      </div>
-                      <div className="checkout-key-value">
-                        <span>Attendee</span>
-                        <strong>
-                          {(typeof registrationGuest.user_name === "string"
-                            ? registrationGuest.user_name
-                            : null) || session.attendee_name}
-                        </strong>
-                        <p className="subtle-text">
-                          {(typeof registrationGuest.user_email === "string"
-                            ? registrationGuest.user_email
-                            : null) || session.attendee_email}
-                        </p>
-                      </div>
-                      <div className="checkout-key-value">
-                        <span>Entry</span>
-                        <strong>
-                          {typeof registrationGuest.approval_status === "string"
-                            ? registrationGuest.approval_status
-                            : "approved"}
-                        </strong>
-                        <p className="subtle-text">
-                          Guest ID{" "}
-                          {typeof registrationGuest.id === "string"
-                            ? registrationGuest.id
-                            : "pending"}
-                        </p>
-                      </div>
-                      <div className="checkout-key-value">
-                        <span>Registered</span>
-                        <strong>
-                          {lumaRegisteredAt ? (
-                            <LocalDateTime iso={lumaRegisteredAt} />
-                          ) : (
-                            "Processing"
-                          )}
-                        </strong>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : null}
-
-              <div className="checkout-link-stack">
-                {attendeeTicketUrl ? (
-                  <a
-                    className="button"
-                    href={attendeeTicketUrl}
-                    rel="noreferrer noopener"
-                    target="_blank"
-                  >
-                    Open Luma ticket
-                  </a>
-                ) : null}
-                {!registrationGuest ? (
-                  <button
-                    className="button"
-                    disabled
-                    type="button"
-                  >
-                    Processing ticket details
-                  </button>
                 ) : null}
               </div>
             </div>
-          ) : (
-            <>
-              <h3>Pay with Zcash</h3>
-              {qrCodeDataUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  alt="Zcash payment QR code"
-                  className="checkout-qr-image"
-                  src={qrCodeDataUrl}
-                />
-              ) : (
-                <div className="checkout-qr-fallback">
-                  QR code will appear once CipherPay returns the payment URI.
+
+            <div className="pass-banner">
+              Your ticket is ready. Luma will email your ticket and calendar
+              invite.
+            </div>
+
+            {registrationGuest ? (
+              <div className="pass-grid">
+                <div className="pass-qr-card">
+                  {entryQrDataUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      alt="Luma entry QR code"
+                      className="checkout-qr-image"
+                      src={entryQrDataUrl}
+                    />
+                  ) : (
+                    <div className="checkout-qr-fallback">
+                      Luma check-in QR will appear here as soon as it is available.
+                    </div>
+                  )}
+                  <p className="subtle-text">Entry QR</p>
                 </div>
-              )}
-              <div className="checkout-detail-list">
-                <div className="checkout-key-value">
-                  <span>Quoted amount</span>
-                  <strong>{zecAmountLabel(session.cipherpay_price_zec)}</strong>
-                </div>
-                <div className="checkout-key-value">
-                  <span>Payment address</span>
-                  <strong className="checkout-mono">
-                    {session.cipherpay_payment_address || "Not returned yet"}
-                  </strong>
-                  <button
-                    className="button button-secondary button-small"
-                    disabled={!session.cipherpay_payment_address}
-                    onClick={() =>
-                      void copyValue(session.cipherpay_payment_address, "Payment address")
-                    }
-                    type="button"
-                  >
-                    Copy address
-                  </button>
-                </div>
-                <div className="checkout-key-value">
-                  <span>Zcash URI</span>
-                  <strong className="checkout-mono">
-                    {session.cipherpay_zcash_uri || "Not returned yet"}
-                  </strong>
-                  <div className="button-row">
-                    <button
-                      className="button button-secondary button-small"
-                      disabled={!session.cipherpay_zcash_uri}
-                      onClick={() =>
-                        void copyValue(session.cipherpay_zcash_uri, "Zcash URI")
-                      }
-                      type="button"
-                    >
-                      Copy URI
-                    </button>
-                    {session.cipherpay_zcash_uri ? (
-                      <a
-                        className="button button-secondary button-small"
-                        href={session.cipherpay_zcash_uri}
-                      >
-                        Open wallet
-                      </a>
-                    ) : null}
+
+                <div className="pass-details">
+                  <div className="pass-detail-card">
+                    <span>Event</span>
+                    <strong>{session.event_name}</strong>
+                    <p>
+                      {event?.start_at ? <LocalDateTime iso={event.start_at} /> : "Event time pending"}
+                    </p>
+                  </div>
+                  <div className="pass-detail-card">
+                    <span>Attendee</span>
+                    <strong>
+                      {(typeof registrationGuest.user_name === "string"
+                        ? registrationGuest.user_name
+                        : null) || session.attendee_name}
+                    </strong>
+                    <p>
+                      {(typeof registrationGuest.user_email === "string"
+                        ? registrationGuest.user_email
+                        : null) || session.attendee_email}
+                    </p>
+                  </div>
+                  <div className="pass-detail-card">
+                    <span>Ticket</span>
+                    <strong>{lumaTicketName}</strong>
+                    <p>Paid with Zcash</p>
+                  </div>
+                  <div className="pass-detail-card">
+                    <span>Entry status</span>
+                    <strong>
+                      {typeof registrationGuest.approval_status === "string"
+                        ? registrationGuest.approval_status
+                        : "approved"}
+                    </strong>
+                    <p>
+                      Guest ID{" "}
+                      {typeof registrationGuest.id === "string"
+                        ? registrationGuest.id
+                        : "pending"}
+                    </p>
                   </div>
                 </div>
               </div>
-              {copyNotice ? <p className="test-valid-text">{copyNotice}</p> : null}
-            </>
-          )}
-        </section>
-
+            ) : (
+              <div className="pass-loading-card">
+                <strong>Preparing your pass</strong>
+                <p className="subtle-text">
+                  Payment has been accepted. The Luma guest record is still being
+                  attached.
+                </p>
+              </div>
+            )}
+          </section>
+        )}
       </aside>
     </div>
   );

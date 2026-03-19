@@ -33,9 +33,8 @@ export default async function EventPage({
           <p className="eyebrow">Setup required</p>
           <h1>Save your Luma API key first</h1>
           <p className="subtle-text">
-            This event checkout flow loads the event and final registration from
-            Luma. Save your local test settings on the admin page, then reopen
-            this event.
+            Save your Luma API key on the admin page, then reopen this event to
+            load the live ticket options.
           </p>
           <div className="button-row">
             <Link className="button" href="/admin">
@@ -70,118 +69,83 @@ export default async function EventPage({
 
   return (
     <main className="page checkout-shell">
-      <section className="card checkout-card">
-        <div className="checkout-hero">
-          <div className="checkout-hero-header">
-            <div>
+      <section className="card event-page-card">
+        <div className="event-page-topbar">
+          <div className="public-brand">
+            <span className="public-brand-badge">Z</span>
+            <span>LumaZcash</span>
+          </div>
+          <div className="event-page-actions">
+            {event.url ? (
+              <a
+                className="button button-secondary button-small"
+                href={event.url}
+                rel="noreferrer noopener"
+                target="_blank"
+              >
+                Open on Luma
+              </a>
+            ) : null}
+            <Link className="button button-secondary button-small" href="/">
+              Back to events
+            </Link>
+          </div>
+        </div>
+
+        <div className="event-page-hero">
+          <div className="event-page-lead">
+            {event.cover_url ? (
+              <div className="event-page-media">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  alt={event.name}
+                  className="event-page-image"
+                  src={event.cover_url}
+                />
+              </div>
+            ) : null}
+
+            <div className="event-page-copy">
               <p className="eyebrow">Event checkout</p>
-            </div>
-            <div className="checkout-hero-actions">
-              {event.url ? (
-                <a
-                  className="button button-secondary button-small"
-                  href={event.url}
-                  rel="noreferrer noopener"
-                  target="_blank"
-                >
-                  Open Luma event
-                </a>
-              ) : null}
-              <Link className="button button-secondary button-small" href="/dashboard">
-                Open dashboard
-              </Link>
-              <Link className="button button-secondary button-small" href="/">
-                Back home
-              </Link>
+              <h1>{event.name}</h1>
+              <p className="event-page-lede subtle-text">
+                Choose a ticket and enter the attendee details Luma needs for
+                registration.
+              </p>
             </div>
           </div>
 
-          <div className="checkout-hero-body">
-            <div className="checkout-hero-copy">
-              <div className="checkout-hero-lead">
-                {event.cover_url ? (
-                  <div className="checkout-hero-media">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      alt={event.name}
-                      className="checkout-hero-image"
-                      src={event.cover_url}
-                    />
-                  </div>
-                ) : null}
-                <div className="checkout-hero-lead-copy">
-                  <h1>{event.name}</h1>
-                  <p className="subtle-text">
-                    Create a CipherPay invoice, pay directly from the QR code or
-                    wallet link in this app, then let the local flow finish the Luma
-                    registration after the payment is accepted.
-                  </p>
-                </div>
-              </div>
-              <div className="checkout-hero-meta">
-                <span>Starts {eventDateLabel(event.start_at, event.timezone || undefined)}</span>
-                {event.end_at ? (
-                  <span>Ends {eventDateLabel(event.end_at, event.timezone || undefined)}</span>
-                ) : null}
-                <span>{event.timezone || "America/New_York"}</span>
-                {event.location_label ? <span>{event.location_label}</span> : null}
-              </div>
-              {event.location_note ? (
-                <p className="checkout-hero-detail subtle-text">{event.location_note}</p>
-              ) : null}
-              {event.description ? (
-                <p className="checkout-hero-detail subtle-text">{event.description}</p>
-              ) : null}
-            </div>
+          <div className="event-page-chips">
+            <span>Starts {eventDateLabel(event.start_at, event.timezone || undefined)}</span>
+            {event.location_label ? <span>{event.location_label}</span> : null}
+            <span>Email ticket delivery</span>
           </div>
+
+          {event.end_at || event.timezone ? (
+            <div className="event-page-detail-row subtle-text">
+              {event.end_at ? (
+                <span>Ends {eventDateLabel(event.end_at, event.timezone || undefined)}</span>
+              ) : null}
+              {event.timezone ? <span>{event.timezone}</span> : null}
+            </div>
+          ) : null}
+
+          {event.location_note ? (
+            <p className="event-page-detail subtle-text">{event.location_note}</p>
+          ) : null}
+          {event.description ? (
+            <p className="event-page-detail subtle-text">{event.description}</p>
+          ) : null}
         </div>
 
-        <div className="checkout-layout">
-          <section className="checkout-main-card">
-            <EventCheckoutForm
-              checkoutEnabled={checkoutEnabled}
-              disabledReason={disabledReason}
-              eventApiId={event.api_id}
-              ticketTypes={ticketTypes}
-            />
-          </section>
-
-          <aside className="checkout-sidebar">
-            <section className="checkout-sidebar-card">
-              <h2>How this flow works</h2>
-              <div className="checkout-flow-list">
-                <div className="checkout-flow-item">
-                  <span className="checkout-flow-bullet" />
-                  <div>
-                    <strong>Create the invoice</strong>
-                    <p>Choose a Luma ticket and generate the matching CipherPay invoice in this app.</p>
-                  </div>
-                </div>
-                <div className="checkout-flow-item">
-                  <span className="checkout-flow-bullet" />
-                  <div>
-                    <strong>Pay with Zcash</strong>
-                    <p>Use the in-app QR code, payment address, or wallet deep link to send the payment.</p>
-                  </div>
-                </div>
-                <div className="checkout-flow-item">
-                  <span className="checkout-flow-bullet" />
-                  <div>
-                    <strong>Stay on the status page</strong>
-                    <p>Keep the checkout open while CipherPay detects the payment and the attendee pass is prepared.</p>
-                  </div>
-                </div>
-                <div className="checkout-flow-item">
-                  <span className="checkout-flow-bullet" />
-                  <div>
-                    <strong>Finish registration</strong>
-                    <p>Once payment is accepted, the app creates the Luma guest registration and shows the entry QR here.</p>
-                  </div>
-                </div>
-              </div>
-            </section>
-          </aside>
-        </div>
+        <section className="event-page-form-shell">
+          <EventCheckoutForm
+            checkoutEnabled={checkoutEnabled}
+            disabledReason={disabledReason}
+            eventApiId={event.api_id}
+            ticketTypes={ticketTypes}
+          />
+        </section>
       </section>
     </main>
   );

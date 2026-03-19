@@ -116,19 +116,18 @@ export function EventCheckoutForm({
   }
 
   return (
-    <form className="checkout-form" onSubmit={handleSubmit}>
-      <div className="checkout-form-section">
-        <div>
-          <h2>Attendee details</h2>
+    <form className="public-checkout-form" onSubmit={handleSubmit}>
+      <section className="public-section-card">
+        <div className="public-section-head">
+          <h2>Attendee</h2>
           <p className="subtle-text">
-            CipherPay creates the invoice, then Luma receives the registration
-            once the Zcash payment is accepted.
+            Luma uses this information for the ticket and calendar invite.
           </p>
         </div>
 
-        <div className="checkout-form-grid">
+        <div className="public-field-grid">
           <label className="test-field">
-            <span>Name</span>
+            <span>Full name</span>
             <input
               autoComplete="name"
               className="test-input"
@@ -153,25 +152,24 @@ export function EventCheckoutForm({
             />
           </label>
         </div>
-      </div>
+      </section>
 
-      <div className="checkout-form-section">
-        <div>
-          <h2>Ticket selection</h2>
+      <section className="public-section-card">
+        <div className="public-section-head">
+          <h2>Tickets</h2>
           <p className="subtle-text">
-            Choose the Luma ticket type to attach after payment. CipherPay
-            invoices are created directly from the fixed price returned by Luma.
+            Select the ticket you want to pay for with Zcash.
           </p>
         </div>
 
         {ticketTypes.length ? (
-          <div className="checkout-ticket-grid">
+          <div className="public-ticket-grid">
             {ticketTypes.map((ticket) => {
               const selected = selectedTicketId === ticket.api_id;
 
               return (
                 <label
-                  className={`checkout-ticket-option${selected ? " checkout-ticket-option-selected" : ""}`}
+                  className={`public-ticket-card${selected ? " public-ticket-card-selected" : ""}`}
                   key={ticket.api_id}
                 >
                   <input
@@ -181,14 +179,18 @@ export function EventCheckoutForm({
                     type="radio"
                     value={ticket.api_id}
                   />
-                  <div>
-                    <p className="checkout-ticket-name">{ticket.name}</p>
-                    <p className="subtle-text">
-                      {ticketPriceLabel(ticket)}
-                    </p>
-                    {ticket.description ? (
-                      <p className="subtle-text">{ticket.description}</p>
-                    ) : null}
+                  <div className="public-ticket-card-body">
+                    <div className="public-ticket-card-top">
+                      <div>
+                        <p className="public-ticket-name">{ticket.name}</p>
+                        {ticket.description ? (
+                          <p className="subtle-text">{ticket.description}</p>
+                        ) : null}
+                      </div>
+                      <span className="public-ticket-price">
+                        {ticketPriceLabel(ticket)}
+                      </span>
+                    </div>
                   </div>
                 </label>
               );
@@ -196,26 +198,37 @@ export function EventCheckoutForm({
           </div>
         ) : (
           <div className="checkout-banner">
-            <strong>No ticket types were returned for this event.</strong>
+            <strong>No tickets are available for this event.</strong>
             <p className="subtle-text">
-              CipherPay checkout is unavailable until Luma exposes at least one
-              active ticket type with a fixed price for this event.
+              Luma must expose at least one active fixed-price ticket before
+              checkout can be created.
             </p>
           </div>
         )}
-      </div>
+      </section>
 
-      {effectiveDisabledReason ? (
-        <div className="checkout-banner checkout-banner-warning">
-          <strong>Checkout is not ready yet.</strong>
-          <p className="subtle-text">{effectiveDisabledReason}</p>
+      <section className="public-section-card public-total-card">
+        <div className="public-total-row">
+          <div>
+            <span className="public-total-label">You&apos;ll pay</span>
+            <strong>{ticketPriceLabel(selectedTicket)}</strong>
+          </div>
+          <span className="public-status-chip">Zcash invoice</span>
         </div>
-      ) : null}
+        <p className="subtle-text">
+          CipherPay quotes the final ZEC amount on the next step.
+        </p>
 
-      {error ? <p className="test-error-text">{error}</p> : null}
-      {notice ? <p className="test-valid-text">{notice}</p> : null}
+        {effectiveDisabledReason ? (
+          <div className="checkout-banner checkout-banner-warning">
+            <strong>Checkout is not ready yet.</strong>
+            <p className="subtle-text">{effectiveDisabledReason}</p>
+          </div>
+        ) : null}
 
-      <div className="checkout-submit-row">
+        {error ? <p className="test-error-text">{error}</p> : null}
+        {notice ? <p className="test-valid-text">{notice}</p> : null}
+
         <button
           className="button"
           disabled={submitting || isPending || !canSubmit}
@@ -223,11 +236,7 @@ export function EventCheckoutForm({
         >
           {submitting || isPending ? "Creating invoice..." : "Continue to payment"}
         </button>
-        <p className="subtle-text">
-          The next screen stays in this app and shows the payment QR code,
-          address, wallet link, and live confirmation status.
-        </p>
-      </div>
+      </section>
     </form>
   );
 }

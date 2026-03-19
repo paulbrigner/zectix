@@ -41,6 +41,20 @@ async function getEvents(): Promise<EventFetchResult> {
   }
 }
 
+function eventDateLabel(value: string, timeZone = "America/New_York") {
+  return new Date(value).toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone,
+  });
+}
+
+function eventLocationLabel(value: string | null) {
+  return value || "Luma event";
+}
+
 function EventListMessage({
   title,
   message,
@@ -99,58 +113,78 @@ export const EventList = async () => {
   }
 
   const { events } = result;
+  const [featuredEvent, ...otherEvents] = events;
 
   return (
-    <div className="home-event-grid">
-      {events.map((event) => (
-        <Link
-          href={`/events/${encodeURIComponent(event.api_id)}`}
-          className="home-event-card"
-          key={event.api_id}
-        >
-          <div className="home-event-card-inner">
-            {event.cover_url && (
-              <div className="home-event-media">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={event.cover_url}
-                  alt={event.name}
-                  className="home-event-image"
-                />
-              </div>
-            )}
-            <div className="home-event-copy">
-              <div className="home-event-meta">
-                <span className="home-event-tag">Luma event</span>
-                <span className="home-event-tag home-event-tag-accent">
-                  Zcash enabled
-                </span>
-              </div>
-              <h3>{event.name}</h3>
-              <p className="home-event-date">
-                {new Date(event.start_at).toLocaleString(undefined, {
-                  month: "long",
-                  day: "numeric",
-                  timeZone: "America/New_York",
-                  year: "numeric",
-                  hour: "numeric",
-                  minute: "2-digit",
-                })}
-              </p>
-              <div className="home-event-footer">
-                <span className="home-event-action">
-                  Create CipherPay checkout
-                </span>
-                {event.url ? (
-                  <span className="home-event-hint">
-                    Luma event remains available after registration
-                  </span>
-                ) : null}
-              </div>
-            </div>
+    <div className="public-event-feed">
+      <Link
+        href={`/events/${encodeURIComponent(featuredEvent.api_id)}`}
+        className="public-feature-card"
+      >
+        <div className="public-feature-media">
+          {featuredEvent.cover_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              alt={featuredEvent.name}
+              className="public-feature-image"
+              src={featuredEvent.cover_url}
+            />
+          ) : (
+            <span className="public-feature-mark">Z</span>
+          )}
+        </div>
+        <div className="public-feature-copy">
+          <p className="public-feature-kicker">Featured event</p>
+          <h3>{featuredEvent.name}</h3>
+          <p className="subtle-text">
+            {eventDateLabel(featuredEvent.start_at)} ·{" "}
+            {eventLocationLabel(featuredEvent.location_label)}
+          </p>
+          <div className="public-chip-row">
+            <span className="public-chip">Pay in ZEC</span>
+            <span className="public-chip">Instant confirmation</span>
+            <span className="public-chip">Luma ticket delivery</span>
           </div>
-        </Link>
-      ))}
+        </div>
+      </Link>
+
+      <div className="public-event-list">
+        {events.map((event) => (
+          <Link
+            className="public-event-row"
+            href={`/events/${encodeURIComponent(event.api_id)}`}
+            key={event.api_id}
+          >
+            <div className="public-event-icon">
+              {event.cover_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  alt={event.name}
+                  className="public-event-icon-image"
+                  src={event.cover_url}
+                />
+              ) : (
+                <span>Z</span>
+              )}
+            </div>
+            <div className="public-event-row-copy">
+              <h3>{event.name}</h3>
+              <p className="subtle-text">
+                {eventDateLabel(event.start_at)} ·{" "}
+                {eventLocationLabel(event.location_label)}
+              </p>
+              {event.url ? (
+                <span className="public-inline-link">Available on Luma after registration</span>
+              ) : null}
+            </div>
+            <span className="public-row-action">
+              {event.api_id === featuredEvent.api_id && otherEvents.length === 0
+                ? "Open event"
+                : "Get tickets"}
+            </span>
+          </Link>
+        ))}
+      </div>
     </div>
   );
 };
