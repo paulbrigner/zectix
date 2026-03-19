@@ -111,6 +111,7 @@ export function CheckoutStatusCard({
   lumaEventUrl,
   viewerToken,
 }: CheckoutStatusCardProps) {
+  const showCheckoutSessionPanel = false;
   const [session, setSession] = useState(initialSession);
   const [copyNotice, setCopyNotice] = useState<string | null>(null);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string | null>(null);
@@ -590,133 +591,102 @@ export function CheckoutStatusCard({
   }, [copyNotice]);
 
   return (
-    <div className="status-layout">
-      <div className="status-main">
-        <section className="status-card">
-          <div className="status-card-head">
-            <div>
-              <p className="eyebrow">Checkout session</p>
-              <h2>{session.event_name}</h2>
+    <div className={`status-layout${showCheckoutSessionPanel ? "" : " status-layout-single"}`}>
+      {showCheckoutSessionPanel ? (
+        <div className="status-main">
+          <section className="status-card">
+            <div className="status-card-head">
+              <div>
+                <p className="eyebrow">Checkout session</p>
+                <h2>{session.event_name}</h2>
+              </div>
+              <div className="status-badge-wrap">
+                <span className="public-status-chip">{paymentStateLabel(session)}</span>
+              </div>
             </div>
-            <div className="status-badge-wrap">
-              <span className="public-status-chip">{paymentStateLabel(session)}</span>
-            </div>
-          </div>
 
-          <p className="checkout-status-message">{statusMessage(session)}</p>
+            <p className="checkout-status-message">{statusMessage(session)}</p>
 
-          <div className="status-detail-grid">
-            <div className="checkout-key-value">
-              <span>Attendee</span>
-              <strong>{session.attendee_name}</strong>
-              <p className="subtle-text">{session.attendee_email}</p>
-            </div>
-            <div className="checkout-key-value">
-              <span>Ticket</span>
-              <strong>{session.ticket_type_name || "Luma ticket"}</strong>
-              <p className="subtle-text">
-                {formatFiatAmount(session.amount, session.currency)}
-              </p>
-            </div>
-            <div className="checkout-key-value">
-              <span>Invoice ID</span>
-              <strong className="checkout-mono">{session.cipherpay_invoice_id}</strong>
-              <p className="subtle-text">
-                Memo {session.cipherpay_memo_code || "not assigned yet"}
-              </p>
-            </div>
-            <div className="checkout-key-value">
-              <span>Registration</span>
-              <strong>
-                {session.registration_status === "registered"
-                  ? "Ready"
-                  : session.registration_status}
-              </strong>
-              <p className="subtle-text">
-                {session.registered_at ? (
-                  <>
-                    Updated <LocalDateTime iso={session.registered_at} />
-                  </>
-                ) : session.registration_error ? (
-                  session.registration_error
-                ) : (
-                  "Waiting for payment acceptance"
-                )}
-              </p>
-            </div>
-          </div>
-
-          <div className="status-timeline">
-            <div className="checkout-key-value">
-              <span>Created</span>
-              <strong>
-                {session.created_at ? <LocalDateTime iso={session.created_at} /> : "n/a"}
-              </strong>
-            </div>
-            <div className="checkout-key-value">
-              <span>Detected</span>
-              <strong>
-                {session.detected_at ? <LocalDateTime iso={session.detected_at} /> : "n/a"}
-              </strong>
-            </div>
-            <div className="checkout-key-value">
-              <span>Confirmed</span>
-              <strong>
-                {session.confirmed_at ? (
-                  <LocalDateTime iso={session.confirmed_at} />
-                ) : (
-                  "n/a"
-                )}
-              </strong>
-            </div>
-            {!paymentAccepted ? (
+            <div className="status-detail-grid">
               <div className="checkout-key-value">
-                <span>Invoice expires</span>
+                <span>Attendee</span>
+                <strong>{session.attendee_name}</strong>
+                <p className="subtle-text">{session.attendee_email}</p>
+              </div>
+              <div className="checkout-key-value">
+                <span>Ticket</span>
+                <strong>{session.ticket_type_name || "Luma ticket"}</strong>
+                <p className="subtle-text">
+                  {formatFiatAmount(session.amount, session.currency)}
+                </p>
+              </div>
+              <div className="checkout-key-value">
+                <span>Invoice ID</span>
+                <strong className="checkout-mono">{session.cipherpay_invoice_id}</strong>
+                <p className="subtle-text">
+                  Memo {session.cipherpay_memo_code || "not assigned yet"}
+                </p>
+              </div>
+              <div className="checkout-key-value">
+                <span>Registration</span>
                 <strong>
-                  {session.cipherpay_expires_at ? (
-                    <LocalDateTime iso={session.cipherpay_expires_at} />
+                  {session.registration_status === "registered"
+                    ? "Ready"
+                    : session.registration_status}
+                </strong>
+                <p className="subtle-text">
+                  {session.registered_at ? (
+                    <>
+                      Updated <LocalDateTime iso={session.registered_at} />
+                    </>
+                  ) : session.registration_error ? (
+                    session.registration_error
+                  ) : (
+                    "Waiting for payment acceptance"
+                  )}
+                </p>
+              </div>
+            </div>
+
+            <div className="status-timeline">
+              <div className="checkout-key-value">
+                <span>Created</span>
+                <strong>
+                  {session.created_at ? <LocalDateTime iso={session.created_at} /> : "n/a"}
+                </strong>
+              </div>
+              <div className="checkout-key-value">
+                <span>Detected</span>
+                <strong>
+                  {session.detected_at ? <LocalDateTime iso={session.detected_at} /> : "n/a"}
+                </strong>
+              </div>
+              <div className="checkout-key-value">
+                <span>Confirmed</span>
+                <strong>
+                  {session.confirmed_at ? (
+                    <LocalDateTime iso={session.confirmed_at} />
                   ) : (
                     "n/a"
                   )}
                 </strong>
               </div>
-            ) : null}
-          </div>
-        </section>
-
-        <section className="status-card">
-          <p className="eyebrow">Event details</p>
-          <h2>Event details</h2>
-          <div className="status-detail-grid">
-            <div className="checkout-key-value">
-              <span>Starts</span>
-              <strong>
-                {event?.start_at ? <LocalDateTime iso={event.start_at} /> : "n/a"}
-              </strong>
-              <p className="subtle-text">{event?.timezone || "America/New_York"}</p>
-            </div>
-            <div className="checkout-key-value">
-              <span>Ends</span>
-              <strong>
-                {event?.end_at ? <LocalDateTime iso={event.end_at} /> : "n/a"}
-              </strong>
-            </div>
-            <div className="checkout-key-value">
-              <span>Location</span>
-              <strong>
-                {event?.location_label || "View the Luma event for venue details"}
-              </strong>
-              {event?.location_note ? (
-                <p className="subtle-text">{event.location_note}</p>
+              {!paymentAccepted ? (
+                <div className="checkout-key-value">
+                  <span>Invoice expires</span>
+                  <strong>
+                    {session.cipherpay_expires_at ? (
+                      <LocalDateTime iso={session.cipherpay_expires_at} />
+                    ) : (
+                      "n/a"
+                    )}
+                  </strong>
+                </div>
               ) : null}
             </div>
-          </div>
-          <p className="checkout-status-message">
-            {event?.description ||
-              "Event logistics will remain available on the Luma event page."}
-          </p>
-        </section>
-      </div>
+          </section>
+        </div>
+      ) : null}
 
       <aside className="status-sidebar">
         {!paymentAccepted ? (
@@ -726,14 +696,16 @@ export function CheckoutStatusCard({
                 <p className="eyebrow">Pay with Zcash</p>
                 <h3>Complete your ticket purchase</h3>
               </div>
-              {session.cipherpay_expires_at ? (
+              <span className="public-status-chip">{paymentStateLabel(session)}</span>
+            </div>
+
+            {session.cipherpay_expires_at ? (
+              <div className="payment-panel-meta">
                 <span className="status-pill-lite">
                   Expires <LocalDateTime iso={session.cipherpay_expires_at} />
                 </span>
-              ) : (
-                <span className="status-pill-lite">Awaiting payment</span>
-              )}
-            </div>
+              </div>
+            ) : null}
 
             <div className="payment-summary-row">
               <div className="checkout-key-value">
@@ -929,6 +901,39 @@ export function CheckoutStatusCard({
             )}
           </section>
         )}
+
+        <section className="status-card">
+          <p className="eyebrow">Event details</p>
+          <h2>Event details</h2>
+          <div className="status-detail-grid">
+            <div className="checkout-key-value">
+              <span>Starts</span>
+              <strong>
+                {event?.start_at ? <LocalDateTime iso={event.start_at} /> : "n/a"}
+              </strong>
+              <p className="subtle-text">{event?.timezone || "America/New_York"}</p>
+            </div>
+            <div className="checkout-key-value">
+              <span>Ends</span>
+              <strong>
+                {event?.end_at ? <LocalDateTime iso={event.end_at} /> : "n/a"}
+              </strong>
+            </div>
+            <div className="checkout-key-value">
+              <span>Location</span>
+              <strong>
+                {event?.location_label || "View the Luma event for venue details"}
+              </strong>
+              {event?.location_note ? (
+                <p className="subtle-text">{event.location_note}</p>
+              ) : null}
+            </div>
+          </div>
+          <p className="checkout-status-message">
+            {event?.description ||
+              "Event logistics will remain available on the Luma event page."}
+          </p>
+        </section>
       </aside>
     </div>
   );

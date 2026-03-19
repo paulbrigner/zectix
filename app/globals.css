@@ -1685,6 +1685,10 @@ select {
   gap: 1.25rem;
 }
 
+.status-layout-single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .status-main,
 .status-sidebar {
   display: grid;
@@ -1738,6 +1742,12 @@ select {
 .payment-panel {
   background: linear-gradient(180deg, #fffdf8 0%, #fff8ec 100%);
   border-color: rgba(244, 177, 26, 0.22);
+}
+
+.payment-panel-meta {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: 0.85rem;
 }
 
 .status-pill-lite {
