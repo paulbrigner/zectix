@@ -702,7 +702,7 @@ export function CheckoutStatusCard({
             {session.cipherpay_expires_at ? (
               <div className="payment-panel-meta">
                 <span className="status-pill-lite">
-                  Expires <LocalDateTime iso={session.cipherpay_expires_at} />
+                  Expires: <LocalDateTime iso={session.cipherpay_expires_at} />
                 </span>
               </div>
             ) : null}
