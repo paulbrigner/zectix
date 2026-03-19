@@ -223,7 +223,11 @@ export function TestOverviewClient() {
                     <td>
                       <Link
                         className="button button-secondary button-small"
-                        href={`/checkout/${session.session_id}`}
+                        href={
+                          session.viewer_token
+                            ? `/checkout/${session.session_id}?t=${encodeURIComponent(session.viewer_token)}`
+                            : `/checkout/${session.session_id}`
+                        }
                       >
                         Open
                       </Link>
