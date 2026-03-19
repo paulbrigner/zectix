@@ -782,46 +782,46 @@ export function CheckoutStatusCard({
         ) : (
           <section className="pass-shell">
             <div className="pass-head">
-              <div>
+              <div className="pass-head-top">
                 <p className="eyebrow">Attendee pass</p>
-                <h3>You&apos;re in</h3>
-              </div>
-              <div className="pass-actions">
-                <button
-                  aria-label="Open printer-friendly pass"
-                  className="checkout-print-button"
-                  disabled={!registrationGuest || !entryQrDataUrl}
-                  onClick={() => void openPrintView()}
-                  type="button"
-                >
-                  <svg
-                    aria-hidden="true"
-                    fill="none"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    width="18"
+                <div className="pass-actions">
+                  <button
+                    aria-label="Open printer-friendly pass"
+                    className="checkout-print-button"
+                    disabled={!registrationGuest || !entryQrDataUrl}
+                    onClick={() => void openPrintView()}
+                    type="button"
                   >
-                    <path
-                      d="M7 9V4h10v5M7 14H5a2 2 0 0 1-2-2v-1.5A2.5 2.5 0 0 1 5.5 8h13A2.5 2.5 0 0 1 21 10.5V12a2 2 0 0 1-2 2h-2M7 12h10v8H7v-8Z"
-                      stroke="currentColor"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="1.7"
-                    />
-                    <circle cx="17.5" cy="10.5" fill="currentColor" r="1" />
-                  </svg>
-                </button>
-                {lumaEventUrl ? (
-                  <a
-                    className="button button-secondary button-small"
-                    href={lumaEventUrl}
-                    rel="noreferrer noopener"
-                    target="_blank"
-                  >
-                    Open event
-                  </a>
-                ) : null}
+                    <svg
+                      aria-hidden="true"
+                      fill="none"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      width="18"
+                    >
+                      <path
+                        d="M7 9V4h10v5M7 14H5a2 2 0 0 1-2-2v-1.5A2.5 2.5 0 0 1 5.5 8h13A2.5 2.5 0 0 1 21 10.5V12a2 2 0 0 1-2 2h-2M7 12h10v8H7v-8Z"
+                        stroke="currentColor"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="1.7"
+                      />
+                      <circle cx="17.5" cy="10.5" fill="currentColor" r="1" />
+                    </svg>
+                  </button>
+                  {lumaEventUrl ? (
+                    <a
+                      className="button button-secondary button-small"
+                      href={lumaEventUrl}
+                      rel="noreferrer noopener"
+                      target="_blank"
+                    >
+                      Open event
+                    </a>
+                  ) : null}
+                </div>
               </div>
+              <h3>You&apos;re in</h3>
             </div>
 
             <div className="pass-banner">

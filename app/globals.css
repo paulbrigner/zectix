@@ -1178,6 +1178,7 @@ select {
   display: inline-flex;
   align-items: center;
   gap: 0;
+  flex: 0 0 auto;
   font-weight: 800;
   color: inherit;
 }
@@ -1434,18 +1435,25 @@ select {
 }
 
 .event-page-topbar {
+  flex-wrap: nowrap;
   justify-content: space-between;
   align-items: center;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.event-page-topbar::-webkit-scrollbar {
+  display: none;
 }
 
 .event-page-actions {
   display: flex;
+  flex: 0 0 auto;
   flex-wrap: nowrap;
   justify-content: flex-end;
   gap: 0.75rem;
-  margin-left: 0;
-  min-width: 0;
-  max-width: 100%;
+  margin-left: auto;
+  min-width: max-content;
   overflow-x: auto;
   padding-bottom: 0.15rem;
   scrollbar-width: none;
@@ -1713,6 +1721,18 @@ select {
 .pass-head {
   display: flex;
   align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.85rem;
+}
+
+.pass-head {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.pass-head-top {
+  display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: 0.85rem;
 }
@@ -2084,7 +2104,7 @@ select {
   }
 
   .payment-panel-head,
-  .pass-head {
+  .payment-panel-head {
     flex-direction: column;
     align-items: flex-start;
   }
@@ -2098,16 +2118,14 @@ select {
     align-items: center;
     justify-content: space-between;
     gap: 0.85rem;
-    min-width: 0;
+    min-width: 100%;
   }
 
   .event-page-actions {
-    flex: 1 1 auto;
-    min-width: 0;
-    justify-content: flex-end;
+    flex: 0 0 auto;
+    min-width: max-content;
+    justify-content: flex-start;
     flex-wrap: nowrap;
-    overflow-x: auto;
-    scrollbar-width: none;
   }
 
   .event-page-actions::-webkit-scrollbar {
@@ -2155,7 +2173,11 @@ select {
     align-items: stretch;
   }
 
+  .pass-head-top {
+    min-width: 100%;
+  }
+
   .pass-actions {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
   }
 }
