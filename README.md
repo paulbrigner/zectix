@@ -100,7 +100,7 @@ That override is not recommended.
 
 ## Hardening Included
 
-This repo now includes several production-oriented safeguards:
+This repo includes several production-oriented safeguards:
 
 - shared-password protection for `/admin` and `/dashboard`
 - per-IP and per-attendee checkout throttling on `/api/checkout`

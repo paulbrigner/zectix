@@ -1834,7 +1834,7 @@ select {
 }
 
 .pass-qr-card,
-.pass-detail-card,
+.pass-detail-list,
 .pass-loading-card {
   padding: 1rem;
   border-radius: 1.35rem;
@@ -1859,9 +1859,27 @@ select {
   gap: 0.85rem;
 }
 
-.pass-detail-card span {
+.pass-detail-list {
+  display: grid;
+  gap: 0;
+}
+
+.pass-detail-row {
+  display: grid;
+  grid-template-columns: 6.5rem minmax(0, 1fr);
+  gap: 0.9rem;
+  align-items: start;
+  padding: 0.85rem 0;
+  border-bottom: 1px solid rgba(17, 24, 39, 0.06);
+}
+
+.pass-detail-row:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.pass-detail-row span {
   display: block;
-  margin-bottom: 0.5rem;
   color: #6e6d73;
   font-size: 0.78rem;
   font-weight: 800;
@@ -1869,17 +1887,17 @@ select {
   text-transform: uppercase;
 }
 
-.pass-detail-card strong {
+.pass-detail-row strong {
   display: block;
   color: #111827;
-  font-size: 1.15rem;
+  font-size: 1.05rem;
   font-weight: 800;
   letter-spacing: -0.03em;
 }
 
-.pass-detail-card p,
+.pass-detail-row p,
 .pass-loading-card p {
-  margin: 0.5rem 0 0;
+  margin: 0.25rem 0 0;
 }
 
 @media (max-width: 960px) {

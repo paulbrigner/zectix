@@ -848,45 +848,53 @@ export function CheckoutStatusCard({
                   <p className="subtle-text">Entry QR</p>
                 </div>
 
-                <div className="pass-details">
-                  <div className="pass-detail-card">
+                <div className="pass-detail-list">
+                  <div className="pass-detail-row">
                     <span>Event</span>
-                    <strong>{session.event_name}</strong>
-                    <p>
-                      {event?.start_at ? <LocalDateTime iso={event.start_at} /> : "Event time pending"}
-                    </p>
+                    <div>
+                      <strong>{session.event_name}</strong>
+                      <p>
+                        {event?.start_at ? <LocalDateTime iso={event.start_at} /> : "Event time pending"}
+                      </p>
+                    </div>
                   </div>
-                  <div className="pass-detail-card">
+                  <div className="pass-detail-row">
                     <span>Attendee</span>
-                    <strong>
-                      {(typeof registrationGuest.user_name === "string"
-                        ? registrationGuest.user_name
-                        : null) || session.attendee_name}
-                    </strong>
-                    <p>
-                      {(typeof registrationGuest.user_email === "string"
-                        ? registrationGuest.user_email
-                        : null) || session.attendee_email}
-                    </p>
+                    <div>
+                      <strong>
+                        {(typeof registrationGuest.user_name === "string"
+                          ? registrationGuest.user_name
+                          : null) || session.attendee_name}
+                      </strong>
+                      <p>
+                        {(typeof registrationGuest.user_email === "string"
+                          ? registrationGuest.user_email
+                          : null) || session.attendee_email}
+                      </p>
+                    </div>
                   </div>
-                  <div className="pass-detail-card">
+                  <div className="pass-detail-row">
                     <span>Ticket</span>
-                    <strong>{lumaTicketName}</strong>
-                    <p>Paid with Zcash</p>
+                    <div>
+                      <strong>{lumaTicketName}</strong>
+                      <p>Paid with Zcash</p>
+                    </div>
                   </div>
-                  <div className="pass-detail-card">
+                  <div className="pass-detail-row">
                     <span>Entry status</span>
-                    <strong>
-                      {typeof registrationGuest.approval_status === "string"
-                        ? registrationGuest.approval_status
-                        : "approved"}
-                    </strong>
-                    <p>
-                      Guest ID{" "}
-                      {typeof registrationGuest.id === "string"
-                        ? registrationGuest.id
-                        : "pending"}
-                    </p>
+                    <div>
+                      <strong>
+                        {typeof registrationGuest.approval_status === "string"
+                          ? registrationGuest.approval_status
+                          : "approved"}
+                      </strong>
+                      <p>
+                        Guest ID{" "}
+                        {typeof registrationGuest.id === "string"
+                          ? registrationGuest.id
+                          : "pending"}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
