@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EventCheckoutForm } from "@/components/EventCheckoutForm";
 import { getLumaEventById, listLumaTicketTypes } from "@/lib/luma";
-import { getRuntimeConfig } from "@/lib/test-harness/state";
+import { getRuntimeConfig } from "@/lib/app-state/state";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -62,7 +62,7 @@ export default async function EventPage({
   );
   const checkoutEnabled = Boolean(config.api_key && config.luma_api_key && hasPricedTicket);
   const disabledReason = !config.api_key
-    ? "Add your CipherPay API key on the Test Admin page before creating a checkout."
+    ? "Add your CipherPay API key on the admin page before creating a checkout."
     : !hasPricedTicket
       ? "This event needs at least one active Luma ticket type with a fixed price before CipherPay checkout can be created."
       : null;
@@ -72,7 +72,6 @@ export default async function EventPage({
       <section className="card event-page-card">
         <div className="event-page-topbar">
           <div className="public-brand">
-            <span className="public-brand-badge">Z</span>
             <span>LumaZcash</span>
           </div>
           <div className="event-page-actions">

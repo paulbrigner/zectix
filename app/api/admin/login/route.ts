@@ -7,8 +7,8 @@ import {
 } from "@/lib/admin-auth";
 import { adminSessionCookieOptions } from "@/lib/admin-auth-server";
 import { jsonError, jsonOk } from "@/lib/http";
-import { getRuntimeConfig } from "@/lib/test-harness/state";
-import { hasCoreTestSetup } from "@/lib/test-harness/utils";
+import { getRuntimeConfig } from "@/lib/app-state/state";
+import { hasCoreSetup } from "@/lib/app-state/utils";
 
 export const runtime = "nodejs";
 
@@ -37,6 +37,6 @@ export async function POST(request: Request) {
 
   return jsonOk({
     ok: true,
-    next: hasCoreTestSetup(config) ? "/dashboard" : "/admin",
+    next: hasCoreSetup(config) ? "/dashboard" : "/admin",
   });
 }

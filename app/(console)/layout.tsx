@@ -3,11 +3,11 @@ import Link from "next/link";
 import { isAdminAuthEnabled } from "@/lib/admin-auth";
 import { requireAdminPageAccess } from "@/lib/admin-auth-server";
 import { appPath } from "@/lib/app-paths";
-import { TestNavLinks } from "./nav-links";
+import { ConsoleNavLinks } from "./nav-links";
 
 export const runtime = "nodejs";
 
-export default async function TestLayout({
+export default async function ConsoleLayout({
   children,
 }: Readonly<{
   children: ReactNode;
@@ -15,14 +15,14 @@ export default async function TestLayout({
   await requireAdminPageAccess();
 
   return (
-    <main className="page test-shell">
-      <section className="card test-card-shell">
+    <main className="page console-shell">
+      <section className="card console-card-shell">
         <header className="feed-header">
           <div>
             <p className="eyebrow">Operations</p>
             <h1>Zcash Event Dashboard</h1>
             <p className="subtle-text">
-              Dashboard, admin, checkout, and webhook tools for the local
+              Dashboard, admin, checkout, and webhook tools for the
               CipherPay and Luma registration flow.
             </p>
           </div>
@@ -40,9 +40,9 @@ export default async function TestLayout({
           </div>
         </header>
 
-        <TestNavLinks />
+        <ConsoleNavLinks />
 
-        <div className="test-content">{children}</div>
+        <div className="console-content">{children}</div>
       </section>
     </main>
   );

@@ -1,6 +1,6 @@
 import { ensureAdminApiAccess } from "@/lib/admin-auth-server";
-import { getRuntimeConfig, updateRuntimeConfig } from "@/lib/test-harness/state";
-import { toPublicConfig } from "@/lib/test-harness/utils";
+import { getRuntimeConfig, updateRuntimeConfig } from "@/lib/app-state/state";
+import { toPublicConfig } from "@/lib/app-state/utils";
 import { jsonError, jsonOk } from "@/lib/http";
 
 export const runtime = "nodejs";

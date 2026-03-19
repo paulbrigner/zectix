@@ -5,17 +5,18 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { LocalDateTime } from "@/components/LocalDateTime";
 import { appApiPath, readJsonOrThrow } from "@/app/(console)/client-utils";
 import type { LumaEvent } from "@/lib/luma";
-import type { TestSession } from "@/lib/test-harness/types";
-import { formatFiatAmount } from "@/lib/test-harness/utils";
+import type { CheckoutSession } from "@/lib/app-state/types";
+import { formatFiatAmount } from "@/lib/app-state/utils";
 
 type SyncResponse = {
-  session: TestSession;
+  session: CheckoutSession;
 };
 
 type CheckoutStatusCardProps = {
-  initialSession: TestSession;
+  initialSession: CheckoutSession;
   event: LumaEvent | null;
   lumaEventUrl: string | null;
+  viewerToken: string | null;
 };
 
 function readRegistrationGuest(value: Record<string, unknown> | null | undefined) {
@@ -59,7 +60,7 @@ function escapeHtml(value: string) {
     .replaceAll(">", "&gt;");
 }
 
-function statusMessage(session: TestSession) {
+function statusMessage(session: CheckoutSession) {
   if (session.registration_status === "registered") {
     return "Your payment was accepted and your attendee pass is ready.";
   }
@@ -91,7 +92,7 @@ function statusMessage(session: TestSession) {
   return "Send the exact amount below using the QR code, copied address, or wallet button.";
 }
 
-function paymentStateLabel(session: TestSession) {
+function paymentStateLabel(session: CheckoutSession) {
   if (session.registration_status === "registered") return "Payment accepted";
   if (session.registration_status === "failed") return "Registration pending";
   if (session.status === "confirmed") return "Payment confirmed";
@@ -108,6 +109,7 @@ export function CheckoutStatusCard({
   initialSession,
   event,
   lumaEventUrl,
+  viewerToken,
 }: CheckoutStatusCardProps) {
   const [session, setSession] = useState(initialSession);
   const [copyNotice, setCopyNotice] = useState<string | null>(null);
@@ -160,7 +162,9 @@ export function CheckoutStatusCard({
     try {
       const response = await readJsonOrThrow<SyncResponse>(
         await fetch(
-          appApiPath(`/api/sessions/${encodeURIComponent(session.session_id)}`),
+          appApiPath(
+            `/api/sessions/${encodeURIComponent(session.session_id)}${viewerToken ? `?t=${encodeURIComponent(viewerToken)}` : ""}`,
+          ),
           {
           cache: "no-store",
           },
@@ -170,7 +174,7 @@ export function CheckoutStatusCard({
     } catch {
       // Ignore passive refresh failures and wait for the next local refresh.
     }
-  }, [session.session_id]);
+  }, [session.session_id, viewerToken]);
 
   useEffect(() => {
     setSession(initialSession);
@@ -802,7 +806,7 @@ export function CheckoutStatusCard({
               </button>
             </div>
 
-            {copyNotice ? <p className="test-valid-text">{copyNotice}</p> : null}
+            {copyNotice ? <p className="console-valid-text">{copyNotice}</p> : null}
           </section>
         ) : (
           <section className="pass-shell">

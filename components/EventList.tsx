@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { listLumaEvents } from "@/lib/luma";
-import { getRuntimeConfig } from "@/lib/test-harness/state";
+import { getRuntimeConfig } from "@/lib/app-state/state";
 
 type EventFetchResult =
   | {
@@ -17,7 +17,7 @@ async function getEvents(): Promise<EventFetchResult> {
   if (!apiKey) {
     return {
       status: "missing-key",
-      message: "Add your Luma API key on the Test Admin page to load the upcoming events feed.",
+      message: "Add your Luma API key on the admin page to load the upcoming events feed.",
     };
   }
 
@@ -113,41 +113,9 @@ export const EventList = async () => {
   }
 
   const { events } = result;
-  const [featuredEvent, ...otherEvents] = events;
 
   return (
     <div className="public-event-feed">
-      <Link
-        href={`/events/${encodeURIComponent(featuredEvent.api_id)}`}
-        className="public-feature-card"
-      >
-        <div className="public-feature-media">
-          {featuredEvent.cover_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              alt={featuredEvent.name}
-              className="public-feature-image"
-              src={featuredEvent.cover_url}
-            />
-          ) : (
-            <span className="public-feature-mark">Z</span>
-          )}
-        </div>
-        <div className="public-feature-copy">
-          <p className="public-feature-kicker">Featured event</p>
-          <h3>{featuredEvent.name}</h3>
-          <p className="subtle-text">
-            {eventDateLabel(featuredEvent.start_at)} ·{" "}
-            {eventLocationLabel(featuredEvent.location_label)}
-          </p>
-          <div className="public-chip-row">
-            <span className="public-chip">Pay in ZEC</span>
-            <span className="public-chip">Instant confirmation</span>
-            <span className="public-chip">Luma ticket delivery</span>
-          </div>
-        </div>
-      </Link>
-
       <div className="public-event-list">
         {events.map((event) => (
           <Link
@@ -178,9 +146,7 @@ export const EventList = async () => {
               ) : null}
             </div>
             <span className="public-row-action">
-              {event.api_id === featuredEvent.api_id && otherEvents.length === 0
-                ? "Open event"
-                : "Get tickets"}
+              Get tickets
             </span>
           </Link>
         ))}

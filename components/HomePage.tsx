@@ -6,7 +6,6 @@ export function HomePage() {
       <main className="public-home-main">
         <nav className="public-home-topbar">
           <div className="public-brand">
-            <span className="public-brand-badge">Z</span>
             <span>LumaZcash</span>
           </div>
           <div className="public-home-nav-links">

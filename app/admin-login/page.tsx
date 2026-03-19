@@ -6,8 +6,8 @@ import {
   isAdminAuthEnabled,
   isAdminSessionTokenValid,
 } from "@/lib/admin-auth";
-import { getRuntimeConfig } from "@/lib/test-harness/state";
-import { hasCoreTestSetup } from "@/lib/test-harness/utils";
+import { getRuntimeConfig } from "@/lib/app-state/state";
+import { hasCoreSetup } from "@/lib/app-state/utils";
 import { cookies } from "next/headers";
 
 export const runtime = "nodejs";
@@ -23,18 +23,18 @@ export default async function AdminLoginPage() {
   }
 
   if (isAdminSessionTokenValid(session)) {
-    redirect(hasCoreTestSetup(config) ? "/dashboard" : "/admin");
+    redirect(hasCoreSetup(config) ? "/dashboard" : "/admin");
   }
 
   return (
-    <main className="page test-shell">
-      <section className="card test-card-shell">
+    <main className="page console-shell">
+      <section className="card console-card-shell">
         <header className="feed-header">
           <div>
             <p className="eyebrow">Admin sign-in</p>
             <h1>LumaZcash operations access</h1>
             <p className="subtle-text">
-              Enter the shared demo password to unlock the admin and dashboard
+              Enter the shared password to unlock the admin and dashboard
               routes for this deployment.
             </p>
           </div>
@@ -45,8 +45,8 @@ export default async function AdminLoginPage() {
           </div>
         </header>
 
-        <div className="test-content">
-          <section className="test-section">
+        <div className="console-content">
+          <section className="console-section">
             <AdminLoginForm />
           </section>
         </div>
@@ -54,4 +54,3 @@ export default async function AdminLoginPage() {
     </main>
   );
 }
-

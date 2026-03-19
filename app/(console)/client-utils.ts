@@ -1,7 +1,7 @@
 "use client";
 
 import { appPath } from "@/lib/app-paths";
-import { cipherPayDefaultsForNetwork } from "@/lib/test-harness/utils";
+import { cipherPayDefaultsForNetwork } from "@/lib/app-state/utils";
 
 export async function readJsonOrThrow<T>(response: Response): Promise<T> {
   const payload = await response.json().catch(() => null);

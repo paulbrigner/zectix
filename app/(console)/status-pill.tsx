@@ -1,16 +1,16 @@
-import { cipherPayStatusFromEvent } from "@/lib/test-harness/utils";
-import type { CipherPaySessionStatus } from "@/lib/test-harness/types";
+import { cipherPayStatusFromEvent } from "@/lib/app-state/utils";
+import type { CipherPaySessionStatus } from "@/lib/app-state/types";
 
 function statusClassName(status: CipherPaySessionStatus) {
-  if (status === "confirmed") return "test-status test-status-confirmed";
-  if (status === "detected") return "test-status test-status-detected";
+  if (status === "confirmed") return "console-status console-status-confirmed";
+  if (status === "detected") return "console-status console-status-detected";
   if (status === "underpaid" || status === "pending" || status === "draft") {
-    return "test-status test-status-pending";
+    return "console-status console-status-pending";
   }
   if (status === "expired" || status === "refunded") {
-    return "test-status test-status-expired";
+    return "console-status console-status-expired";
   }
-  return "test-status";
+  return "console-status";
 }
 
 export function TestStatusPill({ status }: { status: CipherPaySessionStatus }) {

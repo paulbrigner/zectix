@@ -1,8 +1,8 @@
 import { verifyCipherPayWebhookSignature } from "@/lib/cipherpay-webhook";
 import { jsonError, jsonOk } from "@/lib/http";
-import { processCipherPayWebhook } from "@/lib/test-harness/service";
-import { getRuntimeConfig } from "@/lib/test-harness/state";
-import { asRecord, asString } from "@/lib/test-harness/utils";
+import { processCipherPayWebhook } from "@/lib/app-state/service";
+import { getRuntimeConfig } from "@/lib/app-state/state";
+import { asRecord, asString } from "@/lib/app-state/utils";
 
 export const runtime = "nodejs";
 

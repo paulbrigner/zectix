@@ -35,7 +35,7 @@ function dynamoConfig(): DynamoDBClientConfig {
   };
 }
 
-export function testStateTableName() {
+export function appStateTableName() {
   return process.env.DYNAMODB_TABLE_NAME?.trim() || "lumazcash";
 }
 

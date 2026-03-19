@@ -5,13 +5,14 @@ export function jsonOk(data: unknown, init?: ResponseInit) {
   });
 }
 
-export function jsonError(message: string, status = 400) {
+export function jsonError(message: string, status = 400, init?: ResponseInit) {
   return Response.json(
     {
       error: message,
     },
     {
       status,
+      ...init,
     },
   );
 }

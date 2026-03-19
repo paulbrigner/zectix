@@ -12,18 +12,18 @@ import {
   putSession,
   putWebhookEvent,
   upsertSession,
-} from "@/lib/test-harness/state";
+} from "@/lib/app-state/state";
 import type {
   CipherPaySessionStatus,
-  TestConfigRecord,
-  TestSession,
-} from "@/lib/test-harness/types";
+  RuntimeConfigRecord,
+  CheckoutSession,
+} from "@/lib/app-state/types";
 import {
   asIsoTimestamp,
   asRecord,
   cipherPayStatusFromEvent,
   nowIso,
-} from "@/lib/test-harness/utils";
+} from "@/lib/app-state/utils";
 
 type CreateCheckoutInput = {
   attendee_email: string;
@@ -32,9 +32,9 @@ type CreateCheckoutInput = {
   ticket_type_api_id: string | null;
 };
 
-function requireLumaApiKey(config: TestConfigRecord) {
+function requireLumaApiKey(config: RuntimeConfigRecord) {
   if (!config.luma_api_key) {
-    throw new Error("Luma API key is not configured. Save it on the Test Admin page first.");
+    throw new Error("Luma API key is not configured. Save it on the admin page first.");
   }
 
   return config.luma_api_key;
@@ -44,7 +44,7 @@ function normalizeSessionStatus(status: CipherPaySessionStatus) {
   return status === "unknown" ? "pending" : status;
 }
 
-function hasGuestLookup(session: TestSession) {
+function hasGuestLookup(session: CheckoutSession) {
   const registration = asRecord(session.luma_registration_json);
   const guestLookup = asRecord(registration?.guest_lookup);
   return Boolean(asRecord(guestLookup?.guest));
@@ -122,8 +122,8 @@ function extractLumaWebhookDetails(payload: Record<string, unknown>) {
 }
 
 async function registerAcceptedSession(
-  session: TestSession,
-  config: TestConfigRecord,
+  session: CheckoutSession,
+  config: RuntimeConfigRecord,
 ) {
   if (session.registration_status === "registered") {
     return session;
@@ -166,8 +166,8 @@ async function registerAcceptedSession(
 }
 
 export async function hydrateRegisteredSessionGuestLookup(
-  session: TestSession,
-  config?: TestConfigRecord,
+  session: CheckoutSession,
+  config?: RuntimeConfigRecord,
 ) {
   if (session.registration_status !== "registered" || hasGuestLookup(session)) {
     return session;
@@ -208,7 +208,7 @@ export async function createCheckoutSession(input: CreateCheckoutInput) {
   const lumaApiKey = requireLumaApiKey(config);
 
   if (!config.api_key) {
-    throw new Error("CipherPay API key is not configured. Save it on the Test Admin page first.");
+    throw new Error("CipherPay API key is not configured. Save it on the admin page first.");
   }
 
   const event = await getLumaEventById(lumaApiKey, input.event_api_id);
@@ -244,6 +244,42 @@ export async function createCheckoutSession(input: CreateCheckoutInput) {
   const size = selectedTicket.name || null;
   const productName = event.name;
 
+  const existingSession = await findLatestSessionForAttendee({
+    attendeeEmail: input.attendee_email,
+    eventApiId: event.api_id,
+    ticketTypeApiId: selectedTicket.api_id,
+  });
+
+  if (
+    existingSession &&
+    existingSession.registration_status !== "failed" &&
+    existingSession.status !== "expired" &&
+    existingSession.status !== "refunded" &&
+    (!existingSession.cipherpay_expires_at ||
+      new Date(existingSession.cipherpay_expires_at).getTime() > Date.now())
+  ) {
+    return {
+      config,
+      event,
+      ticket: selectedTicket,
+      session: existingSession,
+      invoice: {
+        invoice_id: existingSession.cipherpay_invoice_id,
+        memo_code: existingSession.cipherpay_memo_code,
+        payment_address: existingSession.cipherpay_payment_address,
+        zcash_uri: existingSession.cipherpay_zcash_uri,
+        price_zec: existingSession.cipherpay_price_zec,
+        expires_at: existingSession.cipherpay_expires_at,
+        checkout_url: existingSession.checkout_url,
+        status: existingSession.status,
+        detected_txid: existingSession.last_txid,
+        detected_at: existingSession.detected_at,
+        confirmed_at: existingSession.confirmed_at,
+        refunded_at: existingSession.refunded_at,
+      },
+    };
+  }
+
   const { invoice, checkout_url } = await createCipherPayInvoice(config, {
     amount,
     currency,
@@ -252,7 +288,7 @@ export async function createCheckoutSession(input: CreateCheckoutInput) {
   });
 
   const timestamp = nowIso();
-  const session: TestSession = {
+  const session: CheckoutSession = {
     session_id: invoice.invoice_id,
     network: config.network,
     event_api_id: event.api_id,

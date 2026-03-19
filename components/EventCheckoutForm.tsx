@@ -3,12 +3,13 @@
 import { FormEvent, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { LumaTicketType } from "@/lib/luma";
-import type { TestSession } from "@/lib/test-harness/types";
-import { formatFiatAmount } from "@/lib/test-harness/utils";
+import type { CheckoutSession } from "@/lib/app-state/types";
+import { formatFiatAmount } from "@/lib/app-state/utils";
 import { appApiPath, readJsonOrThrow } from "@/app/(console)/client-utils";
 
 type CheckoutResponse = {
-  session: TestSession;
+  session: CheckoutSession;
+  viewer_token: string | null;
   invoice: {
     invoice_id: string;
     memo_code: string | null;
@@ -102,7 +103,10 @@ export function EventCheckoutForm({
       setNotice(`Invoice ${response.invoice.invoice_id} created. Loading payment details...`);
 
       startTransition(() => {
-        router.push(`/checkout/${encodeURIComponent(response.session.session_id)}`);
+        const nextUrl = response.viewer_token
+          ? `/checkout/${encodeURIComponent(response.session.session_id)}?t=${encodeURIComponent(response.viewer_token)}`
+          : `/checkout/${encodeURIComponent(response.session.session_id)}`;
+        router.push(nextUrl);
       });
     } catch (submitError) {
       setError(
@@ -126,11 +130,11 @@ export function EventCheckoutForm({
         </div>
 
         <div className="public-field-grid">
-          <label className="test-field">
+          <label className="console-field">
             <span>Full name</span>
             <input
               autoComplete="name"
-              className="test-input"
+              className="console-input"
               onChange={(currentEvent) => setName(currentEvent.target.value)}
               placeholder="Jordan Lee"
               required
@@ -139,11 +143,11 @@ export function EventCheckoutForm({
             />
           </label>
 
-          <label className="test-field">
+          <label className="console-field">
             <span>Email</span>
             <input
               autoComplete="email"
-              className="test-input"
+              className="console-input"
               onChange={(currentEvent) => setEmail(currentEvent.target.value)}
               placeholder="jordan@example.com"
               required
@@ -226,8 +230,8 @@ export function EventCheckoutForm({
           </div>
         ) : null}
 
-        {error ? <p className="test-error-text">{error}</p> : null}
-        {notice ? <p className="test-valid-text">{notice}</p> : null}
+        {error ? <p className="console-error-text">{error}</p> : null}
+        {notice ? <p className="console-valid-text">{notice}</p> : null}
 
         <button
           className="button"

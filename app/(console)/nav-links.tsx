@@ -8,16 +8,16 @@ const LINKS = [
   { href: "/admin", label: "Admin" },
 ];
 
-export function TestNavLinks() {
+export function ConsoleNavLinks() {
   const pathname = usePathname();
 
   return (
-    <nav className="test-nav" aria-label="Test navigation">
+    <nav className="console-nav" aria-label="Operations navigation">
       {LINKS.map((link) => {
         const isActive = pathname === link.href;
         return (
           <Link
-            className={`test-nav-link${isActive ? " test-nav-link-active" : ""}`}
+            className={`console-nav-link${isActive ? " console-nav-link-active" : ""}`}
             href={link.href}
             key={link.href}
           >

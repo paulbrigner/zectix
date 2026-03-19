@@ -12,7 +12,7 @@ export type CipherPaySessionStatus =
 
 export type RegistrationStatus = "pending" | "registered" | "failed";
 
-export type TestConfigRecord = {
+export type RuntimeConfigRecord = {
   network: CipherPayNetwork;
   api_base_url: string;
   checkout_base_url: string;
@@ -23,10 +23,11 @@ export type TestConfigRecord = {
   updated_at: string | null;
 };
 
-export type TestConfig = {
+export type RuntimeConfig = {
   network: CipherPayNetwork;
   api_base_url: string;
   checkout_base_url: string;
+  secrets_managed_externally: boolean;
   has_api_key: boolean;
   api_key_preview: string | null;
   has_webhook_secret: boolean;
@@ -37,7 +38,7 @@ export type TestConfig = {
   updated_at: string | null;
 };
 
-export type TestSession = {
+export type CheckoutSession = {
   session_id: string;
   network: CipherPayNetwork;
   event_api_id: string;
@@ -72,7 +73,7 @@ export type TestSession = {
   updated_at: string | null;
 };
 
-export type TestWebhookEvent = {
+export type WebhookEvent = {
   event_id: string;
   cipherpay_invoice_id: string | null;
   event_type: string | null;
@@ -85,8 +86,8 @@ export type TestWebhookEvent = {
   received_at: string | null;
 };
 
-export type TestDashboardData = {
-  config: TestConfig;
+export type DashboardData = {
+  config: RuntimeConfig;
   stats: {
     total_sessions: number;
     pending_sessions: number;
@@ -97,6 +98,6 @@ export type TestDashboardData = {
     failed_registrations: number;
     invalid_webhooks: number;
   };
-  sessions: TestSession[];
-  recent_webhooks: TestWebhookEvent[];
+  sessions: CheckoutSession[];
+  recent_webhooks: WebhookEvent[];
 };
