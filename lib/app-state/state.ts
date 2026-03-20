@@ -28,6 +28,7 @@ import {
   nowIso,
   sortByIsoDateDesc,
   toPublicConfig,
+  applyDerivedCheckoutSessionState,
 } from "@/lib/app-state/utils";
 import { isExternalSecretManagementEnabled } from "@/lib/runtime-env";
 import { createSessionViewerToken } from "@/lib/session-viewer";
@@ -185,7 +186,7 @@ function normalizeSession(value: unknown): CheckoutSession | null {
     return null;
   }
 
-  return {
+  return applyDerivedCheckoutSessionState({
     session_id: sessionId,
     network: normalizeCipherPayNetwork(item.network),
     event_api_id: eventApiId,
@@ -232,7 +233,7 @@ function normalizeSession(value: unknown): CheckoutSession | null {
     refunded_at: asIsoTimestamp(item.refunded_at),
     created_at: asIsoTimestamp(item.created_at),
     updated_at: asIsoTimestamp(item.updated_at),
-  };
+  });
 }
 
 function normalizeWebhook(value: unknown): WebhookEvent | null {
