@@ -151,6 +151,7 @@ export function CheckoutStatusCard({
     session.status === "confirmed" ||
     session.registration_status === "registered" ||
     session.registration_status === "failed";
+  const invoiceExpired = session.status === "expired";
   const registrationGuest = readRegistrationGuest(session.luma_registration_json);
   const checkInQrUrl =
     registrationGuest && typeof registrationGuest.check_in_qr_code === "string"
@@ -771,7 +772,7 @@ export function CheckoutStatusCard({
               </div>
               <div className="payment-panel-meta">
                 <span className="public-status-chip">{paymentStateLabel(session)}</span>
-                {paymentExpiryLabel ? (
+                {paymentExpiryLabel && !invoiceExpired ? (
                 <span className="status-pill-lite">
                   {paymentExpiryLabel}
                 </span>
@@ -790,12 +791,12 @@ export function CheckoutStatusCard({
               </div>
             </div>
 
-            <div className="payment-qr-wrap">
+            <div className={`payment-qr-wrap${invoiceExpired ? " payment-qr-wrap-expired" : ""}`}>
               {qrCodeDataUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   alt="Zcash payment QR code"
-                  className="checkout-qr-image"
+                  className={`checkout-qr-image${invoiceExpired ? " checkout-qr-image-expired" : ""}`}
                   src={qrCodeDataUrl}
                 />
               ) : (
@@ -803,6 +804,7 @@ export function CheckoutStatusCard({
                   QR code will appear once CipherPay returns the payment URI.
                 </div>
               )}
+              {invoiceExpired ? <div className="payment-qr-expired-overlay">Expired</div> : null}
             </div>
 
             <div className="payment-key-list">
@@ -815,38 +817,44 @@ export function CheckoutStatusCard({
               <div className="payment-key-row">
                 <div className="checkout-key-value">
                   <span>Address</span>
-                  <strong className="checkout-mono">
+                  <strong className={`checkout-mono${invoiceExpired ? " checkout-mono-expired" : ""}`}>
                     {session.cipherpay_payment_address || "Not returned yet"}
                   </strong>
                 </div>
                 <button
                   className="button button-secondary button-small"
-                  disabled={!session.cipherpay_payment_address}
+                  disabled={!session.cipherpay_payment_address || invoiceExpired}
                   onClick={() =>
                     void copyValue(session.cipherpay_payment_address, "Payment address")
                   }
                   type="button"
                 >
-                  Copy address
+                  {invoiceExpired ? "Address expired" : "Copy address"}
                 </button>
               </div>
             </div>
 
             <div className="payment-action-stack">
               {session.cipherpay_zcash_uri ? (
-                <a className="button" href={session.cipherpay_zcash_uri}>
-                  Open wallet
-                </a>
+                invoiceExpired ? (
+                  <button className="button" disabled type="button">
+                    Open wallet · Expired
+                  </button>
+                ) : (
+                  <a className="button" href={session.cipherpay_zcash_uri}>
+                    Open wallet
+                  </a>
+                )
               ) : null}
               <button
                 className="button button-secondary"
-                disabled={!session.cipherpay_zcash_uri}
+                disabled={!session.cipherpay_zcash_uri || invoiceExpired}
                 onClick={() =>
                   void copyValue(session.cipherpay_zcash_uri, "Zcash URI")
                 }
                 type="button"
               >
-                Copy payment URI
+                {invoiceExpired ? "Copy payment URI · Expired" : "Copy payment URI"}
               </button>
             </div>
 
