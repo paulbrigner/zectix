@@ -39,6 +39,35 @@ function zecAmountLabel(priceZec: number | null) {
   return `${priceZec.toFixed(8)} ZEC`;
 }
 
+function expiryCountdownLabel(value: string | null, nowMs: number) {
+  if (!value) return null;
+
+  const expiresAtMs = new Date(value).getTime();
+  if (Number.isNaN(expiresAtMs)) {
+    return null;
+  }
+
+  const remainingMs = expiresAtMs - nowMs;
+  if (remainingMs <= 0) {
+    return "Expired";
+  }
+
+  const totalSeconds = Math.ceil(remainingMs / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  if (hours > 0) {
+    return `Expires in ${hours}h ${String(minutes).padStart(2, "0")}m`;
+  }
+
+  if (minutes > 0) {
+    return `Expires in ${minutes}m ${String(seconds).padStart(2, "0")}s`;
+  }
+
+  return `Expires in ${seconds}s`;
+}
+
 function formatPrintDate(value: string | null) {
   if (!value) return "Processing";
 
@@ -116,6 +145,7 @@ export function CheckoutStatusCard({
   const [copyNotice, setCopyNotice] = useState<string | null>(null);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string | null>(null);
   const [entryQrDataUrl, setEntryQrDataUrl] = useState<string | null>(null);
+  const [countdownNowMs, setCountdownNowMs] = useState(() => Date.now());
   const paymentAccepted =
     session.status === "detected" ||
     session.status === "confirmed" ||
@@ -143,6 +173,10 @@ export function CheckoutStatusCard({
     (registrationGuest && typeof registrationGuest.registered_at === "string"
       ? registrationGuest.registered_at
       : null) || session.registered_at;
+  const paymentExpiryLabel = useMemo(
+    () => expiryCountdownLabel(session.cipherpay_expires_at, countdownNowMs),
+    [countdownNowMs, session.cipherpay_expires_at],
+  );
 
   const shouldPoll = useMemo(() => {
     const awaitingPayment =
@@ -182,6 +216,21 @@ export function CheckoutStatusCard({
   }, [initialSession]);
 
   useEffect(() => {
+    if (paymentAccepted || !session.cipherpay_expires_at) {
+      return undefined;
+    }
+
+    setCountdownNowMs(Date.now());
+    const intervalId = window.setInterval(() => {
+      setCountdownNowMs(Date.now());
+    }, 1000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [paymentAccepted, session.cipherpay_expires_at]);
+
+  useEffect(() => {
     if (!shouldPoll) return undefined;
 
     const timeoutId = window.setTimeout(() => {
@@ -197,6 +246,30 @@ export function CheckoutStatusCard({
       window.clearInterval(intervalId);
     };
   }, [refreshSession, session.session_id, shouldPoll]);
+
+  useEffect(() => {
+    if (paymentAccepted || !session.cipherpay_expires_at) {
+      return undefined;
+    }
+
+    const expiresAtMs = new Date(session.cipherpay_expires_at).getTime();
+    if (Number.isNaN(expiresAtMs)) {
+      return undefined;
+    }
+
+    const refreshDelayMs = Math.max(expiresAtMs - Date.now(), 0) + 250;
+    const timeoutId = window.setTimeout(() => {
+      void refreshSession();
+    }, refreshDelayMs);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [
+    paymentAccepted,
+    refreshSession,
+    session.cipherpay_expires_at,
+  ]);
 
   useEffect(() => {
     if (!session.cipherpay_zcash_uri) {
@@ -698,9 +771,9 @@ export function CheckoutStatusCard({
               </div>
               <div className="payment-panel-meta">
                 <span className="public-status-chip">{paymentStateLabel(session)}</span>
-                {session.cipherpay_expires_at ? (
+                {paymentExpiryLabel ? (
                 <span className="status-pill-lite">
-                  Expires: <LocalDateTime iso={session.cipherpay_expires_at} />
+                  {paymentExpiryLabel}
                 </span>
                 ) : null}
               </div>

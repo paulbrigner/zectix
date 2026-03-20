@@ -1,6 +1,7 @@
 import type {
   CipherPayNetwork,
   CipherPaySessionStatus,
+  CheckoutSession,
   RuntimeConfig,
   RuntimeConfigRecord,
 } from "@/lib/app-state/types";
@@ -14,6 +15,13 @@ const SESSION_STATUSES = new Set<CipherPaySessionStatus>([
   "confirmed",
   "expired",
   "refunded",
+  "unknown",
+]);
+
+const LOCALLY_EXPIRABLE_SESSION_STATUSES = new Set<CipherPaySessionStatus>([
+  "draft",
+  "pending",
+  "underpaid",
   "unknown",
 ]);
 
@@ -183,6 +191,28 @@ export function cipherPayStatusFromEvent(
   if (normalized === "subscription.past_due") return "expired";
   if (normalized === "subscription.canceled") return "expired";
   return fallback;
+}
+
+export function applyDerivedCheckoutSessionState(
+  session: CheckoutSession,
+): CheckoutSession {
+  if (!LOCALLY_EXPIRABLE_SESSION_STATUSES.has(session.status)) {
+    return session;
+  }
+
+  if (!session.cipherpay_expires_at) {
+    return session;
+  }
+
+  const expiresAt = new Date(session.cipherpay_expires_at).getTime();
+  if (Number.isNaN(expiresAt) || expiresAt > Date.now()) {
+    return session;
+  }
+
+  return {
+    ...session,
+    status: "expired",
+  };
 }
 
 export function sortByIsoDateDesc<T>(
