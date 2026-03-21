@@ -133,6 +133,7 @@ This prevents anyone who only guesses a `sessionId` from reading checkout state.
 - Node.js 22
 - npm
 - Docker Desktop or another way to run DynamoDB Local for local development
+- a Luma Plus subscription for the API access this app depends on
 
 ## Scripts
 
@@ -198,6 +199,10 @@ By default, local development uses a base path of `/lumazcash`, so the main loca
 ### 7. Save Luma and CipherPay settings in `/admin`
 
 Once those values are saved, the app can create invoices and complete registrations.
+
+Note:
+
+- this app assumes your Luma account has the API access included with Luma Plus
 
 ## Local Environment Variables
 
