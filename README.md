@@ -336,15 +336,39 @@ The current deployment model expects:
 - an Amplify compute role with permission to read and write that table
 - a public domain or subdomain, such as `lumazcash.pgpforcrypto.org`
 
+### Custom domain note
+
+Amplify deployment and Amplify custom-domain routing are separate concerns.
+
+- `amplify.yml` controls the app build
+- the public hostname only works after Amplify has an attached domain association and a `subdomain -> branch` mapping such as `lumazcash -> main`
+
+If your DNS is managed in Route53 in the same AWS account, Amplify can usually create the DNS record for you once that mapping is configured.
+
+If you disconnect and reconnect the GitHub repository or recreate the Amplify app, verify that the custom domain still includes the expected subdomain mapping.
+
+For this app, the expected production mapping is:
+
+- domain: `pgpforcrypto.org`
+- subdomain: `lumazcash`
+- branch: `main`
+
+That should result in:
+
+- `https://lumazcash.pgpforcrypto.org`
+- `https://lumazcash.pgpforcrypto.org/api/cipherpay/webhook`
+
 ### Deployment order
 
 1. Push `main` to GitHub.
 2. Connect the repo to Amplify.
 3. Configure the required Amplify environment variables.
 4. Ensure the Amplify compute role has access to DynamoDB.
-5. Deploy the app.
-6. Configure the final production webhook URL in CipherPay.
-7. Open `/admin` and save any non-secret runtime settings you want to override.
+5. Attach the production custom domain and confirm the `lumazcash -> main` subdomain mapping exists.
+6. Deploy the app.
+7. Verify that `lumazcash.pgpforcrypto.org` resolves publicly before configuring webhooks.
+8. Configure the final production webhook URL in CipherPay.
+9. Open `/admin` and save any non-secret runtime settings you want to override.
 
 ## DynamoDB State
 
