@@ -6,7 +6,6 @@ import {
   appApiPath,
   cipherPayWebhookCallbackUrl,
   cipherPayDefaultsForNetwork,
-  lumaWebhookCallbackUrl,
   readJsonOrThrow,
 } from "@/app/(console)/client-utils";
 
@@ -99,9 +98,6 @@ export function TestAdminClient() {
   const webhookUrl = origin
     ? cipherPayWebhookCallbackUrl(origin)
     : appApiPath("/api/cipherpay/webhook");
-  const lumaWebhookUrl = origin
-    ? lumaWebhookCallbackUrl(origin)
-    : appApiPath("/api/luma/webhook");
 
   return (
     <div className="console-page-body">
@@ -127,14 +123,6 @@ export function TestAdminClient() {
             <p className="console-inline-code">{webhookUrl}</p>
             <p className="subtle-text">
               Save this as your CipherPay webhook URL while testing locally.
-            </p>
-          </article>
-
-          <article className="console-detail-card">
-            <h3>Luma webhook</h3>
-            <p className="console-inline-code">{lumaWebhookUrl}</p>
-            <p className="subtle-text">
-              Save this as your Luma webhook URL for guest and ticket registration events.
             </p>
           </article>
 

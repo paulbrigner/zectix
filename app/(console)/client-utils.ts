@@ -28,8 +28,4 @@ export function cipherPayWebhookCallbackUrl(origin: string) {
   return `${origin.replace(/\/+$/, "")}${appApiPath("/api/cipherpay/webhook")}`;
 }
 
-export function lumaWebhookCallbackUrl(origin: string) {
-  return `${origin.replace(/\/+$/, "")}${appApiPath("/api/luma/webhook")}`;
-}
-
 export { cipherPayDefaultsForNetwork };
