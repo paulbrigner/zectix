@@ -3,10 +3,12 @@ import { jsonError, jsonOk } from "@/lib/http";
 import { processCipherPayWebhook } from "@/lib/app-state/service";
 import { getRuntimeConfig } from "@/lib/app-state/state";
 import { asRecord, asString } from "@/lib/app-state/utils";
+import { createRequestId, logEvent } from "@/lib/observability";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
+  const requestId = createRequestId();
   const config = await getRuntimeConfig({ allowMissingTable: true });
   const rawBody = await request.text();
   if (!rawBody) {
@@ -51,16 +53,36 @@ export async function POST(request: Request) {
   });
 
   if (!config.webhook_secret) {
+    logEvent("error", "webhook.rejected_missing_secret", {
+      request_id: requestId,
+      invoice_id: invoiceId,
+      event_type: eventType,
+    });
     return jsonError("CipherPay webhook secret is not configured", 503);
   }
 
   if (!verification.ok) {
+    logEvent("warn", "webhook.rejected_invalid_signature", {
+      request_id: requestId,
+      invoice_id: invoiceId,
+      event_type: eventType,
+      reason: verification.reason,
+    });
     return jsonError("Invalid CipherPay webhook signature", 401);
   }
 
   if (!asRecord(payload)) {
+    logEvent("warn", "webhook.rejected_invalid_json", {
+      request_id: requestId,
+    });
     return jsonError("Invalid JSON body");
   }
+
+  logEvent("info", "webhook.accepted", {
+    request_id: requestId,
+    invoice_id: invoiceId,
+    event_type: eventType,
+  });
 
   return jsonOk({ received: true });
 }

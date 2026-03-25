@@ -9,6 +9,7 @@ import {
   findLatestSessionForAttendee,
   getRuntimeConfig,
   getSession,
+  listSessionsNeedingRegistrationRecovery,
   putSession,
   putWebhookEvent,
   upsertSession,
@@ -23,7 +24,9 @@ import {
   asRecord,
   cipherPayStatusFromEvent,
   nowIso,
+  registrationRetryDelayMinutes,
 } from "@/lib/app-state/utils";
+import { logEvent } from "@/lib/observability";
 
 type CreateCheckoutInput = {
   attendee_email: string;
@@ -50,6 +53,37 @@ function hasGuestLookup(session: CheckoutSession) {
   return Boolean(asRecord(guestLookup?.guest));
 }
 
+function classifyRegistrationFailure(error: unknown) {
+  const message =
+    error instanceof Error ? error.message : "Luma registration failed";
+  const normalized = message.toLowerCase();
+
+  if (
+    normalized.includes("timeout") ||
+    normalized.includes("timed out") ||
+    normalized.includes("fetch failed") ||
+    normalized.includes("network") ||
+    normalized.includes("429") ||
+    normalized.includes("rate limit") ||
+    normalized.includes("500") ||
+    normalized.includes("502") ||
+    normalized.includes("503") ||
+    normalized.includes("504")
+  ) {
+    return {
+      code: "transient_provider_error",
+      message,
+      retryable: true,
+    };
+  }
+
+  return {
+    code: "registration_failed",
+    message,
+    retryable: false,
+  };
+}
+
 async function registerAcceptedSession(
   session: CheckoutSession,
   config: RuntimeConfigRecord,
@@ -59,6 +93,15 @@ async function registerAcceptedSession(
   }
 
   const lumaApiKey = requireLumaApiKey(config);
+  const attemptAt = nowIso();
+  const nextAttemptCount = (session.registration_attempt_count || 0) + 1;
+
+  logEvent("info", "registration.started", {
+    session_id: session.session_id,
+    invoice_id: session.cipherpay_invoice_id,
+    event_api_id: session.event_api_id,
+    attempt_count: nextAttemptCount,
+  });
 
   try {
     const result = await addLumaGuest({
@@ -81,15 +124,41 @@ async function registerAcceptedSession(
     const registeredSession = await upsertSession(session.session_id, {
       registration_status: "registered",
       registration_error: null,
+      registration_failure_code: null,
+      registration_attempt_count: nextAttemptCount,
+      registration_last_attempt_at: attemptAt,
+      registration_next_retry_at: null,
       luma_registration_json: registrationPayload,
       registered_at: nowIso(),
     });
+    logEvent("info", "registration.succeeded", {
+      session_id: session.session_id,
+      invoice_id: session.cipherpay_invoice_id,
+      attempt_count: nextAttemptCount,
+    });
     return hydrateRegisteredSessionGuestLookup(registeredSession, config);
   } catch (error) {
+    const failure = classifyRegistrationFailure(error);
+    const nextRetryAt = failure.retryable
+      ? new Date(
+          Date.now() + registrationRetryDelayMinutes(nextAttemptCount) * 60 * 1000,
+        ).toISOString()
+      : null;
+    logEvent(failure.retryable ? "warn" : "error", "registration.failed", {
+      session_id: session.session_id,
+      invoice_id: session.cipherpay_invoice_id,
+      attempt_count: nextAttemptCount,
+      failure_code: failure.code,
+      retry_at: nextRetryAt,
+      error: failure.message,
+    });
     return upsertSession(session.session_id, {
       registration_status: "failed",
-      registration_error:
-        error instanceof Error ? error.message : "Luma registration failed",
+      registration_error: failure.message,
+      registration_failure_code: failure.code,
+      registration_attempt_count: nextAttemptCount,
+      registration_last_attempt_at: attemptAt,
+      registration_next_retry_at: nextRetryAt,
     });
   }
 }
@@ -121,6 +190,8 @@ export async function hydrateRegisteredSessionGuestLookup(
   return upsertSession(session.session_id, {
     registration_status: "registered",
     registration_error: null,
+    registration_failure_code: null,
+    registration_next_retry_at: null,
     luma_registration_json: {
       ...(session.luma_registration_json || {}),
       guest_lookup: asRecord(guestLookup),
@@ -187,6 +258,12 @@ export async function createCheckoutSession(input: CreateCheckoutInput) {
     (!existingSession.cipherpay_expires_at ||
       new Date(existingSession.cipherpay_expires_at).getTime() > Date.now())
   ) {
+    logEvent("info", "checkout.reused", {
+      session_id: existingSession.session_id,
+      invoice_id: existingSession.cipherpay_invoice_id,
+      attendee_email: existingSession.attendee_email,
+      event_api_id: existingSession.event_api_id,
+    });
     return {
       config,
       event,
@@ -239,6 +316,10 @@ export async function createCheckoutSession(input: CreateCheckoutInput) {
     status: normalizeSessionStatus(invoice.status),
     registration_status: "pending",
     registration_error: null,
+    registration_failure_code: null,
+    registration_attempt_count: 0,
+    registration_last_attempt_at: null,
+    registration_next_retry_at: null,
     luma_registration_json: null,
     last_event_type: invoice.status,
     last_event_at: timestamp,
@@ -253,6 +334,13 @@ export async function createCheckoutSession(input: CreateCheckoutInput) {
   };
 
   await putSession(session);
+  logEvent("info", "checkout.created", {
+    session_id: session.session_id,
+    invoice_id: session.cipherpay_invoice_id,
+    attendee_email: session.attendee_email,
+    event_api_id: session.event_api_id,
+    ticket_type_api_id: session.ticket_type_api_id,
+  });
 
   return {
     config,
@@ -298,6 +386,13 @@ export async function processCipherPayWebhook({
     request_headers_json: requestHeaders,
     received_at: receivedAt,
   });
+  logEvent(signatureValid ? "info" : "warn", "webhook.received", {
+    invoice_id: invoiceId,
+    event_type: eventType,
+    txid,
+    signature_valid: signatureValid,
+    validation_error: validationError,
+  });
 
   if (!signatureValid || !invoiceId) {
     return null;
@@ -305,6 +400,11 @@ export async function processCipherPayWebhook({
 
   const session = await getSession(invoiceId);
   if (!session) {
+    logEvent("warn", "webhook.unknown_session", {
+      invoice_id: invoiceId,
+      event_type: eventType,
+      txid,
+    });
     return null;
   }
 
@@ -328,6 +428,12 @@ export async function processCipherPayWebhook({
         ? asIsoTimestamp(requestBody.timestamp) || receivedAt
         : session.refunded_at,
   });
+  logEvent("info", "webhook.applied", {
+    session_id: next.session_id,
+    invoice_id: next.cipherpay_invoice_id,
+    event_type: eventType,
+    status: next.status,
+  });
 
   if (next.status === "detected" || next.status === "confirmed") {
     const config = await getRuntimeConfig();
@@ -335,4 +441,46 @@ export async function processCipherPayWebhook({
   }
 
   return next;
+}
+
+export async function retryRegistrationForSession(sessionId: string) {
+  const [session, config] = await Promise.all([
+    getSession(sessionId),
+    getRuntimeConfig({ allowMissingTable: true }),
+  ]);
+
+  if (!session) {
+    throw new Error(`Session ${sessionId} was not found.`);
+  }
+
+  if (!["detected", "confirmed"].includes(session.status)) {
+    throw new Error("Only accepted sessions can be retried for registration.");
+  }
+
+  logEvent("info", "registration.retry_requested", {
+    session_id: sessionId,
+    invoice_id: session.cipherpay_invoice_id,
+  });
+  return registerAcceptedSession(session, config);
+}
+
+export async function retryDueRegistrations(limit = 10) {
+  const [sessions, config] = await Promise.all([
+    listSessionsNeedingRegistrationRecovery(limit),
+    getRuntimeConfig({ allowMissingTable: true }),
+  ]);
+
+  const results: CheckoutSession[] = [];
+  logEvent("info", "registration.retry_due.started", {
+    candidate_count: sessions.length,
+  });
+  for (const session of sessions) {
+    results.push(await registerAcceptedSession(session, config));
+  }
+
+  logEvent("info", "registration.retry_due.completed", {
+    recovered_count: results.length,
+  });
+
+  return results;
 }

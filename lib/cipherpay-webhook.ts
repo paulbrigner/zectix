@@ -1,4 +1,4 @@
-import { createHmac } from "node:crypto";
+import { createHmac, timingSafeEqual } from "node:crypto";
 
 export const CIPHERPAY_WEBHOOK_TOLERANCE_MS = 5 * 60 * 1000;
 
@@ -51,10 +51,14 @@ export function verifyCipherPayWebhookSignature({
   }
 
   const expected = computeCipherPayWebhookSignature({ timestamp, body, secret });
-  if (String(signature) !== expected) {
+  const expectedBuffer = Buffer.from(expected, "hex");
+  const actualBuffer = Buffer.from(String(signature), "hex");
+  if (
+    expectedBuffer.length !== actualBuffer.length ||
+    !timingSafeEqual(actualBuffer, expectedBuffer)
+  ) {
     return { ok: false, reason: "signature_mismatch" };
   }
 
   return { ok: true, age_ms: ageMs };
 }
-

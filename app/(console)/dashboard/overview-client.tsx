@@ -55,6 +55,27 @@ export function TestOverviewClient() {
     }
   }
 
+  async function retryRegistration(sessionId?: string) {
+    try {
+      await readJsonOrThrow(
+        await fetch(appApiPath("/api/admin/retry-registration"), {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+          },
+          body: JSON.stringify(sessionId ? { session_id: sessionId } : {}),
+        }),
+      );
+      await loadDashboard();
+    } catch (retryError) {
+      setError(
+        retryError instanceof Error
+          ? retryError.message
+          : "Failed to retry registration",
+      );
+    }
+  }
+
   useEffect(() => {
     setOrigin(window.location.origin);
     void loadDashboard();
@@ -63,6 +84,7 @@ export function TestOverviewClient() {
   const config = data?.config;
   const sessions = data?.sessions ?? [];
   const webhooks = data?.recent_webhooks ?? [];
+  const adminEvents = data?.recent_admin_events ?? [];
   const webhookUrl = origin
     ? cipherPayWebhookCallbackUrl(origin)
     : appApiPath("/api/cipherpay/webhook");
@@ -118,7 +140,7 @@ export function TestOverviewClient() {
               <StatCard
                 label="Registered"
                 value={String(data.stats.registered_sessions)}
-                detail={`${data.stats.failed_registrations} registration failures, ${data.stats.invalid_webhooks} invalid webhooks`}
+                detail={`${data.stats.failed_registrations} registration failures, ${data.stats.retryable_registrations} retryable`}
               />
             </div>
 
@@ -142,6 +164,23 @@ export function TestOverviewClient() {
                 <p className="subtle-text">CipherPay API key: {config?.api_key_preview || "not saved yet"}</p>
                 <p className="subtle-text">Webhook secret: {config?.webhook_secret_preview || "not saved yet"}</p>
                 <p className="subtle-text">Luma API key: {config?.luma_api_key_preview || "not saved yet"}</p>
+              </article>
+
+              <article className="console-detail-card">
+                <h3>Registration recovery</h3>
+                <p className="subtle-text">
+                  Retry any failed post-payment Luma registrations that are due
+                  for recovery.
+                </p>
+                <div className="button-row">
+                  <button
+                    className="button button-secondary button-small"
+                    onClick={() => void retryRegistration()}
+                    type="button"
+                  >
+                    Retry due registrations
+                  </button>
+                </div>
               </article>
             </div>
           </>
@@ -221,16 +260,28 @@ export function TestOverviewClient() {
                       )}
                     </td>
                     <td>
-                      <Link
-                        className="button button-secondary button-small"
-                        href={
-                          session.viewer_token
-                            ? `/checkout/${session.session_id}?t=${encodeURIComponent(session.viewer_token)}`
-                            : `/checkout/${session.session_id}`
-                        }
-                      >
-                        Open
-                      </Link>
+                      <div className="button-row">
+                        <Link
+                          className="button button-secondary button-small"
+                          href={
+                            session.viewer_token
+                              ? `/checkout/${session.session_id}?t=${encodeURIComponent(session.viewer_token)}`
+                              : `/checkout/${session.session_id}`
+                          }
+                        >
+                          Open
+                        </Link>
+                        {["detected", "confirmed"].includes(session.status) &&
+                        session.registration_status !== "registered" ? (
+                          <button
+                            className="button button-secondary button-small"
+                            onClick={() => void retryRegistration(session.session_id)}
+                            type="button"
+                          >
+                            Retry reg
+                          </button>
+                        ) : null}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -298,6 +349,52 @@ export function TestOverviewClient() {
                       ) : null}
                     </td>
                     <td className="console-mono-cell">{event.txid || "n/a"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+      </section>
+
+      <section className="console-section">
+        <header className="console-section-header">
+          <div>
+            <h2>Admin audit log</h2>
+            <p className="subtle-text">
+              Recent admin sign-in, sign-out, config, and recovery actions.
+            </p>
+          </div>
+        </header>
+
+        {!adminEvents.length && !loading ? (
+          <p className="subtle-text">No admin audit events recorded yet.</p>
+        ) : null}
+
+        {adminEvents.length ? (
+          <div className="console-table-wrap">
+            <table className="console-table">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Event</th>
+                  <th>IP</th>
+                  <th>Origin</th>
+                </tr>
+              </thead>
+              <tbody>
+                {adminEvents.map((event) => (
+                  <tr key={event.event_id}>
+                    <td>
+                      {event.created_at ? (
+                        <LocalDateTime iso={event.created_at} />
+                      ) : (
+                        "n/a"
+                      )}
+                    </td>
+                    <td>{event.event_type}</td>
+                    <td className="console-mono-cell">{event.actor_ip || "n/a"}</td>
+                    <td className="console-mono-cell">{event.actor_origin || "n/a"}</td>
                   </tr>
                 ))}
               </tbody>

@@ -10,6 +10,7 @@ import {
   appStateTableName,
 } from "@/lib/app-state/dynamodb";
 import type {
+  AdminAuditEvent,
   RuntimeConfigRecord,
   DashboardData,
   CheckoutSession,
@@ -18,10 +19,12 @@ import type {
 import {
   asBoolean,
   asFiniteNumber,
+  asNonNegativeInteger,
   asIsoTimestamp,
   asRecord,
   asString,
   defaultConfigRecord,
+  isRegistrationRetryDue,
   normalizeEmailAddress,
   normalizeCipherPayNetwork,
   normalizeCurrencyCode,
@@ -52,6 +55,13 @@ function webhookKey(eventId: string, receivedAt: string) {
   };
 }
 
+function adminAuditKey(eventId: string, createdAt: string) {
+  return {
+    pk: "ADMIN_EVENT",
+    sk: `${createdAt}#${eventId}`,
+  };
+}
+
 function sessionLookupPartition(eventApiId: string, attendeeEmail: string) {
   return `SESSION_LOOKUP#${eventApiId}#${normalizeEmailAddress(attendeeEmail)}`;
 }
@@ -71,6 +81,13 @@ function sessionLookupSortKey(createdAt: string | null, sessionId: string) {
 function checkoutRateLimitKey(scope: string, identifier: string, windowStart: string) {
   return {
     pk: `RATE_LIMIT#${scope}#${identifier}`,
+    sk: windowStart,
+  };
+}
+
+function adminLoginRateLimitKey(scope: string, identifier: string, windowStart: string) {
+  return {
+    pk: `ADMIN_RATE_LIMIT#${scope}#${identifier}`,
     sk: windowStart,
   };
 }
@@ -222,6 +239,13 @@ function normalizeSession(value: unknown): CheckoutSession | null {
           ? "failed"
           : "pending",
     registration_error: asString(item.registration_error),
+    registration_failure_code: asString(item.registration_failure_code),
+    registration_attempt_count: asNonNegativeInteger(
+      item.registration_attempt_count,
+      0,
+    ),
+    registration_last_attempt_at: asIsoTimestamp(item.registration_last_attempt_at),
+    registration_next_retry_at: asIsoTimestamp(item.registration_next_retry_at),
     luma_registration_json: asRecord(item.luma_registration_json),
     last_event_type: asString(item.last_event_type),
     last_event_at: asIsoTimestamp(item.last_event_at),
@@ -254,6 +278,27 @@ function normalizeWebhook(value: unknown): WebhookEvent | null {
     request_body_json: asRecord(item.request_body_json),
     request_headers_json: asRecord(item.request_headers_json),
     received_at: asIsoTimestamp(item.received_at),
+  };
+}
+
+function normalizeAdminAuditEvent(value: unknown): AdminAuditEvent | null {
+  const item = asRecord(value);
+  if (!item) return null;
+
+  const eventId = asString(item.event_id);
+  const eventType = asString(item.event_type);
+  if (!eventId || !eventType) {
+    return null;
+  }
+
+  return {
+    event_id: eventId,
+    event_type: eventType,
+    actor_ip: asString(item.actor_ip),
+    actor_origin: asString(item.actor_origin),
+    request_headers_json: asRecord(item.request_headers_json),
+    metadata_json: asRecord(item.metadata_json),
+    created_at: asIsoTimestamp(item.created_at),
   };
 }
 
@@ -531,6 +576,43 @@ export async function putWebhookEvent(
   return next;
 }
 
+export async function putAdminAuditEvent(
+  event: Omit<AdminAuditEvent, "event_id" | "created_at"> & {
+    event_id?: string;
+    created_at?: string | null;
+  },
+) {
+  const eventId = event.event_id || randomUUID();
+  const createdAt = event.created_at || nowIso();
+  const next: AdminAuditEvent = {
+    event_id: eventId,
+    event_type: event.event_type,
+    actor_ip: event.actor_ip,
+    actor_origin: event.actor_origin,
+    request_headers_json: event.request_headers_json,
+    metadata_json: event.metadata_json,
+    created_at: createdAt,
+  };
+
+  try {
+    await getDynamoDocumentClient().send(
+      new PutCommand({
+        TableName: appStateTableName(),
+        Item: {
+          ...adminAuditKey(eventId, createdAt),
+          ...next,
+        },
+      }),
+    );
+  } catch (error) {
+    if (!isMissingLocalStateError(error)) {
+      throw error;
+    }
+  }
+
+  return next;
+}
+
 export async function listWebhookEvents(limit = 20) {
   try {
     const response = await getDynamoDocumentClient().send(
@@ -548,6 +630,33 @@ export async function listWebhookEvents(limit = 20) {
         .map(normalizeWebhook)
         .filter(Boolean) as WebhookEvent[],
       (item) => item.received_at,
+    ).slice(0, limit);
+  } catch (error) {
+    if (isMissingLocalStateError(error)) {
+      return [];
+    }
+
+    throw error;
+  }
+}
+
+export async function listAdminAuditEvents(limit = 20) {
+  try {
+    const response = await getDynamoDocumentClient().send(
+      new QueryCommand({
+        TableName: appStateTableName(),
+        KeyConditionExpression: "pk = :pk",
+        ExpressionAttributeValues: {
+          ":pk": "ADMIN_EVENT",
+        },
+      }),
+    );
+
+    return sortByIsoDateDesc(
+      (response.Items || [])
+        .map(normalizeAdminAuditEvent)
+        .filter(Boolean) as AdminAuditEvent[],
+      (item) => item.created_at,
     ).slice(0, limit);
   } catch (error) {
     if (isMissingLocalStateError(error)) {
@@ -641,11 +750,77 @@ export async function consumeCheckoutRateLimit({
   };
 }
 
+export async function consumeAdminLoginRateLimit({
+  ipAddress,
+}: {
+  ipAddress: string | null;
+}) {
+  const now = Date.now();
+  const windowSeconds = 10 * 60;
+  const windowStart = new Date(
+    Math.floor(now / (windowSeconds * 1000)) * windowSeconds * 1000,
+  ).toISOString();
+  const expiresAt = new Date(now + windowSeconds * 1000).toISOString();
+  const timestamp = nowIso();
+  const ipIdentifier = hashIdentifier(ipAddress || "unknown");
+
+  let result;
+  try {
+    result = await getDynamoDocumentClient().send(
+      new UpdateCommand({
+        TableName: appStateTableName(),
+        Key: adminLoginRateLimitKey("IP", ipIdentifier, windowStart),
+        UpdateExpression:
+          "SET request_count = if_not_exists(request_count, :zero) + :one, expires_at = :expires_at, updated_at = :updated_at, created_at = if_not_exists(created_at, :created_at)",
+        ExpressionAttributeValues: {
+          ":zero": 0,
+          ":one": 1,
+          ":expires_at": expiresAt,
+          ":updated_at": timestamp,
+          ":created_at": timestamp,
+        },
+        ReturnValues: "ALL_NEW",
+      }),
+    );
+  } catch (error) {
+    if (isMissingLocalStateError(error)) {
+      return {
+        ok: true,
+        retry_after_seconds: null,
+        reason: null,
+      };
+    }
+
+    throw error;
+  }
+
+  const count = asFiniteNumber(asRecord(result.Attributes)?.request_count) || 0;
+  if (count > 8) {
+    return {
+      ok: false,
+      retry_after_seconds: windowSeconds,
+      reason: "Too many login attempts. Please wait a few minutes and try again.",
+    };
+  }
+
+  return {
+    ok: true,
+    retry_after_seconds: null,
+    reason: null,
+  };
+}
+
+export async function listSessionsNeedingRegistrationRecovery(limit = 20) {
+  const sessions = await queryAllSessions();
+  return sessions.filter((session) => isRegistrationRetryDue(session)).slice(0, limit);
+}
+
 export async function getDashboardData(): Promise<DashboardData> {
-  const [config, sessions, webhooks] = await Promise.all([
+  const [config, sessions, webhooks, adminEvents] = await Promise.all([
     getRuntimeConfig({ allowMissingTable: true }),
     listSessions(25),
     listWebhookEvents(25),
+    listAdminAuditEvents(25),
   ]);
 
   return {
@@ -670,6 +845,9 @@ export async function getDashboardData(): Promise<DashboardData> {
       failed_registrations: sessions.filter(
         (session) => session.registration_status === "failed",
       ).length,
+      retryable_registrations: sessions.filter((session) =>
+        isRegistrationRetryDue(session),
+      ).length,
       invalid_webhooks: webhooks.filter((event) => !event.signature_valid).length,
     },
     sessions: sessions.map((session) => ({
@@ -680,5 +858,6 @@ export async function getDashboardData(): Promise<DashboardData> {
       ),
     })),
     recent_webhooks: webhooks,
+    recent_admin_events: adminEvents,
   };
 }
