@@ -1,6 +1,6 @@
 import { jsonError, jsonOk } from "@/lib/http";
 import { getSession } from "@/lib/app-state/state";
-import { hydrateRegisteredSessionGuestLookup } from "@/lib/app-state/service";
+import { syncAcceptedSessionRegistration } from "@/lib/app-state/service";
 import { isSessionViewerTokenValid } from "@/lib/session-viewer";
 
 export const runtime = "nodejs";
@@ -31,7 +31,7 @@ export async function GET(
       return jsonError("Checkout session access is not authorized.", 403);
     }
 
-    const hydratedSession = await hydrateRegisteredSessionGuestLookup(session);
+    const hydratedSession = await syncAcceptedSessionRegistration(session);
 
     return jsonOk({ session: hydratedSession });
   } catch (error) {

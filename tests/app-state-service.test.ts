@@ -13,11 +13,13 @@ const mockUpsertSession = vi.fn();
 const mockPutWebhookEvent = vi.fn();
 const mockAddLumaGuest = vi.fn();
 const mockGetLumaGuest = vi.fn();
+const mockListSessionsNeedingRegistrationRecovery = vi.fn();
 
 vi.mock("@/lib/app-state/state", () => ({
   findLatestSessionForAttendee: mockFindLatestSessionForAttendee,
   getRuntimeConfig: mockGetRuntimeConfig,
   getSession: mockGetSession,
+  listSessionsNeedingRegistrationRecovery: mockListSessionsNeedingRegistrationRecovery,
   putSession: mockPutSession,
   putWebhookEvent: mockPutWebhookEvent,
   upsertSession: mockUpsertSession,
@@ -34,7 +36,7 @@ vi.mock("@/lib/cipherpay", () => ({
   createCipherPayInvoice: mockCreateCipherPayInvoice,
 }));
 
-const { createCheckoutSession, processCipherPayWebhook } = await import(
+const { createCheckoutSession, processCipherPayWebhook, syncAcceptedSessionRegistration } = await import(
   "@/lib/app-state/service"
 );
 
@@ -50,6 +52,7 @@ beforeEach(() => {
   mockPutWebhookEvent.mockReset();
   mockAddLumaGuest.mockReset();
   mockGetLumaGuest.mockReset();
+  mockListSessionsNeedingRegistrationRecovery.mockReset();
   mockGetRuntimeConfig.mockResolvedValue(makeRuntimeConfig());
 });
 
@@ -264,5 +267,118 @@ describe("webhook service", () => {
     expect(mockPutWebhookEvent).toHaveBeenCalledTimes(1);
     expect(result).toBeNull();
     expect(mockGetSession).not.toHaveBeenCalled();
+  });
+
+  it("keeps registration pending when Luma guest lookup is still missing", async () => {
+    const session = makeCheckoutSession({
+      session_id: "session_confirmed",
+      cipherpay_invoice_id: "invoice_confirmed",
+      status: "confirmed",
+      registration_status: "pending",
+    });
+
+    mockPutWebhookEvent.mockResolvedValueOnce({
+      event_id: "event_1",
+      cipherpay_invoice_id: "invoice_confirmed",
+      event_type: "confirmed",
+      txid: "txid_1",
+      signature_valid: true,
+      validation_error: null,
+      timestamp_header: "1711281600",
+      request_body_json: { invoice_id: "invoice_confirmed", event: "confirmed" },
+      request_headers_json: {},
+      received_at: "2026-03-24T12:00:00.000Z",
+    });
+    mockGetSession.mockResolvedValueOnce(session);
+    mockUpsertSession
+      .mockResolvedValueOnce({
+        ...session,
+        status: "confirmed",
+        last_event_type: "confirmed",
+        confirmed_at: "2026-03-24T12:00:00.000Z",
+      })
+      .mockResolvedValueOnce({
+        ...session,
+        status: "confirmed",
+        registration_status: "pending",
+        registration_error:
+          "Payment accepted. Waiting for Luma to attach the attendee pass.",
+        registration_failure_code: "guest_lookup_pending",
+        registration_attempt_count: 1,
+        registration_last_attempt_at: "2026-03-24T12:00:00.000Z",
+        registration_next_retry_at: "2026-03-24T12:00:30.000Z",
+        luma_registration_json: {},
+        registered_at: null,
+      });
+    mockAddLumaGuest.mockResolvedValueOnce({});
+    mockGetLumaGuest.mockResolvedValueOnce(null);
+
+    const result = await processCipherPayWebhook({
+      requestBody: { invoice_id: "invoice_confirmed", event: "confirmed" },
+      eventType: "confirmed",
+      invoiceId: "invoice_confirmed",
+      signatureValid: true,
+      validationError: null,
+      requestHeaders: {},
+      timestampHeader: "1711281600",
+      txid: "txid_1",
+    });
+
+    expect(mockAddLumaGuest).toHaveBeenCalledTimes(1);
+    expect(mockGetLumaGuest).toHaveBeenCalledTimes(1);
+    expect(result?.registration_status).toBe("pending");
+    expect(result?.registration_failure_code).toBe("guest_lookup_pending");
+    expect(result?.registered_at).toBeNull();
+  });
+
+  it("repairs accepted sessions once the Luma guest record becomes available", async () => {
+    const session = makeCheckoutSession({
+      session_id: "session_registered",
+      status: "confirmed",
+      registration_status: "registered",
+      registration_attempt_count: 1,
+      registration_last_attempt_at: "2026-03-24T12:00:00.000Z",
+      luma_registration_json: {},
+    });
+
+    mockGetLumaGuest.mockResolvedValueOnce({
+      guest: {
+        id: "gst_123",
+        registered_at: "2026-03-24T12:01:00.000Z",
+        check_in_qr_code: "https://luma.test/qr",
+      },
+    });
+    mockUpsertSession.mockResolvedValueOnce({
+      ...session,
+      registration_status: "registered",
+      registration_error: null,
+      registration_failure_code: null,
+      registration_next_retry_at: null,
+      luma_registration_json: {
+        guest_lookup: {
+          guest: {
+            id: "gst_123",
+            registered_at: "2026-03-24T12:01:00.000Z",
+            check_in_qr_code: "https://luma.test/qr",
+          },
+        },
+      },
+      registered_at: "2026-03-24T12:01:00.000Z",
+    });
+
+    const result = await syncAcceptedSessionRegistration(session, makeRuntimeConfig());
+
+    expect(mockGetLumaGuest).toHaveBeenCalledTimes(1);
+    expect(mockAddLumaGuest).not.toHaveBeenCalled();
+    expect(result.registration_status).toBe("registered");
+    expect(result.luma_registration_json).toEqual({
+      guest_lookup: {
+        guest: {
+          id: "gst_123",
+          registered_at: "2026-03-24T12:01:00.000Z",
+          check_in_qr_code: "https://luma.test/qr",
+        },
+      },
+    });
   });
 });

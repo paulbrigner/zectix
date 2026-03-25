@@ -23,6 +23,7 @@ import {
   asIsoTimestamp,
   asRecord,
   cipherPayStatusFromEvent,
+  isRegistrationRetryDue,
   nowIso,
   registrationRetryDelayMinutes,
 } from "@/lib/app-state/utils";
@@ -51,6 +52,46 @@ function hasGuestLookup(session: CheckoutSession) {
   const registration = asRecord(session.luma_registration_json);
   const guestLookup = asRecord(registration?.guest_lookup);
   return Boolean(asRecord(guestLookup?.guest));
+}
+
+function recentRegistrationAttempt(session: CheckoutSession, cooldownMs = 30_000) {
+  if (!session.registration_last_attempt_at) {
+    return false;
+  }
+
+  const attemptedAtMs = new Date(session.registration_last_attempt_at).getTime();
+  if (Number.isNaN(attemptedAtMs)) {
+    return false;
+  }
+
+  return Date.now() - attemptedAtMs < cooldownMs;
+}
+
+function registrationPayloadWithGuestLookup(
+  session: CheckoutSession,
+  guestLookup: Record<string, unknown>,
+) {
+  return {
+    ...(session.luma_registration_json || {}),
+    guest_lookup: guestLookup,
+  };
+}
+
+async function attachGuestLookupToRegisteredSession(
+  session: CheckoutSession,
+  guestLookup: Record<string, unknown>,
+) {
+  return upsertSession(session.session_id, {
+    registration_status: "registered",
+    registration_error: null,
+    registration_failure_code: null,
+    registration_next_retry_at: null,
+    luma_registration_json: registrationPayloadWithGuestLookup(session, guestLookup),
+    registered_at:
+      asIsoTimestamp(asRecord(asRecord(guestLookup)?.guest)?.registered_at) ||
+      session.registered_at ||
+      nowIso(),
+  });
 }
 
 function classifyRegistrationFailure(error: unknown) {
@@ -88,7 +129,7 @@ async function registerAcceptedSession(
   session: CheckoutSession,
   config: RuntimeConfigRecord,
 ) {
-  if (session.registration_status === "registered") {
+  if (session.registration_status === "registered" && hasGuestLookup(session)) {
     return session;
   }
 
@@ -120,6 +161,26 @@ async function registerAcceptedSession(
       ...(asRecord(result) || {}),
       ...(asRecord(guestLookup) ? { guest_lookup: asRecord(guestLookup) } : {}),
     };
+
+    if (!asRecord(asRecord(guestLookup)?.guest)) {
+      const nextRetryAt = new Date(Date.now() + 30_000).toISOString();
+      logEvent("warn", "registration.pending_guest_lookup", {
+        session_id: session.session_id,
+        invoice_id: session.cipherpay_invoice_id,
+        attempt_count: nextAttemptCount,
+        retry_at: nextRetryAt,
+      });
+      return upsertSession(session.session_id, {
+        registration_status: "pending",
+        registration_error: "Payment accepted. Waiting for Luma to attach the attendee pass.",
+        registration_failure_code: "guest_lookup_pending",
+        registration_attempt_count: nextAttemptCount,
+        registration_last_attempt_at: attemptAt,
+        registration_next_retry_at: nextRetryAt,
+        luma_registration_json: registrationPayload,
+        registered_at: null,
+      });
+    }
 
     const registeredSession = await upsertSession(session.session_id, {
       registration_status: "registered",
@@ -183,24 +244,52 @@ export async function hydrateRegisteredSessionGuestLookup(
     attendeeEmail: session.attendee_email,
   }).catch(() => null);
 
-  if (!asRecord(guestLookup)) {
+  const guestLookupRecord = asRecord(guestLookup);
+  if (!guestLookupRecord) {
     return session;
   }
 
-  return upsertSession(session.session_id, {
-    registration_status: "registered",
-    registration_error: null,
-    registration_failure_code: null,
-    registration_next_retry_at: null,
-    luma_registration_json: {
-      ...(session.luma_registration_json || {}),
-      guest_lookup: asRecord(guestLookup),
-    },
-    registered_at:
-      asIsoTimestamp(asRecord(asRecord(guestLookup)?.guest)?.registered_at) ||
-      session.registered_at ||
-      nowIso(),
-  });
+  return attachGuestLookupToRegisteredSession(session, guestLookupRecord);
+}
+
+export async function syncAcceptedSessionRegistration(
+  session: CheckoutSession,
+  config?: RuntimeConfigRecord,
+) {
+  if (!["detected", "confirmed"].includes(session.status) || hasGuestLookup(session)) {
+    return session;
+  }
+
+  const resolvedConfig =
+    config || (await getRuntimeConfig({ allowMissingTable: true }));
+  if (!resolvedConfig.luma_api_key) {
+    return session;
+  }
+
+  const guestLookup = await getLumaGuest({
+    apiKey: resolvedConfig.luma_api_key,
+    eventApiId: session.event_api_id,
+    attendeeEmail: session.attendee_email,
+  }).catch(() => null);
+
+  const guestLookupRecord = asRecord(guestLookup);
+  if (asRecord(guestLookupRecord?.guest) && guestLookupRecord) {
+    return attachGuestLookupToRegisteredSession(session, guestLookupRecord);
+  }
+
+  if (recentRegistrationAttempt(session)) {
+    return session;
+  }
+
+  if (
+    (session.registration_status === "pending" ||
+      session.registration_status === "failed") &&
+    !isRegistrationRetryDue(session)
+  ) {
+    return session;
+  }
+
+  return registerAcceptedSession(session, resolvedConfig);
 }
 
 export async function createCheckoutSession(input: CreateCheckoutInput) {
