@@ -1,4 +1,4 @@
-const DEFAULT_DEV_BASE_PATH = "/lumazcash";
+const DEFAULT_DEV_BASE_PATH = "/zectix";
 
 function normalizeAppBasePath(value: string | null | undefined) {
   const trimmed = value?.trim();

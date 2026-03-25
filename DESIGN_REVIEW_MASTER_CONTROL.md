@@ -1,14 +1,14 @@
-# LumaZcash Design Review
+# ZecTix Design Review
 
 **Date:** 2026-03-24  
 **Reviewer:** Master Control  
-**Repository:** `/Users/paulbrigner/dev/lumazcash`
+**Repository:** `/Users/paulbrigner/dev/zectix`
 
 ---
 
 ## Executive Summary
 
-LumaZcash is a focused Next.js 15 application that sells Luma event registrations through a Zcash payment flow backed by CipherPay. The architecture is compact, readable, and more disciplined than a lot of first-generation AI-assisted app code: core business logic is mostly pushed into `lib/`, persistence concerns are isolated under `lib/app-state/`, and the user-facing flow is understandable end to end.
+ZecTix is a focused Next.js 15 application that sells Luma event registrations through a Zcash payment flow backed by CipherPay. The architecture is compact, readable, and more disciplined than a lot of first-generation AI-assisted app code: core business logic is mostly pushed into `lib/`, persistence concerns are isolated under `lib/app-state/`, and the user-facing flow is understandable end to end.
 
 The repo’s strongest qualities are **clarity, narrow scope, and pragmatic separation of concerns**. The main weaknesses are **lack of test coverage, thin operational guardrails, and some security/robustness gaps around admin auth, webhook handling, and production observability**.
 
@@ -467,7 +467,7 @@ Right now, the repo only partially answers that.
 
 ## 12. Final Verdict
 
-LumaZcash is a **good small system**, not a sloppy one. The design is more coherent than many apps in this category, and the repo shows decent judgment in separation of concerns, runtime config handling, checkout idempotency, and pragmatic DynamoDB usage.
+ZecTix is a **good small system**, not a sloppy one. The design is more coherent than many apps in this category, and the repo shows decent judgment in separation of concerns, runtime config handling, checkout idempotency, and pragmatic DynamoDB usage.
 
 But the current version still feels like an **early serious prototype** rather than a fully hardened production system. The biggest gap is not architecture elegance. It is **operational confidence**.
 

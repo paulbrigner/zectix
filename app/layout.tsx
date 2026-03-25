@@ -11,18 +11,18 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "LumaZcash",
+  title: "ZecTix",
   description:
     "Buy Luma event tickets with Zcash through a streamlined in-app CipherPay checkout.",
   openGraph: {
-    title: "LumaZcash",
+    title: "ZecTix",
     description:
       "Buy Luma event tickets with Zcash through a streamlined in-app CipherPay checkout.",
     type: "website",
   },
   twitter: {
     card: "summary",
-    title: "LumaZcash",
+    title: "ZecTix",
     description:
       "Buy Luma event tickets with Zcash through a streamlined in-app CipherPay checkout.",
   },

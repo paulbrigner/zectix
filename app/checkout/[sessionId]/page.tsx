@@ -39,7 +39,7 @@ export default async function CheckoutPage({
       <section className="card event-page-card">
         <div className="event-page-topbar">
           <div className="public-brand">
-            <span>LumaZcash</span>
+            <span>ZecTix</span>
           </div>
           <div className="event-page-actions">
             {event?.url ? (

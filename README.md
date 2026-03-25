@@ -1,6 +1,6 @@
-# LumaZcash
+# ZecTix
 
-LumaZcash is a Next.js application for selling Luma event registrations through CipherPay with Zcash.
+ZecTix is a Next.js application for selling Luma event registrations through CipherPay with Zcash.
 
 The app:
 
@@ -45,7 +45,7 @@ If you plan to use it in production, you should still perform your own engineeri
 
 ## Main Routes
 
-- `/` home page in production, or `/lumazcash` in local development by default
+- `/` home page in production, or `/zectix` in local development by default
 - `/events/[eventId]` event checkout entry page
 - `/checkout/[sessionId]` live payment and registration status page
 - `/admin-login` shared-password sign-in page for operations routes
@@ -189,7 +189,7 @@ npm run db:init
 This creates the default local table:
 
 ```text
-lumazcash
+zectix
 ```
 
 ### 5. Start the dev server
@@ -200,11 +200,11 @@ npm run dev
 
 ### 6. Open the app
 
-By default, local development uses a base path of `/lumazcash`, so the main local URLs are:
+By default, local development uses a base path of `/zectix`, so the main local URLs are:
 
-- `http://localhost:3000/lumazcash`
-- `http://localhost:3000/lumazcash/admin`
-- `http://localhost:3000/lumazcash/dashboard`
+- `http://localhost:3000/zectix`
+- `http://localhost:3000/zectix/admin`
+- `http://localhost:3000/zectix/dashboard`
 
 ### 7. Save Luma and CipherPay settings in `/admin`
 
@@ -220,9 +220,9 @@ The local template is in [`./.env.local.template`](./.env.local.template).
 
 Common local variables:
 
-- `APP_BASE_PATH=/lumazcash`
+- `APP_BASE_PATH=/zectix`
 - `DYNAMODB_ENDPOINT=http://127.0.0.1:8000`
-- `DYNAMODB_TABLE_NAME=lumazcash`
+- `DYNAMODB_TABLE_NAME=zectix`
 - `AWS_REGION=us-east-1`
 - `AWS_ACCESS_KEY_ID=local`
 - `AWS_SECRET_ACCESS_KEY=local`
@@ -270,7 +270,7 @@ If you expose your local dev server through Caddy or another reverse proxy, the 
 
 For example:
 
-- CipherPay: `https://your-local-domain.example/lumazcash/api/cipherpay/webhook`
+- CipherPay: `https://your-local-domain.example/zectix/api/cipherpay/webhook`
 
 ### Production webhook URL
 
@@ -280,7 +280,7 @@ On a dedicated production domain with no base path:
 
 For the current AWS target domain:
 
-- `https://lumazcash.pgpforcrypto.org/api/cipherpay/webhook`
+- `https://zectix.pgpforcrypto.org/api/cipherpay/webhook`
 
 ## AWS Amplify Deployment
 
@@ -288,7 +288,7 @@ This repository is set up for straightforward Amplify deployment.
 
 ### Production assumptions
 
-- production runs at the domain root, not under `/lumazcash`
+- production runs at the domain root, not under `/zectix`
 - the app uses managed DynamoDB
 - `/admin` and `/dashboard` are protected with shared auth
 - integration secrets are injected through Amplify environment variables
@@ -308,7 +308,7 @@ It:
 
 Required:
 
-- `DYNAMODB_TABLE_NAME=lumazcash`
+- `DYNAMODB_TABLE_NAME=zectix`
 - `ADMIN_PASSWORD_HASH`
 - `ADMIN_SESSION_SECRET`
 
@@ -343,16 +343,16 @@ Notes:
 The current deployment model expects:
 
 - an Amplify Hosting app for this repository
-- a managed DynamoDB table named `lumazcash`
+- a managed DynamoDB table named `zectix`
 - an Amplify compute role with permission to read and write that table
-- a public domain or subdomain, such as `lumazcash.pgpforcrypto.org`
+- a public domain or subdomain, such as `zectix.pgpforcrypto.org`
 
 ### Custom domain note
 
 Amplify deployment and Amplify custom-domain routing are separate concerns.
 
 - `amplify.yml` controls the app build
-- the public hostname only works after Amplify has an attached domain association and a `subdomain -> branch` mapping such as `lumazcash -> main`
+- the public hostname only works after Amplify has an attached domain association and a `subdomain -> branch` mapping such as `zectix -> main`
 
 If your DNS is managed in Route53 in the same AWS account, Amplify can usually create the DNS record for you once that mapping is configured.
 
@@ -361,13 +361,13 @@ If you disconnect and reconnect the GitHub repository or recreate the Amplify ap
 For this app, the expected production mapping is:
 
 - domain: `pgpforcrypto.org`
-- subdomain: `lumazcash`
+- subdomain: `zectix`
 - branch: `main`
 
 That should result in:
 
-- `https://lumazcash.pgpforcrypto.org`
-- `https://lumazcash.pgpforcrypto.org/api/cipherpay/webhook`
+- `https://zectix.pgpforcrypto.org`
+- `https://zectix.pgpforcrypto.org/api/cipherpay/webhook`
 
 ### Deployment order
 
@@ -375,9 +375,9 @@ That should result in:
 2. Connect the repo to Amplify.
 3. Configure the required Amplify environment variables.
 4. Ensure the Amplify compute role has access to DynamoDB.
-5. Attach the production custom domain and confirm the `lumazcash -> main` subdomain mapping exists.
+5. Attach the production custom domain and confirm the `zectix -> main` subdomain mapping exists.
 6. Deploy the app.
-7. Verify that `lumazcash.pgpforcrypto.org` resolves publicly before configuring webhooks.
+7. Verify that `zectix.pgpforcrypto.org` resolves publicly before configuring webhooks.
 8. Configure the final production webhook URL in CipherPay.
 9. Open `/admin` and save any non-secret runtime settings you want to override.
 10. If you update production secrets, redeploy after changing Amplify environment variables.
@@ -462,7 +462,7 @@ Base path behavior is controlled in [`./next.config.mjs`](./next.config.mjs) and
 
 Current defaults:
 
-- local development: `/lumazcash`
+- local development: `/zectix`
 - production: root `/`
 
 You can override that with `APP_BASE_PATH`.

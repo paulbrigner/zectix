@@ -1,4 +1,4 @@
-# LumaZcash Runbook
+# ZecTix Runbook
 
 This is the operator checklist for the production app.
 
@@ -52,8 +52,8 @@ When something looks off, check these in order:
 
 ### A production deploy is live but the hostname is wrong
 
-1. Confirm the Amplify domain association still has `lumazcash -> main`.
-2. Confirm Route53 still has the `lumazcash.pgpforcrypto.org` CNAME.
+1. Confirm the Amplify domain association still has `zectix -> main`.
+2. Confirm Route53 still has the `zectix.pgpforcrypto.org` CNAME.
 3. Reattach the domain mapping if the Amplify app was disconnected and reconnected.
 
 ## Recovery Notes
@@ -77,8 +77,8 @@ Required production values:
 
 - `OPS_AUTOMATION_SECRET` in Amplify
 - matching `OPS_AUTOMATION_SECRET` in the AWS retry Lambda
-- `LUMAZCASH_BASE_URL` in the AWS ops Lambdas
-- `LUMAZCASH_TABLE_NAME` in the AWS monitoring Lambda
+- `ZECTIX_BASE_URL` in the AWS ops Lambdas
+- `ZECTIX_TABLE_NAME` in the AWS monitoring Lambda
 
 ## Probes
 
