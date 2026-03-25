@@ -18,19 +18,11 @@ This repository is designed to run in two environments:
 
 ## Disclaimer
 
-This codebase was generated and iterated with Codex GPT-5.4.
+This codebase was generated and iterated with Codex GPT-5.4 and later hardened with additional testing, operational safeguards, and deployment controls.
 
-It has not been formally audited or professionally reviewed for security,
-correctness, compliance, or production readiness.
+It has not undergone a formal third-party security audit or professional review.
 
-If you plan to use this code in production:
-
-- perform your own engineering review
-- add comprehensive automated and manual testing
-- validate payment, webhook, and registration edge cases
-- review infrastructure, auth, and secret-handling decisions
-
-Use at your own risk.
+If you plan to use it in production, you should still perform your own engineering, security, and operational review. Use at your own risk.
 
 ## Stack
 
@@ -402,6 +394,8 @@ Production operations such as scheduled recovery and production monitoring are h
 
 ## AWS Operations
 
+AWS monitoring and recovery are first-class production operations in this deployment model, not just included helper code.
+
 The repository includes AWS-side handler code under [`./ops/aws`](./ops/aws) for:
 
 - scheduled retry of due registrations
@@ -410,8 +404,10 @@ The repository includes AWS-side handler code under [`./ops/aws`](./ops/aws) for
 These AWS automation paths use:
 
 - `OPS_AUTOMATION_SECRET` for machine-to-machine authentication to `/api/admin/retry-registration`
-- CloudWatch metrics and alarms for readiness and registration/webhook trouble
 - EventBridge schedules for recurring jobs
+- Lambda functions for recovery and monitoring
+- CloudWatch metrics and alarms for readiness and registration/webhook trouble
+- SNS notifications for alarm delivery
 
 Keep this separation:
 
@@ -438,6 +434,7 @@ The dashboard is the primary operator surface for the app today. When something 
 
 - check `/dashboard` for failed registrations and invalid webhooks
 - inspect the affected checkout session for `registration_error` and payment status
+- `Payment accepted` does not guarantee Luma created the guest yet; check `registration_status` and `registration_error`
 - use the dashboard recovery actions or `/api/admin/retry-registration` for stuck registrations
 - check `/api/health` and `/api/ready` before assuming the app or integrations are down
 - confirm the current Amplify environment variables before assuming the code path is broken
