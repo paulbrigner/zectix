@@ -2,7 +2,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
-const defaultBasePath = process.env.NODE_ENV === "production" ? "" : "/lumazcash";
+const defaultBasePath = process.env.NODE_ENV === "production" ? "" : "/zectix";
 
 function normalizeBasePath(value) {
   const trimmed = value?.trim();

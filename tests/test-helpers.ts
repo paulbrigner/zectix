@@ -23,7 +23,7 @@ export function makeCheckoutSession(
     session_id: "session_123",
     network: "mainnet",
     event_api_id: "event_123",
-    event_name: "LumaZcash Event",
+    event_name: "ZecTix Event",
     ticket_type_api_id: "ticket_123",
     ticket_type_name: "Standard",
     attendee_name: "Jordan Lee",

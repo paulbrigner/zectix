@@ -4,7 +4,7 @@ import {
   DynamoDBClient,
 } from "@aws-sdk/client-dynamodb";
 
-const tableName = process.env.DYNAMODB_TABLE_NAME || "lumazcash";
+const tableName = process.env.DYNAMODB_TABLE_NAME || "zectix";
 const endpoint = process.env.DYNAMODB_ENDPOINT || "http://127.0.0.1:8000";
 const region = process.env.AWS_REGION || "us-east-1";
 

@@ -1,6 +1,6 @@
 import { createHmac, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 
-export const ADMIN_SESSION_COOKIE = "lumazcash_admin";
+export const ADMIN_SESSION_COOKIE = "zectix_admin";
 export const ADMIN_SESSION_TTL_SECONDS = 60 * 60 * 12;
 
 function asNonEmptyString(value: string | null | undefined) {

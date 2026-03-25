@@ -36,7 +36,7 @@ function dynamoConfig(): DynamoDBClientConfig {
 }
 
 export function appStateTableName() {
-  return process.env.DYNAMODB_TABLE_NAME?.trim() || "lumazcash";
+  return process.env.DYNAMODB_TABLE_NAME?.trim() || "zectix";
 }
 
 export function getDynamoDocumentClient() {

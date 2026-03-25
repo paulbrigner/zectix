@@ -95,7 +95,7 @@ describe("checkout service", () => {
     );
     mockGetLumaEventById.mockResolvedValueOnce({
       api_id: "event_123",
-      name: "LumaZcash Event",
+      name: "ZecTix Event",
       start_at: "2026-03-24T12:00:00.000Z",
       end_at: null,
       timezone: null,
@@ -126,7 +126,7 @@ describe("checkout service", () => {
     );
     mockGetLumaEventById.mockResolvedValueOnce({
       api_id: "event_123",
-      name: "LumaZcash Event",
+      name: "ZecTix Event",
       start_at: "2026-03-24T12:00:00.000Z",
       end_at: null,
       timezone: null,
@@ -154,7 +154,7 @@ describe("checkout service", () => {
     });
     mockGetLumaEventById.mockResolvedValueOnce({
       api_id: "event_123",
-      name: "LumaZcash Event",
+      name: "ZecTix Event",
       start_at: "2026-03-24T12:00:00.000Z",
       end_at: null,
       timezone: null,
@@ -196,7 +196,7 @@ describe("checkout service", () => {
     };
     const event = {
       api_id: "event_123",
-      name: "LumaZcash Event",
+      name: "ZecTix Event",
       start_at: "2026-03-24T12:00:00.000Z",
       end_at: null,
       timezone: null,
@@ -225,7 +225,7 @@ describe("checkout service", () => {
       expect.objectContaining({
         amount: 25,
         currency: "USD",
-        product_name: "LumaZcash Event",
+        product_name: "ZecTix Event",
         size: "Standard",
       }),
     );

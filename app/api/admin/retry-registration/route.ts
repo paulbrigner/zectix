@@ -15,7 +15,7 @@ export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   const automationAuthorized = isValidOpsAutomationSecret(
-    request.headers.get("x-lumazcash-automation-secret"),
+    request.headers.get("x-zectix-automation-secret"),
   );
 
   if (!automationAuthorized) {

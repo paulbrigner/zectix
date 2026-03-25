@@ -18,7 +18,7 @@ function requireValue(name, value) {
 }
 
 function normalizeBaseUrl(baseUrl) {
-  const normalized = requireValue("LUMAZCASH_BASE_URL", baseUrl);
+  const normalized = requireValue("ZECTIX_BASE_URL", baseUrl);
   return normalized.endsWith("/") ? normalized : `${normalized}/`;
 }
 
@@ -98,12 +98,12 @@ function toMetricData(metrics) {
 }
 
 export async function handler() {
-  const baseUrl = normalizeBaseUrl(process.env.LUMAZCASH_BASE_URL);
+  const baseUrl = normalizeBaseUrl(process.env.ZECTIX_BASE_URL);
   const tableName = requireValue(
-    "LUMAZCASH_TABLE_NAME",
-    process.env.LUMAZCASH_TABLE_NAME,
+    "ZECTIX_TABLE_NAME",
+    process.env.ZECTIX_TABLE_NAME,
   );
-  const namespace = trim(process.env.LUMAZCASH_METRIC_NAMESPACE) || "LumaZcash/Ops";
+  const namespace = trim(process.env.ZECTIX_METRIC_NAMESPACE) || "ZecTix/Ops";
   const nowMs = Date.now();
   const recentWindowMs = 24 * 60 * 60 * 1000;
 

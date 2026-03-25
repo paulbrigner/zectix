@@ -11,7 +11,7 @@ function requireValue(name, value) {
 }
 
 function normalizeBaseUrl(baseUrl) {
-  const normalized = requireValue("LUMAZCASH_BASE_URL", baseUrl);
+  const normalized = requireValue("ZECTIX_BASE_URL", baseUrl);
   return normalized.endsWith("/") ? normalized : `${normalized}/`;
 }
 
@@ -29,7 +29,7 @@ async function readBody(response) {
 }
 
 export async function handler(event = {}) {
-  const baseUrl = normalizeBaseUrl(process.env.LUMAZCASH_BASE_URL);
+  const baseUrl = normalizeBaseUrl(process.env.ZECTIX_BASE_URL);
   const automationSecret = requireValue(
     "OPS_AUTOMATION_SECRET",
     process.env.OPS_AUTOMATION_SECRET,
@@ -45,7 +45,7 @@ export async function handler(event = {}) {
     headers: {
       "content-type": "application/json",
       accept: "application/json",
-      "x-lumazcash-automation-secret": automationSecret,
+      "x-zectix-automation-secret": automationSecret,
       "x-ops-source": "aws-eventbridge",
     },
     body: JSON.stringify(sessionId ? { session_id: sessionId } : {}),

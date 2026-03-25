@@ -32,7 +32,7 @@ export default async function AdminLoginPage() {
         <header className="feed-header">
           <div>
             <p className="eyebrow">Admin sign-in</p>
-            <h1>LumaZcash operations access</h1>
+            <h1>ZecTix operations access</h1>
             <p className="subtle-text">
               Enter the shared password to unlock the admin and dashboard
               routes for this deployment.
