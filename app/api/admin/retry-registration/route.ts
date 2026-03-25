@@ -5,6 +5,7 @@ import {
   retryRegistrationForSession,
 } from "@/lib/app-state/service";
 import { jsonError, jsonOk } from "@/lib/http";
+import { isValidOpsAutomationSecret } from "@/lib/ops-automation";
 import {
   ensureSameOriginMutation,
   getTrustedIpAddress,
@@ -13,14 +14,20 @@ import {
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
-  const authError = await ensureAdminApiAccess();
-  if (authError) {
-    return authError;
-  }
+  const automationAuthorized = isValidOpsAutomationSecret(
+    request.headers.get("x-lumazcash-automation-secret"),
+  );
 
-  const originError = ensureSameOriginMutation(request);
-  if (originError) {
-    return originError;
+  if (!automationAuthorized) {
+    const authError = await ensureAdminApiAccess();
+    if (authError) {
+      return authError;
+    }
+
+    const originError = ensureSameOriginMutation(request);
+    if (originError) {
+      return originError;
+    }
   }
 
   const body = await request.json().catch(() => null);
@@ -33,17 +40,21 @@ export async function POST(request: Request) {
     if (sessionId) {
       const session = await retryRegistrationForSession(sessionId);
       await putAdminAuditEvent({
-        event_type: "admin.retry_registration.session",
+        event_type: automationAuthorized
+          ? "automation.retry_registration.session"
+          : "admin.retry_registration.session",
         actor_ip: getTrustedIpAddress(request),
         actor_origin: request.headers.get("origin"),
         request_headers_json: {
           origin: request.headers.get("origin"),
           referer: request.headers.get("referer"),
           "user-agent": request.headers.get("user-agent"),
+          "x-ops-source": request.headers.get("x-ops-source"),
         },
         metadata_json: {
           session_id: sessionId,
           registration_status: session.registration_status,
+          automation: automationAuthorized,
         },
       });
       return jsonOk({ ok: true, session });
@@ -51,16 +62,20 @@ export async function POST(request: Request) {
 
     const sessions = await retryDueRegistrations(20);
     await putAdminAuditEvent({
-      event_type: "admin.retry_registration.due",
+      event_type: automationAuthorized
+        ? "automation.retry_registration.due"
+        : "admin.retry_registration.due",
       actor_ip: getTrustedIpAddress(request),
       actor_origin: request.headers.get("origin"),
       request_headers_json: {
         origin: request.headers.get("origin"),
         referer: request.headers.get("referer"),
         "user-agent": request.headers.get("user-agent"),
+        "x-ops-source": request.headers.get("x-ops-source"),
       },
       metadata_json: {
         recovered_count: sessions.length,
+        automation: automationAuthorized,
       },
     });
     return jsonOk({ ok: true, sessions });

@@ -64,28 +64,21 @@ When something looks off, check these in order:
 - Registration retries are stateful: failed sessions carry retry metadata and can be retried from the dashboard or `/api/admin/retry-registration`.
 - Structured logs now emit checkout, webhook, and registration events with correlation-friendly metadata.
 
-## GitHub Actions Recovery Job
+## AWS Recovery and Monitoring
 
-If you enable the scheduled recovery workflow, set these GitHub Actions secrets:
+Production operations are AWS-native:
 
-- `LUMAZCASH_BASE_URL`, for example `https://lumazcash.pgpforcrypto.org`
-- `LUMAZCASH_ADMIN_PASSWORD`, the shared admin password used by `/api/admin/login`
+- EventBridge schedules invoke the retry and monitoring Lambda functions
+- the retry Lambda calls `/api/admin/retry-registration` using `OPS_AUTOMATION_SECRET`
+- the monitoring Lambda records CloudWatch metrics for readiness and operational trouble
+- CloudWatch alarms publish to the configured SNS topic
 
-Optional manual-dispatch input:
+Required production values:
 
-- `session_id`, to retry one checkout session instead of the due-session batch
-
-## GitHub Actions Smoke Check
-
-Set this GitHub repository variable:
-
-- `PRODUCTION_BASE_URL`, for example `https://lumazcash.pgpforcrypto.org`
-
-Optional tuning variables:
-
-- `SMOKE_MAX_ATTEMPTS`
-- `SMOKE_RETRY_DELAY_SECONDS`
-- `SMOKE_REQUEST_TIMEOUT_SECONDS`
+- `OPS_AUTOMATION_SECRET` in Amplify
+- matching `OPS_AUTOMATION_SECRET` in the AWS retry Lambda
+- `LUMAZCASH_BASE_URL` in the AWS ops Lambdas
+- `LUMAZCASH_TABLE_NAME` in the AWS monitoring Lambda
 
 ## Probes
 
