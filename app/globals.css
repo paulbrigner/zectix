@@ -144,6 +144,7 @@ select {
   min-height: 2.25rem;
   padding: 0 0.875rem;
   font-size: 0.92rem;
+  white-space: nowrap;
 }
 
 .feed-header,
