@@ -1,11 +1,14 @@
 import { createCheckoutSession } from "@/lib/app-state/service";
 import { consumeCheckoutRateLimit } from "@/lib/app-state/state";
 import { jsonError, jsonOk } from "@/lib/http";
+import { createRequestId, logEvent } from "@/lib/observability";
+import { getTrustedIpAddress } from "@/lib/request-security";
 import { createSessionViewerToken } from "@/lib/session-viewer";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
+  const requestId = createRequestId();
   const body = await request.json().catch(() => null);
   const attendeeEmail =
     body && typeof body === "object" && typeof body.attendee_email === "string"
@@ -31,8 +34,7 @@ export async function POST(request: Request) {
     return jsonError("Event, attendee name, and attendee email are required.");
   }
 
-  const forwardedFor = request.headers.get("x-forwarded-for");
-  const ipAddress = forwardedFor?.split(",")[0]?.trim() || null;
+  const ipAddress = getTrustedIpAddress(request);
 
   const rateLimit = await consumeCheckoutRateLimit({
     ipAddress,
@@ -40,6 +42,12 @@ export async function POST(request: Request) {
     eventApiId,
   });
   if (!rateLimit.ok) {
+    logEvent("warn", "checkout.rate_limited", {
+      request_id: requestId,
+      actor_ip: ipAddress,
+      attendee_email: attendeeEmail,
+      event_api_id: eventApiId,
+    });
     return jsonError(rateLimit.reason || "Too many checkout attempts.", 429, {
       headers: {
         "retry-after": String(rateLimit.retry_after_seconds || 600),
@@ -55,6 +63,14 @@ export async function POST(request: Request) {
       ticket_type_api_id: ticketTypeApiId,
     });
 
+    logEvent("info", "checkout.request.succeeded", {
+      request_id: requestId,
+      session_id: result.session.session_id,
+      invoice_id: result.session.cipherpay_invoice_id,
+      attendee_email: attendeeEmail,
+      event_api_id: eventApiId,
+    });
+
     return jsonOk({
       ...result,
       viewer_token: createSessionViewerToken(
@@ -63,6 +79,13 @@ export async function POST(request: Request) {
       ),
     });
   } catch (error) {
+    logEvent("error", "checkout.request.failed", {
+      request_id: requestId,
+      actor_ip: ipAddress,
+      attendee_email: attendeeEmail,
+      event_api_id: eventApiId,
+      error: error instanceof Error ? error.message : "Failed to create checkout session",
+    });
     return jsonError(
       error instanceof Error ? error.message : "Failed to create checkout session",
       500,

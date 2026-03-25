@@ -62,7 +62,10 @@ Use at your own risk.
 - `/api/checkout` checkout session creation
 - `/api/cipherpay/webhook` CipherPay webhook endpoint
 - `/api/admin/config` admin config API
+- `/api/admin/retry-registration` admin recovery API for failed or stuck registrations
 - `/api/dashboard` dashboard API
+- `/api/health` liveness probe
+- `/api/ready` readiness probe
 - `/api/sessions/[sessionId]` signed checkout-session status API
 
 ## Runtime Configuration
@@ -92,6 +95,12 @@ By default, when `NODE_ENV=production`, the app treats these values as externall
 
 This reduces the blast radius of an application-level config compromise and keeps third-party credentials out of normal mutable app state.
 
+For operators, the practical takeaway is:
+
+- rotate production secrets in Amplify or your secret manager
+- keep recovery steps and incident checks in [`RUNBOOK.md`](./RUNBOOK.md)
+- avoid reintroducing mutable runtime secret storage unless you explicitly need it
+
 If you intentionally want runtime secret storage enabled in production, you can override that behavior with:
 
 - `ALLOW_RUNTIME_SECRET_STORAGE=true`
@@ -103,10 +112,17 @@ That override is not recommended.
 This repo includes several production-oriented safeguards:
 
 - shared-password protection for `/admin` and `/dashboard`
+- admin login throttling and audit logging
+- same-origin checks on admin mutation routes
 - per-IP and per-attendee checkout throttling on `/api/checkout`
 - idempotent reuse of still-active checkout sessions instead of always minting a new CipherPay invoice
 - signed viewer tokens for `/checkout/[sessionId]` and `/api/sessions/[sessionId]`
 - targeted session lookup items in DynamoDB to avoid full attendee-session scans as volume grows
+- retryable registration recovery state plus an admin retry endpoint
+- `/api/health` and `/api/ready` probes
+- structured operational logging with request and session correlation ids
+- a Vitest-based unit and service test suite
+- operator recovery guidance in [`RUNBOOK.md`](./RUNBOOK.md)
 
 ### Checkout rate limiting
 
@@ -143,6 +159,7 @@ npm run dev
 npm run build
 npm run start
 npm run lint
+npm test
 npm run typecheck
 npm run db:init
 npm run auth:hash -- "choose-a-shared-password"
@@ -369,6 +386,7 @@ That should result in:
 7. Verify that `lumazcash.pgpforcrypto.org` resolves publicly before configuring webhooks.
 8. Configure the final production webhook URL in CipherPay.
 9. Open `/admin` and save any non-secret runtime settings you want to override.
+10. If you update production secrets, redeploy after changing Amplify environment variables.
 
 ## DynamoDB State
 
@@ -383,6 +401,33 @@ The DynamoDB table stores the orchestration state needed for the application:
 Luma remains the source of truth for event and registration data.
 
 CipherPay remains the source of truth for invoice and payment state.
+
+## Operational Recovery
+
+The dashboard is the primary operator surface for the app today. When something looks wrong:
+
+- check `/dashboard` for failed registrations and invalid webhooks
+- inspect the affected checkout session for `registration_error` and payment status
+- use the dashboard recovery actions or `/api/admin/retry-registration` for stuck registrations
+- check `/api/health` and `/api/ready` before assuming the app or integrations are down
+- confirm the current Amplify environment variables before assuming the code path is broken
+- use `RUNBOOK.md` for the current recovery checklist and incident notes
+
+## Tests
+
+The repository includes a small but high-value Vitest suite covering:
+
+- admin password hashing and session helpers
+- CipherPay webhook signature verification
+- session viewer token generation and validation
+- app-state utility helpers
+- checkout creation and recovery-oriented service logic
+
+Run it with:
+
+```sh
+npm test
+```
 
 ## Base Path Behavior
 

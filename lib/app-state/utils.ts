@@ -60,6 +60,16 @@ export function asFiniteNumber(value: unknown): number | null {
   return null;
 }
 
+export function asNonNegativeInteger(value: unknown, fallback = 0) {
+  const parsed = asFiniteNumber(value);
+  if (parsed == null) {
+    return fallback;
+  }
+
+  const rounded = Math.floor(parsed);
+  return rounded >= 0 ? rounded : fallback;
+}
+
 export function asBoolean(value: unknown, fallback = false) {
   if (typeof value === "boolean") return value;
   if (typeof value === "number") return value !== 0;
@@ -213,6 +223,41 @@ export function applyDerivedCheckoutSessionState(
     ...session,
     status: "expired",
   };
+}
+
+export function isRegistrationRetryDue(
+  session: Pick<
+    CheckoutSession,
+    | "status"
+    | "registration_status"
+    | "registration_next_retry_at"
+    | "registration_attempt_count"
+  >,
+  nowMs = Date.now(),
+) {
+  if (!["detected", "confirmed"].includes(session.status)) {
+    return false;
+  }
+
+  if (session.registration_status === "registered") {
+    return false;
+  }
+
+  if (!session.registration_next_retry_at) {
+    return false;
+  }
+
+  const retryAt = new Date(session.registration_next_retry_at).getTime();
+  if (Number.isNaN(retryAt)) {
+    return false;
+  }
+
+  return retryAt <= nowMs;
+}
+
+export function registrationRetryDelayMinutes(attemptCount: number) {
+  const normalized = Math.max(1, Math.floor(attemptCount));
+  return Math.min(60, 5 * 2 ** (normalized - 1));
 }
 
 export function sortByIsoDateDesc<T>(

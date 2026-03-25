@@ -60,6 +60,10 @@ export type CheckoutSession = {
   status: CipherPaySessionStatus;
   registration_status: RegistrationStatus;
   registration_error: string | null;
+  registration_failure_code: string | null;
+  registration_attempt_count: number;
+  registration_last_attempt_at: string | null;
+  registration_next_retry_at: string | null;
   luma_registration_json: Record<string, unknown> | null;
   last_event_type: string | null;
   last_event_at: string | null;
@@ -86,6 +90,16 @@ export type WebhookEvent = {
   received_at: string | null;
 };
 
+export type AdminAuditEvent = {
+  event_id: string;
+  event_type: string;
+  actor_ip: string | null;
+  actor_origin: string | null;
+  request_headers_json: Record<string, unknown> | null;
+  metadata_json: Record<string, unknown> | null;
+  created_at: string | null;
+};
+
 export type DashboardData = {
   config: RuntimeConfig;
   stats: {
@@ -96,6 +110,7 @@ export type DashboardData = {
     expired_sessions: number;
     registered_sessions: number;
     failed_registrations: number;
+    retryable_registrations: number;
     invalid_webhooks: number;
   };
   sessions: Array<
@@ -104,4 +119,5 @@ export type DashboardData = {
     }
   >;
   recent_webhooks: WebhookEvent[];
+  recent_admin_events: AdminAuditEvent[];
 };

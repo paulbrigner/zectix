@@ -30,6 +30,13 @@ npm run lint   # ESLint
 - `lib/app-state/service.ts` coordinates the Luma + CipherPay workflow.
 - In production, integration secrets are expected to come from environment variables rather than mutable runtime storage unless `ALLOW_RUNTIME_SECRET_STORAGE=true` is explicitly set.
 
+### Production Hardening Notes
+
+- Keep production-facing behavior simple and observable: prefer small helpers, explicit state transitions, and clear operator-facing messages.
+- When changing checkout, webhook, auth, or registration logic, add tests for the pure helpers and service paths first.
+- `RUNBOOK.md` is the current source of truth for operational recovery steps and should stay in sync with behavior changes.
+- Keep health/readiness routes compact, and keep recovery endpoints operator-only, explicit, and auditable.
+
 ### Luma API Integration
 
 `components/EventList.tsx` is an async server component that fetches events from `https://public-api.luma.com/v1/calendar/list-events` using the `LUMA_API_KEY` env var or the runtime config saved through `/admin`. Response shape: `{ entries: [{ api_id, event: { name, start_at, cover_url, url } }] }`.
