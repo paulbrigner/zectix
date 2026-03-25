@@ -215,6 +215,7 @@ export async function addLumaGuest({
       ticket: ticketTypeApiId
         ? {
             event_ticket_type_id: ticketTypeApiId,
+            quantity: 1,
           }
         : undefined,
     }),
