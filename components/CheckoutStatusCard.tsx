@@ -178,6 +178,8 @@ export function CheckoutStatusCard({
     () => expiryCountdownLabel(session.cipherpay_expires_at, countdownNowMs),
     [countdownNowMs, session.cipherpay_expires_at],
   );
+  const passReady =
+    session.registration_status === "registered" && Boolean(registrationGuest);
 
   const shouldPoll = useMemo(() => {
     const awaitingPayment =
@@ -864,12 +866,12 @@ export function CheckoutStatusCard({
           <section className="pass-shell">
             <div className="pass-head">
               <div className="pass-head-top">
-                <p className="eyebrow">Attendee pass</p>
+                <p className="eyebrow">{passReady ? "Attendee pass" : "Payment accepted"}</p>
                 <div className="pass-actions">
                   <button
                     aria-label="Open printer-friendly pass"
                     className="checkout-print-button"
-                    disabled={!registrationGuest || !entryQrDataUrl}
+                    disabled={!passReady || !entryQrDataUrl}
                     onClick={() => void openPrintView()}
                     type="button"
                   >
@@ -902,15 +904,16 @@ export function CheckoutStatusCard({
                   ) : null}
                 </div>
               </div>
-              <h3>You&apos;re in</h3>
+              <h3>{passReady ? "You're in" : "Preparing your pass"}</h3>
             </div>
 
             <div className="pass-banner">
-              Your ticket is ready. Luma will email your ticket and calendar
-              invite.
+              {passReady
+                ? "Your ticket is ready. Luma will email your ticket and calendar invite."
+                : "Payment accepted. We're attaching your Luma attendee pass now. This page refreshes automatically."}
             </div>
 
-            {registrationGuest ? (
+            {passReady && registrationGuest ? (
               <div className="pass-grid">
                 <div className="pass-qr-card">
                   {entryQrDataUrl ? (
@@ -982,8 +985,9 @@ export function CheckoutStatusCard({
               <div className="pass-loading-card">
                 <strong>Preparing your pass</strong>
                 <p className="subtle-text">
-                  Payment has been accepted. The Luma guest record is still being
-                  attached.
+                  {session.registration_status === "failed"
+                    ? "Payment has been accepted. We're retrying the Luma registration now."
+                    : "Payment has been accepted. The Luma guest record is still being attached."}
                 </p>
               </div>
             )}
