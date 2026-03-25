@@ -388,6 +388,33 @@ That should result in:
 9. Open `/admin` and save any non-secret runtime settings you want to override.
 10. If you update production secrets, redeploy after changing Amplify environment variables.
 
+## GitHub Automation
+
+The repository includes GitHub-side automation for quality gates and operational checks:
+
+- `CI` runs lint, tests, and production build validation on pushes and pull requests.
+- `Dependency Review` runs on pull requests.
+- `Dependabot` updates npm packages and GitHub Actions weekly.
+- `Retry Registrations` can retry stuck post-payment Luma registrations on a schedule or by manual dispatch.
+- `Production Smoke` checks the deployed site, `/api/health`, and `/api/ready`.
+
+### GitHub Actions configuration
+
+Set these GitHub repository secrets for the scheduled registration recovery workflow:
+
+- `LUMAZCASH_BASE_URL`
+- `LUMAZCASH_ADMIN_PASSWORD`
+
+Set this GitHub repository variable for the smoke-check workflow:
+
+- `PRODUCTION_BASE_URL`
+
+Optional smoke-check tuning variables:
+
+- `SMOKE_MAX_ATTEMPTS`
+- `SMOKE_RETRY_DELAY_SECONDS`
+- `SMOKE_REQUEST_TIMEOUT_SECONDS`
+
 ## DynamoDB State
 
 The DynamoDB table stores the orchestration state needed for the application:
