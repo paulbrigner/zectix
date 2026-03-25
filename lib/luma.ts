@@ -1,4 +1,10 @@
-import { asBoolean, asFiniteNumber, asRecord, asString } from "@/lib/app-state/utils";
+import {
+  asBoolean,
+  asFiniteNumber,
+  asRecord,
+  asString,
+  normalizeEmailAddress,
+} from "@/lib/app-state/utils";
 
 export type LumaEvent = {
   api_id: string;
@@ -201,6 +207,7 @@ export async function addLumaGuest({
   attendeeEmail: string;
   ticketTypeApiId: string | null;
 }) {
+  const normalizedEmail = normalizeEmailAddress(attendeeEmail);
   const response = await fetch("https://public-api.luma.com/v1/event/add-guests", {
     method: "POST",
     headers: lumaHeaders(apiKey),
@@ -209,7 +216,7 @@ export async function addLumaGuest({
       guests: [
         {
           name: attendeeName,
-          email: attendeeEmail,
+          email: normalizedEmail,
         },
       ],
       ticket: ticketTypeApiId
@@ -234,8 +241,9 @@ export async function getLumaGuest({
   eventApiId: string;
   attendeeEmail: string;
 }) {
+  const normalizedEmail = normalizeEmailAddress(attendeeEmail);
   const response = await fetch(
-    `https://public-api.luma.com/v1/event/get-guest?event_api_id=${encodeURIComponent(eventApiId)}&email=${encodeURIComponent(attendeeEmail)}`,
+    `https://public-api.luma.com/v1/event/get-guest?event_api_id=${encodeURIComponent(eventApiId)}&email=${encodeURIComponent(normalizedEmail)}`,
     {
       headers: {
         accept: "application/json",

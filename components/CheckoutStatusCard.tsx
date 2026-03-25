@@ -95,7 +95,10 @@ function statusMessage(session: CheckoutSession) {
   }
 
   if (session.registration_status === "failed") {
-    return "Your payment was accepted. We are still finalizing the Luma registration.";
+    return (
+      session.registration_error ||
+      "Your payment was accepted, but the Luma attendee record still needs operator attention."
+    );
   }
 
   if (session.status === "confirmed") {
@@ -123,7 +126,7 @@ function statusMessage(session: CheckoutSession) {
 
 function paymentStateLabel(session: CheckoutSession) {
   if (session.registration_status === "registered") return "Payment accepted";
-  if (session.registration_status === "failed") return "Registration pending";
+  if (session.registration_status === "failed") return "Registration issue";
   if (session.status === "confirmed") return "Payment confirmed";
   if (session.status === "detected") return "Payment accepted";
   if (session.status === "underpaid") return "Underpaid";
@@ -904,13 +907,22 @@ export function CheckoutStatusCard({
                   ) : null}
                 </div>
               </div>
-              <h3>{passReady ? "You're in" : "Preparing your pass"}</h3>
+              <h3>
+                {passReady
+                  ? "You're in"
+                  : session.registration_status === "failed"
+                    ? "Registration needs attention"
+                    : "Preparing your pass"}
+              </h3>
             </div>
 
             <div className="pass-banner">
               {passReady
                 ? "Your ticket is ready. Luma will email your ticket and calendar invite."
-                : "Payment accepted. We're attaching your Luma attendee pass now. This page refreshes automatically."}
+                : session.registration_status === "failed"
+                  ? (session.registration_error ||
+                    "Payment accepted, but Luma did not create the attendee record yet.")
+                  : "Payment accepted. We're attaching your Luma attendee pass now. This page refreshes automatically."}
             </div>
 
             {passReady && registrationGuest ? (
@@ -986,7 +998,8 @@ export function CheckoutStatusCard({
                 <strong>Preparing your pass</strong>
                 <p className="subtle-text">
                   {session.registration_status === "failed"
-                    ? "Payment has been accepted. We're retrying the Luma registration now."
+                    ? (session.registration_error ||
+                      "Payment has been accepted, but the Luma attendee record still needs operator attention.")
                     : "Payment has been accepted. The Luma guest record is still being attached."}
                 </p>
               </div>

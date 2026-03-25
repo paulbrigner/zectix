@@ -24,6 +24,7 @@ import {
   asRecord,
   cipherPayStatusFromEvent,
   isRegistrationRetryDue,
+  normalizeEmailAddress,
   nowIso,
   registrationRetryDelayMinutes,
 } from "@/lib/app-state/utils";
@@ -76,6 +77,9 @@ function registrationPayloadWithGuestLookup(
     guest_lookup: guestLookup,
   };
 }
+
+const GUEST_ATTACH_RETRY_WINDOW_MS = 30_000;
+const GUEST_ATTACH_MAX_ATTEMPTS = 3;
 
 async function attachGuestLookupToRegisteredSession(
   session: CheckoutSession,
@@ -136,6 +140,7 @@ async function registerAcceptedSession(
   const lumaApiKey = requireLumaApiKey(config);
   const attemptAt = nowIso();
   const nextAttemptCount = (session.registration_attempt_count || 0) + 1;
+  const attendeeEmail = normalizeEmailAddress(session.attendee_email);
 
   logEvent("info", "registration.started", {
     session_id: session.session_id,
@@ -148,14 +153,14 @@ async function registerAcceptedSession(
     const result = await addLumaGuest({
       apiKey: lumaApiKey,
       eventApiId: session.event_api_id,
-      attendeeEmail: session.attendee_email,
+      attendeeEmail,
       attendeeName: session.attendee_name,
       ticketTypeApiId: session.ticket_type_api_id,
     });
     const guestLookup = await getLumaGuest({
       apiKey: lumaApiKey,
       eventApiId: session.event_api_id,
-      attendeeEmail: session.attendee_email,
+      attendeeEmail,
     }).catch(() => null);
     const registrationPayload = {
       ...(asRecord(result) || {}),
@@ -163,17 +168,30 @@ async function registerAcceptedSession(
     };
 
     if (!asRecord(asRecord(guestLookup)?.guest)) {
-      const nextRetryAt = new Date(Date.now() + 30_000).toISOString();
-      logEvent("warn", "registration.pending_guest_lookup", {
+      const exhaustedAttempts = nextAttemptCount >= GUEST_ATTACH_MAX_ATTEMPTS;
+      const nextRetryAt = new Date(
+        Date.now() +
+          (exhaustedAttempts
+            ? registrationRetryDelayMinutes(nextAttemptCount) * 60 * 1000
+            : GUEST_ATTACH_RETRY_WINDOW_MS),
+      ).toISOString();
+      const failureCode = exhaustedAttempts
+        ? "guest_creation_unconfirmed"
+        : "guest_lookup_pending";
+      const registrationMessage = exhaustedAttempts
+        ? "Payment accepted, but Luma did not create the attendee record yet. Please retry from Operations or verify the attendee email in Luma."
+        : "Payment accepted. Waiting for Luma to attach the attendee pass.";
+      logEvent(exhaustedAttempts ? "error" : "warn", exhaustedAttempts ? "registration.guest_creation_unconfirmed" : "registration.pending_guest_lookup", {
         session_id: session.session_id,
         invoice_id: session.cipherpay_invoice_id,
         attempt_count: nextAttemptCount,
         retry_at: nextRetryAt,
+        attendee_email: attendeeEmail,
       });
       return upsertSession(session.session_id, {
-        registration_status: "pending",
-        registration_error: "Payment accepted. Waiting for Luma to attach the attendee pass.",
-        registration_failure_code: "guest_lookup_pending",
+        registration_status: exhaustedAttempts ? "failed" : "pending",
+        registration_error: registrationMessage,
+        registration_failure_code: failureCode,
         registration_attempt_count: nextAttemptCount,
         registration_last_attempt_at: attemptAt,
         registration_next_retry_at: nextRetryAt,
@@ -241,7 +259,7 @@ export async function hydrateRegisteredSessionGuestLookup(
   const guestLookup = await getLumaGuest({
     apiKey: resolvedConfig.luma_api_key,
     eventApiId: session.event_api_id,
-    attendeeEmail: session.attendee_email,
+    attendeeEmail: normalizeEmailAddress(session.attendee_email),
   }).catch(() => null);
 
   const guestLookupRecord = asRecord(guestLookup);
@@ -269,7 +287,7 @@ export async function syncAcceptedSessionRegistration(
   const guestLookup = await getLumaGuest({
     apiKey: resolvedConfig.luma_api_key,
     eventApiId: session.event_api_id,
-    attendeeEmail: session.attendee_email,
+    attendeeEmail: normalizeEmailAddress(session.attendee_email),
   }).catch(() => null);
 
   const guestLookupRecord = asRecord(guestLookup);

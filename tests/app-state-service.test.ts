@@ -381,4 +381,41 @@ describe("webhook service", () => {
       },
     });
   });
+
+  it("fails accepted sessions after repeated silent guest-creation no-ops", async () => {
+    const session = makeCheckoutSession({
+      session_id: "session_stuck",
+      status: "confirmed",
+      registration_status: "pending",
+      registration_attempt_count: 2,
+      attendee_email: "PaulBrigner+T16@gmail.com",
+      registration_next_retry_at: "2026-03-24T11:59:00.000Z",
+    });
+
+    mockAddLumaGuest.mockResolvedValueOnce({});
+    mockGetLumaGuest.mockResolvedValueOnce(null);
+    mockUpsertSession.mockResolvedValueOnce({
+      ...session,
+      registration_status: "failed",
+      registration_error:
+        "Payment accepted, but Luma did not create the attendee record yet. Please retry from Operations or verify the attendee email in Luma.",
+      registration_failure_code: "guest_creation_unconfirmed",
+      registration_attempt_count: 3,
+      registration_last_attempt_at: "2026-03-24T12:00:00.000Z",
+      registration_next_retry_at: "2026-03-24T12:20:00.000Z",
+      luma_registration_json: {},
+      registered_at: null,
+    });
+
+    const result = await syncAcceptedSessionRegistration(session, makeRuntimeConfig());
+
+    expect(mockAddLumaGuest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        attendeeEmail: "paulbrigner+t16@gmail.com",
+      }),
+    );
+    expect(result.registration_status).toBe("failed");
+    expect(result.registration_failure_code).toBe("guest_creation_unconfirmed");
+    expect(result.registration_error).toMatch(/did not create the attendee record/i);
+  });
 });
