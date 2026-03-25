@@ -23,6 +23,7 @@ frontend:
         - env | grep -e CIPHERPAY_NETWORK >> .env.production || true
         - env | grep -e CIPHERPAY_API_BASE_URL >> .env.production || true
         - env | grep -e CIPHERPAY_CHECKOUT_BASE_URL >> .env.production || true
+        - env | grep -e OPS_AUTOMATION_SECRET >> .env.production || true
         - npm run build
   artifacts:
     baseDirectory: .next

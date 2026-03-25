@@ -123,6 +123,7 @@ This repo includes several production-oriented safeguards:
 - structured operational logging with request and session correlation ids
 - a Vitest-based unit and service test suite
 - operator recovery guidance in [`RUNBOOK.md`](./RUNBOOK.md)
+- support for an AWS-only automation secret on the registration recovery path
 
 ### Checkout rate limiting
 
@@ -322,6 +323,7 @@ Required:
 Recommended for production:
 
 - `SESSION_VIEWER_SECRET`
+- `OPS_AUTOMATION_SECRET`
 - `LUMA_API_KEY`
 - `CIPHERPAY_API_KEY`
 - `CIPHERPAY_WEBHOOK_SECRET`
@@ -390,30 +392,31 @@ That should result in:
 
 ## GitHub Automation
 
-The repository includes GitHub-side automation for quality gates and operational checks:
+GitHub Actions in this repository are limited to repository and CI concerns:
 
 - `CI` runs lint, tests, and production build validation on pushes and pull requests.
 - `Dependency Review` runs on pull requests.
 - `Dependabot` updates npm packages and GitHub Actions weekly.
-- `Retry Registrations` can retry stuck post-payment Luma registrations on a schedule or by manual dispatch.
-- `Production Smoke` checks the deployed site, `/api/health`, and `/api/ready`.
 
-### GitHub Actions configuration
+Production operations such as scheduled recovery and production monitoring are handled in AWS, not GitHub Actions.
 
-Set these GitHub repository secrets for the scheduled registration recovery workflow:
+## AWS Operations
 
-- `LUMAZCASH_BASE_URL`
-- `LUMAZCASH_ADMIN_PASSWORD`
+The repository includes AWS-side handler code under [`./ops/aws`](./ops/aws) for:
 
-Set this GitHub repository variable for the smoke-check workflow:
+- scheduled retry of due registrations
+- production monitoring and readiness/incident metrics
 
-- `PRODUCTION_BASE_URL`
+These AWS automation paths use:
 
-Optional smoke-check tuning variables:
+- `OPS_AUTOMATION_SECRET` for machine-to-machine authentication to `/api/admin/retry-registration`
+- CloudWatch metrics and alarms for readiness and registration/webhook trouble
+- EventBridge schedules for recurring jobs
 
-- `SMOKE_MAX_ATTEMPTS`
-- `SMOKE_RETRY_DELAY_SECONDS`
-- `SMOKE_REQUEST_TIMEOUT_SECONDS`
+Keep this separation:
+
+- GitHub Actions for repo and CI
+- AWS for production operations
 
 ## DynamoDB State
 
