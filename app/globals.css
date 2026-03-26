@@ -187,6 +187,63 @@ select {
   gap: 1.5rem;
 }
 
+.console-disclosure {
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.96));
+}
+
+.console-disclosure-summary {
+  padding: 1rem 1.1rem;
+  list-style: none;
+  cursor: pointer;
+}
+
+.console-disclosure-summary::-webkit-details-marker {
+  display: none;
+}
+
+.console-disclosure-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.console-disclosure-title {
+  display: block;
+  color: var(--color-gray-900);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.console-disclosure-heading p {
+  margin: 0.3rem 0 0;
+}
+
+.console-disclosure-toggle {
+  width: 0.78rem;
+  height: 0.78rem;
+  margin-top: 0.35rem;
+  border-right: 2px solid rgba(17, 24, 39, 0.42);
+  border-bottom: 2px solid rgba(17, 24, 39, 0.42);
+  transform: rotate(45deg);
+  transition: transform 160ms ease;
+  flex: 0 0 auto;
+}
+
+.console-disclosure[open] .console-disclosure-toggle {
+  transform: rotate(225deg);
+}
+
+.console-disclosure-body {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem 1.1rem 1.1rem;
+  border-top: 1px solid rgba(17, 24, 39, 0.08);
+}
+
 .console-nav {
   display: flex;
   gap: 0.75rem;
@@ -328,6 +385,48 @@ select {
   gap: 0.45rem;
   font-weight: 600;
   color: var(--color-gray-900);
+}
+
+.console-field-label {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.console-field-meta {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.console-field-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.35rem;
+  padding: 0 0.45rem;
+  border-radius: 999px;
+  background: rgba(17, 24, 39, 0.06);
+  color: var(--color-gray-600);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.console-info-indicator {
+  display: inline-grid;
+  place-items: center;
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 999px;
+  border: 1px solid rgba(17, 24, 39, 0.14);
+  background: white;
+  color: var(--color-gray-500);
+  font-size: 0.72rem;
+  font-weight: 800;
+  cursor: help;
 }
 
 .console-input {

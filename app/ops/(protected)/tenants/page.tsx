@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { createTenantAction } from "@/app/ops/actions";
+import { ConsoleDisclosure } from "@/components/ConsoleDisclosure";
+import { ConsoleFieldLabel } from "@/components/ConsoleFieldLabel";
 import { listTenants } from "@/lib/app-state/state";
 
 export const runtime = "nodejs";
@@ -18,37 +20,62 @@ export default async function TenantsPage() {
           </div>
         </div>
 
-        <form action={createTenantAction} className="console-content">
-          <div className="public-field-grid">
-            <label className="console-field">
-              <span>Name</span>
-              <input className="console-input" name="name" required type="text" />
-            </label>
-            <label className="console-field">
-              <span>Slug</span>
-              <input className="console-input" name="slug" type="text" />
-            </label>
-            <label className="console-field">
-              <span>Contact email</span>
-              <input className="console-input" name="contact_email" required type="email" />
-            </label>
-            <label className="console-field">
-              <span>Monthly minimum (USD cents)</span>
-              <input className="console-input" name="monthly_minimum_usd_cents" type="number" />
-            </label>
-            <label className="console-field">
-              <span>Service fee (bps)</span>
-              <input className="console-input" name="service_fee_bps" type="number" />
-            </label>
-            <label className="console-field">
-              <span>Pilot notes</span>
-              <input className="console-input" name="pilot_notes" type="text" />
-            </label>
-          </div>
-          <button className="button" type="submit">
-            Create tenant
-          </button>
-        </form>
+        <ConsoleDisclosure
+          defaultOpen={!tenants.length}
+          description="Optional commercial fields can be added now or later."
+          title="Create organizer record"
+        >
+          <form action={createTenantAction} className="console-content">
+            <div className="public-field-grid">
+              <label className="console-field">
+                <ConsoleFieldLabel label="Name" />
+                <input className="console-input" name="name" required type="text" />
+              </label>
+              <label className="console-field">
+                <ConsoleFieldLabel
+                  info="Used for internal tenant identity and future organizer URLs. Leave blank to generate it from the name."
+                  label="Slug"
+                  optional
+                />
+                <input className="console-input" name="slug" type="text" />
+              </label>
+              <label className="console-field">
+                <ConsoleFieldLabel
+                  info="Primary service-manager contact for this tenant."
+                  label="Contact email"
+                />
+                <input className="console-input" name="contact_email" required type="email" />
+              </label>
+              <label className="console-field">
+                <ConsoleFieldLabel
+                  info="Internal billing floor in USD cents. Leave blank to store 0."
+                  label="Monthly minimum (USD cents)"
+                  optional
+                />
+                <input className="console-input" name="monthly_minimum_usd_cents" type="number" />
+              </label>
+              <label className="console-field">
+                <ConsoleFieldLabel
+                  info="Service fee in basis points. 100 bps = 1%."
+                  label="Service fee (bps)"
+                  optional
+                />
+                <input className="console-input" name="service_fee_bps" type="number" />
+              </label>
+              <label className="console-field">
+                <ConsoleFieldLabel
+                  info="Internal-only notes about pilot scope, exceptions, or support context."
+                  label="Pilot notes"
+                  optional
+                />
+                <input className="console-input" name="pilot_notes" type="text" />
+              </label>
+            </div>
+            <button className="button" type="submit">
+              Create tenant
+            </button>
+          </form>
+        </ConsoleDisclosure>
       </section>
 
       <section className="console-section">
