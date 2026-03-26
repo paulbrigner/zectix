@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import {
   createCalendarConnectionAction,
   createCipherPayConnectionAction,
+  setTenantStatusAction,
   validateAndSyncCalendarAction,
   validateCipherPayConnectionAction,
 } from "@/app/ops/actions";
@@ -42,6 +43,32 @@ export default async function TenantDetailPage({
             </Link>
           </div>
         </div>
+
+        <form action={setTenantStatusAction} className="console-content">
+          <input name="tenant_id" type="hidden" value={detail.tenant.tenant_id} />
+          <input name="redirect_to" type="hidden" value={`/ops/tenants/${detail.tenant.tenant_id}`} />
+          <div className="public-field-grid">
+            <label className="console-field">
+              <span>Tenant status</span>
+              <select
+                className="console-input"
+                defaultValue={detail.tenant.status}
+                name="status"
+              >
+                <option value="draft">draft</option>
+                <option value="active">active</option>
+                <option value="suspended">suspended</option>
+                <option value="archived">archived</option>
+              </select>
+            </label>
+          </div>
+          <p className="subtle-text">
+            Public calendar pages only resolve for tenants whose status is <code>active</code>.
+          </p>
+          <button className="button button-secondary button-small" type="submit">
+            Save tenant status
+          </button>
+        </form>
       </section>
 
       <section className="console-section">
