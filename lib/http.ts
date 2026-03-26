@@ -16,3 +16,12 @@ export function jsonError(message: string, status = 400, init?: ResponseInit) {
     },
   );
 }
+
+export function redirectToPath(path: string, status: 301 | 302 | 303 | 307 | 308 = 303) {
+  return new Response(null, {
+    status,
+    headers: {
+      Location: path,
+    },
+  });
+}

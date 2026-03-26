@@ -7,13 +7,23 @@ import {
 } from "@/lib/admin-auth";
 import { adminSessionCookieOptions } from "@/lib/admin-auth-server";
 import { consumeOpsLoginRateLimit, putAdminAuditEvent } from "@/lib/app-state/state";
+import { appPath } from "@/lib/app-paths";
+import { redirectToPath } from "@/lib/http";
 import { createRequestId, logEvent } from "@/lib/observability";
 import { ensureSameOriginMutation, getTrustedIpAddress } from "@/lib/request-security";
 
 export const runtime = "nodejs";
 
+function loginRedirectPath(error?: string) {
+  const loginUrl = new URL(appPath("/ops/login"), "https://service.invalid");
+  if (error) {
+    loginUrl.searchParams.set("error", error);
+  }
+
+  return `${loginUrl.pathname}${loginUrl.search}`;
+}
+
 export async function POST(request: Request) {
-  const loginUrl = new URL("/ops/login", request.url);
   const requestId = createRequestId();
   const originError = ensureSameOriginMutation(request);
   const actorIp = getTrustedIpAddress(request);
@@ -37,14 +47,12 @@ export async function POST(request: Request) {
   }
 
   if (!isAdminAuthEnabled()) {
-    loginUrl.searchParams.set("error", "auth_disabled");
-    return Response.redirect(loginUrl, 303);
+    return redirectToPath(loginRedirectPath("auth_disabled"));
   }
 
   const rateLimit = await consumeOpsLoginRateLimit({ ipAddress: actorIp });
   if (!rateLimit.ok) {
-    loginUrl.searchParams.set("error", "rate_limited");
-    return Response.redirect(loginUrl, 303);
+    return redirectToPath(loginRedirectPath("rate_limited"));
   }
 
   const formData = await request.formData();
@@ -68,8 +76,7 @@ export async function POST(request: Request) {
       request_id: requestId,
       actor_ip: actorIp,
     });
-    loginUrl.searchParams.set("error", "invalid_password");
-    return Response.redirect(loginUrl, 303);
+    return redirectToPath(loginRedirectPath("invalid_password"));
   }
 
   const cookieStore = await cookies();
@@ -98,5 +105,5 @@ export async function POST(request: Request) {
     actor_ip: actorIp,
   });
 
-  return Response.redirect(new URL("/ops", request.url), 303);
+  return redirectToPath(appPath("/ops"));
 }
