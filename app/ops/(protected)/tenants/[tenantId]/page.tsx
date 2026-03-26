@@ -42,6 +42,9 @@ export default async function TenantDetailPage({
             </p>
           </div>
           <div className="button-row">
+            <Link className="button button-secondary button-small" href={`/ops/tenants/${encodeURIComponent(detail.tenant.tenant_id)}/dashboard`}>
+              Dashboard
+            </Link>
             <Link className="button button-secondary button-small" href={`/ops/tenants/${encodeURIComponent(detail.tenant.tenant_id)}/events`}>
               Ticket controls
             </Link>

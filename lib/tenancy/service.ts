@@ -415,3 +415,5 @@ export async function getTenantOpsDetail(tenantId: string) {
     active_cipherpay_connections_by_calendar: activeCipherPayConnectionsByCalendar,
   };
 }
+
+export type TenantOpsDetail = NonNullable<Awaited<ReturnType<typeof getTenantOpsDetail>>>;

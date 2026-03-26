@@ -65,9 +65,14 @@ export default async function TenantsPage() {
               <p className="console-kpi-label">{tenant.status}</p>
               <h3>{tenant.name}</h3>
               <p className="subtle-text">{tenant.contact_email}</p>
-              <Link className="button button-secondary button-small" href={`/ops/tenants/${encodeURIComponent(tenant.tenant_id)}`}>
-                Open tenant
-              </Link>
+              <div className="button-row">
+                <Link className="button button-secondary button-small" href={`/ops/tenants/${encodeURIComponent(tenant.tenant_id)}/dashboard`}>
+                  Dashboard
+                </Link>
+                <Link className="button button-secondary button-small" href={`/ops/tenants/${encodeURIComponent(tenant.tenant_id)}`}>
+                  Open tenant
+                </Link>
+              </div>
             </article>
           ))}
         </div>
