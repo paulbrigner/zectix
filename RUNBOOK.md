@@ -56,6 +56,7 @@ When something looks off, check these in order:
 - The ops console is the main recovery surface.
 - Keep production secrets in AWS Secrets Manager or your chosen secret manager.
 - Do not use mutable runtime config as the source of truth for production secrets.
+- Operators do not manually enter Luma webhook ids or secrets; those are managed internally during `validate and sync`.
 - Registration retries are stateful: the first registration attempt now starts inline when CipherPay reports a detected payment, and any follow-up retries can be run from the ops UI or `/api/ops/process-registration-tasks`.
 - Structured logs emit checkout, webhook, and registration events with correlation-friendly metadata.
 

@@ -9,6 +9,7 @@ import {
 } from "@/app/ops/actions";
 import { ConsoleDisclosure } from "@/components/ConsoleDisclosure";
 import { ConsoleFieldLabel } from "@/components/ConsoleFieldLabel";
+import { ConsoleInfoTip } from "@/components/ConsoleInfoTip";
 import { getTenantOpsDetail } from "@/lib/tenancy/service";
 
 export const runtime = "nodejs";
@@ -30,6 +31,28 @@ export default async function TenantDetailPage({
       calendar.calendar_connection_id,
       calendar.display_name,
     ]),
+  );
+  const cipherPayConnectionRows = detail.cipherpay_connections.map((connection) => {
+    const previews = detail.cipherpay_secret_previews.get(
+      connection.cipherpay_connection_id,
+    );
+    const activeConnection = detail.active_cipherpay_connections_by_calendar.get(
+      connection.calendar_connection_id,
+    );
+    return {
+      connection,
+      previews,
+      isCurrentConnection:
+        activeConnection?.cipherpay_connection_id === connection.cipherpay_connection_id,
+      calendarName:
+        calendarNamesById.get(connection.calendar_connection_id) || "Unknown calendar",
+    };
+  });
+  const currentCipherPayConnections = cipherPayConnectionRows.filter(
+    (entry) => entry.isCurrentConnection,
+  );
+  const historicalCipherPayConnections = cipherPayConnectionRows.filter(
+    (entry) => !entry.isCurrentConnection,
   );
 
   return (
@@ -89,14 +112,17 @@ export default async function TenantDetailPage({
       <section className="console-section">
         <div className="console-section-header">
           <div>
-            <h2>Add calendar connection</h2>
-            <p className="subtle-text">Store the organizer’s Luma key as a secret reference, then validate and sync mirrored inventory.</p>
+            <h2>Calendar connection</h2>
+            <p className="subtle-text">
+              Store the organizer’s Luma API key. The managed event webhook is
+              created internally during validation.
+            </p>
           </div>
         </div>
 
         <ConsoleDisclosure
           defaultOpen={!detail.calendars.length}
-          description="Leave the optional webhook fields blank for new setups. Validate and sync will register them."
+          description="Save the Luma API key first. Validate and sync will verify access, register the managed event webhook, and refresh mirrored inventory."
           title="New calendar connection"
         >
           <form action={createCalendarConnectionAction} className="console-content">
@@ -112,7 +138,7 @@ export default async function TenantDetailPage({
               </label>
               <label className="console-field">
                 <ConsoleFieldLabel
-                  info="Public URL path under /c/{slug}. Leave blank to generate it from the display name."
+                  info="Public URL path under /c/{slug}. Leave blank to generate it from the display name and add a numeric suffix if that slug is already taken."
                   label="Public slug"
                   optional
                 />
@@ -120,26 +146,10 @@ export default async function TenantDetailPage({
               </label>
               <label className="console-field">
                 <ConsoleFieldLabel
-                  info="Organizer-owned Luma API key used to mirror events and attach attendees."
+                  info="Organizer-owned Luma API key used to mirror events, attach attendees after payment, and register the managed event webhook."
                   label="Luma API key"
                 />
                 <input className="console-input" name="luma_api_key" required type="password" />
-              </label>
-              <label className="console-field">
-                <ConsoleFieldLabel
-                  info="Only needed when importing an existing Luma webhook. Leave blank for new setups."
-                  label="Luma webhook secret"
-                  optional
-                />
-                <input className="console-input" name="luma_webhook_secret" type="password" />
-              </label>
-              <label className="console-field">
-                <ConsoleFieldLabel
-                  info="Only needed when importing an existing Luma webhook. Leave blank for new setups."
-                  label="Luma webhook id"
-                  optional
-                />
-                <input className="console-input" name="luma_webhook_id" type="text" />
               </label>
             </div>
             <button className="button" type="submit">
@@ -157,18 +167,29 @@ export default async function TenantDetailPage({
                 <h3>{calendar.display_name}</h3>
                 <p className="subtle-text">Public URL: /c/{calendar.slug}</p>
                 <p className="subtle-text">
-                  Luma key {previews?.luma.preview || "missing"} · webhook {previews?.lumaWebhook.preview || "not set"}
+                  Luma key {previews?.luma.preview || "missing"} · managed webhook {calendar.luma_webhook_id ? "configured" : "not configured yet"}
                 </p>
                 <p className="subtle-text">
                   Last sync {calendar.last_synced_at || "not yet"} {calendar.last_sync_error ? `· ${calendar.last_sync_error}` : ""}
                 </p>
-                <form action={validateAndSyncCalendarAction}>
-                  <input name="calendar_connection_id" type="hidden" value={calendar.calendar_connection_id} />
-                  <input name="redirect_to" type="hidden" value={`/ops/tenants/${detail.tenant.tenant_id}`} />
-                  <button className="button button-secondary button-small" type="submit">
-                    Validate and sync
-                  </button>
-                </form>
+                <div className="console-inline-action">
+                  <form action={validateAndSyncCalendarAction}>
+                    <input name="calendar_connection_id" type="hidden" value={calendar.calendar_connection_id} />
+                    <input name="redirect_to" type="hidden" value={`/ops/tenants/${detail.tenant.tenant_id}`} />
+                    <button className="button button-secondary button-small" type="submit">
+                      Validate and sync
+                    </button>
+                  </form>
+                  <ConsoleInfoTip label="What Validate and sync does">
+                    <p>
+                      Checks that the saved Luma API key can read the calendar,
+                      creates or refreshes the managed webhook for{" "}
+                      <code>event.created</code>, <code>event.updated</code>, and{" "}
+                      <code>event.canceled</code>, then refreshes the mirrored
+                      events and tickets used by public checkout.
+                    </p>
+                  </ConsoleInfoTip>
+                </div>
               </article>
             );
           })}
@@ -178,12 +199,11 @@ export default async function TenantDetailPage({
       <section className="console-section">
         <div className="console-section-header">
           <div>
-            <h2>Add CipherPay connection</h2>
+            <h2>CipherPay connection</h2>
             <p className="subtle-text">
-              Attach one organizer-owned payment account to one calendar connection.
-              Saving for a calendar that already has a CipherPay connection will replace
-              the current secrets and endpoints on that connection instead of creating a
-              second live checkout mapping.
+              Each calendar needs one current CipherPay account for checkout.
+              Saving this form for a calendar updates that current connection in
+              place instead of creating a second live mapping.
             </p>
           </div>
         </div>
@@ -191,7 +211,7 @@ export default async function TenantDetailPage({
         <ConsoleDisclosure
           defaultOpen={detail.calendars.length > 0 && !detail.cipherpay_connections.length}
           description="Leave the base URLs blank unless this tenant uses custom CipherPay endpoints."
-          title="New CipherPay connection"
+          title="CipherPay setup"
         >
           <form action={createCipherPayConnectionAction} className="console-content">
             <input name="tenant_id" type="hidden" value={detail.tenant.tenant_id} />
@@ -259,43 +279,74 @@ export default async function TenantDetailPage({
         </ConsoleDisclosure>
 
         <div className="console-card-grid">
-          {detail.cipherpay_connections.map((connection) => {
-            const previews = detail.cipherpay_secret_previews.get(connection.cipherpay_connection_id);
-            const activeConnection = detail.active_cipherpay_connections_by_calendar.get(
-              connection.calendar_connection_id,
-            );
-            const isCurrentConnection =
-              activeConnection?.cipherpay_connection_id === connection.cipherpay_connection_id;
-            const calendarName =
-              calendarNamesById.get(connection.calendar_connection_id) || "Unknown calendar";
-            return (
-              <article className="console-detail-card" key={connection.cipherpay_connection_id}>
-                <p className="console-kpi-label">
-                  {connection.status} · {isCurrentConnection ? "current" : "historical"}
-                </p>
+          {currentCipherPayConnections.map(
+            ({ calendarName, connection, previews }) => (
+              <article
+                className="console-detail-card"
+                key={connection.cipherpay_connection_id}
+              >
+                <p className="console-kpi-label">Current checkout connection</p>
                 <h3>{connection.network}</h3>
-                <p className="subtle-text">{calendarName}</p>
+                <p className="subtle-text">
+                  {calendarName} · validation {connection.status}
+                </p>
                 <p className="subtle-text">{connection.api_base_url}</p>
                 <p className="subtle-text">
-                  API {previews?.api.preview || "missing"} · webhook {previews?.webhook.preview || "missing"}
+                  API {previews?.api.preview || "missing"} · webhook{" "}
+                  {previews?.webhook.preview || "missing"}
                 </p>
-                {isCurrentConnection ? (
-                  <form action={validateCipherPayConnectionAction}>
-                    <input name="cipherpay_connection_id" type="hidden" value={connection.cipherpay_connection_id} />
-                    <input name="redirect_to" type="hidden" value={`/ops/tenants/${detail.tenant.tenant_id}`} />
-                    <button className="button button-secondary button-small" type="submit">
-                      Mark validated
-                    </button>
-                  </form>
-                ) : (
-                  <p className="subtle-text">
-                    This saved row is not the connection currently used for checkout.
-                  </p>
-                )}
+                <form action={validateCipherPayConnectionAction}>
+                  <input
+                    name="cipherpay_connection_id"
+                    type="hidden"
+                    value={connection.cipherpay_connection_id}
+                  />
+                  <input
+                    name="redirect_to"
+                    type="hidden"
+                    value={`/ops/tenants/${detail.tenant.tenant_id}`}
+                  />
+                  <button className="button button-secondary button-small" type="submit">
+                    Mark validated
+                  </button>
+                </form>
               </article>
-            );
-          })}
+            ),
+          )}
         </div>
+
+        {historicalCipherPayConnections.length ? (
+          <ConsoleDisclosure
+            description="Older saved settings are kept for rollback and support reference, but they are not used for checkout."
+            title="Previous saved settings"
+          >
+            <div className="console-card-grid">
+              {historicalCipherPayConnections.map(
+                ({ calendarName, connection, previews }) => (
+                  <article
+                    className="console-detail-card"
+                    key={connection.cipherpay_connection_id}
+                  >
+                    <p className="console-kpi-label">Previous saved settings</p>
+                    <h3>{connection.network}</h3>
+                    <p className="subtle-text">
+                      {calendarName} · last known validation {connection.status}
+                    </p>
+                    <p className="subtle-text">{connection.api_base_url}</p>
+                    <p className="subtle-text">
+                      API {previews?.api.preview || "missing"} · webhook{" "}
+                      {previews?.webhook.preview || "missing"}
+                    </p>
+                    <p className="subtle-text">
+                      This row is kept for reference only and is not attached to
+                      checkout.
+                    </p>
+                  </article>
+                ),
+              )}
+            </div>
+          </ConsoleDisclosure>
+        ) : null}
       </section>
     </>
   );

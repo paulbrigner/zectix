@@ -65,7 +65,12 @@ vi.mock("@/lib/sync/luma-sync", () => ({
   validateCalendarConnection: vi.fn(),
 }));
 
-const { createCipherPayConnection, getTenantOpsDetail, validateCipherPayConnection } = await import(
+const {
+  createCalendarConnection,
+  createCipherPayConnection,
+  getTenantOpsDetail,
+  validateCipherPayConnection,
+} = await import(
   "@/lib/tenancy/service"
 );
 
@@ -93,6 +98,7 @@ beforeEach(() => {
   mockSetSecret.mockReset();
   mockGetSecret.mockReset();
 
+  mockPutCalendarConnection.mockImplementation(async (connection) => connection);
   mockPutCipherPayConnection.mockImplementation(async (connection) => connection);
   mockGetSecret.mockResolvedValue("resolved-secret");
   mockListSessionsByTenant.mockResolvedValue([]);
@@ -100,6 +106,25 @@ beforeEach(() => {
   mockListRegistrationTasksByTenant.mockResolvedValue([]);
   mockListEventMirrorsByCalendar.mockResolvedValue([]);
   mockListTicketMirrorsByEvent.mockResolvedValue([]);
+});
+
+describe("createCalendarConnection", () => {
+  it("starts with managed webhook fields unset until validate and sync runs", async () => {
+    mockSetSecret.mockResolvedValue("secret://luma-api");
+
+    const result = await createCalendarConnection({
+      tenant_id: "tenant_123",
+      display_name: "Demo Calendar",
+      slug: "",
+      luma_api_key: "luma_api_key",
+    });
+
+    expect(mockSetSecret).toHaveBeenCalledTimes(1);
+    expect(mockSetSecret).toHaveBeenCalledWith(null, "luma_api_key");
+    expect(result.luma_api_secret_ref).toBe("secret://luma-api");
+    expect(result.luma_webhook_id).toBeNull();
+    expect(result.luma_webhook_secret_ref).toBeNull();
+  });
 });
 
 describe("createCipherPayConnection", () => {

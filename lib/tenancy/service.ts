@@ -124,8 +124,6 @@ export async function createCalendarConnection(input: {
   display_name: string;
   slug?: string | null;
   luma_api_key: string;
-  luma_webhook_secret?: string | null;
-  luma_webhook_id?: string | null;
 }) {
   const timestamp = nowIso();
   const slug = await dedupeSlug(
@@ -133,9 +131,6 @@ export async function createCalendarConnection(input: {
     async (candidate) => getCalendarConnectionBySlug(candidate),
   );
   const lumaApiSecretRef = await getSecretStore().setSecret(null, input.luma_api_key);
-  const lumaWebhookSecretRef = input.luma_webhook_secret
-    ? await getSecretStore().setSecret(null, input.luma_webhook_secret)
-    : null;
 
   const connection: CalendarConnection = {
     calendar_connection_id: randomUUID(),
@@ -144,8 +139,8 @@ export async function createCalendarConnection(input: {
     display_name: input.display_name.trim(),
     status: "pending_validation",
     luma_api_secret_ref: lumaApiSecretRef,
-    luma_webhook_secret_ref: lumaWebhookSecretRef,
-    luma_webhook_id: input.luma_webhook_id?.trim() || null,
+    luma_webhook_secret_ref: null,
+    luma_webhook_id: null,
     last_validated_at: null,
     last_synced_at: null,
     last_sync_error: null,
