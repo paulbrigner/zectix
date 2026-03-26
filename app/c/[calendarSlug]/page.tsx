@@ -13,6 +13,17 @@ function eventDateLabel(value: string, timeZone = "America/New_York") {
   }).format(new Date(value));
 }
 
+function eventInitials(name: string) {
+  const initials = name
+    .split(/\s+/)
+    .map((part) => part.trim()[0] || "")
+    .filter(Boolean)
+    .slice(0, 2)
+    .join("");
+
+  return initials.toUpperCase() || "ZE";
+}
+
 export default async function PublicCalendarPage({
   params,
 }: {
@@ -25,9 +36,9 @@ export default async function PublicCalendarPage({
   }
 
   return (
-    <main className="page checkout-shell">
-      <section className="card event-page-card">
-        <div className="event-page-topbar">
+    <main className="public-home-shell">
+      <div className="public-home-main">
+        <div className="public-home-topbar">
           <div className="public-brand">
             <span>{data.tenant.name}</span>
           </div>
@@ -36,21 +47,22 @@ export default async function PublicCalendarPage({
           </Link>
         </div>
 
-        <div className="event-page-hero">
-          <div className="event-page-copy">
+        <section className="public-events-section">
+          <div className="public-section-heading">
             <p className="eyebrow">Public calendar</p>
-            <h1>{data.calendar.display_name}</h1>
+            <h1 className="public-display">Upcoming events</h1>
             <p className="subtle-text">
-              Tickets below were mirrored from Luma and explicitly enabled for managed Zcash checkout.
+              {data.calendar.display_name} events that were mirrored from Luma and enabled for managed Zcash checkout.
             </p>
           </div>
-        </div>
 
-        <section className="console-section">
           {data.events.length === 0 ? (
-            <p className="subtle-text">
-              No public Zcash-enabled events are currently available for this organizer.
-            </p>
+            <div className="home-empty-state">
+              <h3>No public events yet</h3>
+              <p>
+                No public Zcash-enabled events are currently available for this organizer.
+              </p>
+            </div>
           ) : (
             <div className="public-event-list">
               {data.events.map((event) => (
@@ -59,20 +71,34 @@ export default async function PublicCalendarPage({
                   href={`/c/${encodeURIComponent(data.calendar.slug)}/events/${encodeURIComponent(event.event_api_id)}`}
                   key={event.event_api_id}
                 >
+                  <div className="public-event-icon" aria-hidden="true">
+                    {event.cover_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        alt={event.name}
+                        className="public-event-icon-image"
+                        src={event.cover_url}
+                      />
+                    ) : (
+                      <span>{eventInitials(event.name)}</span>
+                    )}
+                  </div>
                   <div className="public-event-row-copy">
+                    <p className="console-kpi-label">Upcoming event</p>
                     <h3>{event.name}</h3>
                     <p className="subtle-text">
                       {eventDateLabel(event.start_at, event.timezone || undefined)}
-                      {event.location_label ? ` · ${event.location_label}` : ""}
+                      {event.location_label ? ` · ${event.location_label}` : " · Luma event"}
                     </p>
+                    <span className="public-inline-link">Managed Zcash checkout</span>
                   </div>
-                  <span className="public-row-action">Pay with Zcash</span>
+                  <span className="public-row-action">Get tickets</span>
                 </Link>
               ))}
             </div>
           )}
         </section>
-      </section>
+      </div>
     </main>
   );
 }
