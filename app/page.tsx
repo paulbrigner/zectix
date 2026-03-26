@@ -171,7 +171,7 @@ export default function Home() {
             target="_blank"
             rel="noreferrer"
           >
-            Open CipherPay dashboard
+            Get started with CipherPay
           </Button>
           <Button
             variant="landing-ghost"
@@ -210,7 +210,15 @@ export default function Home() {
             target="_blank"
             rel="noreferrer"
           >
-            Get started with CipherPay
+            Join the ZecTix Luma beta
+          </Button>
+                    <Button
+            variant="landing-ghost"
+            href="https://zectix.com/c/pgpforcrypto"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Try the demo
           </Button>
         </div>
       </section>
