@@ -1388,6 +1388,49 @@ select {
   line-height: 1.68;
 }
 
+.ops-fit-section {
+  margin-top: 0.2rem;
+}
+
+.ops-fit-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.94fr) minmax(0, 1.06fr);
+  gap: 1.35rem 1.5rem;
+  align-items: start;
+}
+
+.ops-fit-heading {
+  max-width: 39rem;
+}
+
+.ops-fit-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  align-content: start;
+}
+
+.ops-fit-card {
+  gap: 0.9rem;
+  min-height: 12.5rem;
+  padding: 1.45rem 1.5rem;
+}
+
+.ops-fit-card-wide {
+  grid-column: 1 / -1;
+  min-height: auto;
+}
+
+.ops-fit-card h3 {
+  font-size: clamp(1.25rem, 1.55vw, 1.75rem);
+  line-height: 1.18;
+}
+
+.ops-fit-card p {
+  font-size: 1.02rem;
+  line-height: 1.7;
+}
+
 .marketing-spotlight {
   margin-top: 1.65rem;
   padding: 1.45rem;
@@ -2359,6 +2402,7 @@ select {
     grid-template-columns: 1fr;
   }
 
+  .ops-fit-layout,
   .marketing-spotlight-header,
   .marketing-spotlight-steps {
     grid-template-columns: 1fr;
@@ -2415,6 +2459,7 @@ select {
     font-size: clamp(2rem, 7vw, 3.25rem);
   }
 
+  .ops-fit-grid,
   .marketing-feature-grid,
   .marketing-proof-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2543,6 +2588,7 @@ select {
     font-size: clamp(2.25rem, 11vw, 3.4rem);
   }
 
+  .ops-fit-grid,
   .marketing-feature-grid,
   .marketing-proof-grid {
     grid-template-columns: 1fr;
@@ -2554,6 +2600,12 @@ select {
 
   .marketing-spotlight-title {
     max-width: none;
+  }
+
+  .ops-fit-card,
+  .ops-fit-card-wide {
+    min-height: auto;
+    padding: 1.2rem;
   }
 
   .public-event-row {

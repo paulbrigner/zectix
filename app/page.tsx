@@ -307,27 +307,34 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="home-events-section" id="ops-readiness">
-          <div className="home-section-heading">
-            <p className="eyebrow">Operational fit</p>
-            <h2 className="home-display">
-              Built for pilots now, with the service controls needed to make the
-              rollout credible.
-            </h2>
-            <p className="subtle-text">
-              The public experience stays streamlined while the operator side
-              handles sync, assertions, webhook visibility, registration retries,
-              and recovery when real-world edge cases show up.
-            </p>
-          </div>
+        <section className="home-events-section ops-fit-section" id="ops-readiness">
+          <div className="ops-fit-layout">
+            <div className="home-section-heading ops-fit-heading">
+              <p className="eyebrow">Operational fit</p>
+              <h2 className="home-display">
+                Built for pilots now, with the service controls needed to make the
+                rollout credible.
+              </h2>
+              <p className="subtle-text">
+                The public experience stays streamlined while the operator side
+                handles sync, assertions, webhook visibility, registration retries,
+                and recovery when real-world edge cases show up.
+              </p>
+            </div>
 
-          <div className="marketing-proof-grid">
-            {operationalNotes.map((item) => (
-              <article className="marketing-proof-card" key={item.title}>
-                <h3>{item.title}</h3>
-                <p>{item.description}</p>
-              </article>
-            ))}
+            <div className="ops-fit-grid">
+              {operationalNotes.map((item, index) => (
+                <article
+                  className={`marketing-proof-card ops-fit-card${
+                    index === operationalNotes.length - 1 ? " ops-fit-card-wide" : ""
+                  }`}
+                  key={item.title}
+                >
+                  <h3>{item.title}</h3>
+                  <p>{item.description}</p>
+                </article>
+              ))}
+            </div>
           </div>
         </section>
       </div>
