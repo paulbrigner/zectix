@@ -269,6 +269,14 @@ select {
   color: var(--color-pink-600);
 }
 
+.console-nav-link-disabled {
+  border-style: dashed;
+  background: rgba(148, 163, 184, 0.12);
+  color: var(--color-gray-400);
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 .console-section {
   display: grid;
   gap: 1rem;

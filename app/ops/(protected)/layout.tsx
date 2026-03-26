@@ -46,9 +46,13 @@ export default async function OpsLayout({
           <Link className="console-nav-link" href="/ops/tenants">
             Tenants
           </Link>
-          <Link className="console-nav-link" href="/ops/reports">
+          <span
+            aria-disabled="true"
+            className="console-nav-link console-nav-link-disabled"
+            title="Reports is temporarily disabled while the billing workflow is refined."
+          >
             Reports
-          </Link>
+          </span>
         </nav>
 
         <div className="console-content">{children}</div>
