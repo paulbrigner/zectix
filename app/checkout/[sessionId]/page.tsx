@@ -29,17 +29,35 @@ export default async function CheckoutPage({
 
   return (
     <main className="page checkout-shell">
-      <section className="card checkout-card">
+      <section className="card event-page-card">
         <div className="event-page-topbar">
           <div className="public-brand">
             <span>{session.public_calendar_slug}</span>
           </div>
-          <Link
-            className="button button-secondary button-small"
-            href={`/c/${encodeURIComponent(session.public_calendar_slug)}`}
-          >
-            Back to calendar
-          </Link>
+          <div className="event-page-actions">
+            {event?.url ? (
+              <a
+                className="button button-secondary button-small"
+                href={event.url}
+                rel="noreferrer noopener"
+                target="_blank"
+              >
+                Open on Luma
+              </a>
+            ) : null}
+            <Link
+              className="button button-secondary button-small"
+              href={`/c/${encodeURIComponent(session.public_calendar_slug)}`}
+            >
+              Back to calendar
+            </Link>
+          </div>
+        </div>
+
+        <div className="status-page-heading">
+          <p className="eyebrow">Checkout</p>
+          <h1>{session.event_name}</h1>
+          <p className="subtle-text">Ticket for {session.attendee_name}</p>
         </div>
 
         <CheckoutStatusCard
