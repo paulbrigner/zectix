@@ -15,6 +15,7 @@ const mockResolveCipherPayClientForCalendar = vi.fn();
 const mockResolveCipherPayWebhookSecretForCalendar = vi.fn();
 const mockCreateCipherPayInvoice = vi.fn();
 const mockEnsureRegistrationTaskForSession = vi.fn();
+const mockProcessRegistrationTask = vi.fn();
 const mockProcessDueRegistrationTasks = vi.fn();
 const mockRetryRegistrationTaskForSession = vi.fn();
 const mockHandleCalendarRefreshWebhook = vi.fn();
@@ -46,6 +47,7 @@ vi.mock("@/lib/cipherpay", () => ({
 
 vi.mock("@/lib/tasks/registration-tasks", () => ({
   ensureRegistrationTaskForSession: mockEnsureRegistrationTaskForSession,
+  processRegistrationTask: mockProcessRegistrationTask,
   processDueRegistrationTasks: mockProcessDueRegistrationTasks,
   retryRegistrationTaskForSession: mockRetryRegistrationTaskForSession,
 }));
@@ -76,6 +78,7 @@ beforeEach(() => {
   mockResolveCipherPayWebhookSecretForCalendar.mockReset();
   mockCreateCipherPayInvoice.mockReset();
   mockEnsureRegistrationTaskForSession.mockReset();
+  mockProcessRegistrationTask.mockReset();
   mockProcessDueRegistrationTasks.mockReset();
   mockRetryRegistrationTaskForSession.mockReset();
   mockHandleCalendarRefreshWebhook.mockReset();
@@ -203,7 +206,7 @@ describe("webhook service", () => {
     expect(mockUpdateSession).not.toHaveBeenCalled();
   });
 
-  it("updates the session and queues a registration task when payment is detected", async () => {
+  it("updates the session and immediately starts registration when payment is detected", async () => {
     const session = makeCheckoutSession({
       status: "pending",
     });
@@ -223,10 +226,15 @@ describe("webhook service", () => {
       receivedAt,
       patch,
     }));
-    mockUpdateSession.mockResolvedValueOnce(updatedSession);
     mockEnsureRegistrationTaskForSession.mockResolvedValueOnce({
       task_id: "task_123",
+      session_id: session.session_id,
     });
+    mockProcessRegistrationTask.mockResolvedValueOnce({
+      task_id: "task_123",
+      status: "in_progress",
+    });
+    mockUpdateSession.mockResolvedValueOnce(updatedSession);
 
     const result = await processCipherPayWebhook({
       requestBody: {
@@ -250,7 +258,58 @@ describe("webhook service", () => {
       }),
     );
     expect(mockEnsureRegistrationTaskForSession).toHaveBeenCalledWith(updatedSession);
+    expect(mockProcessRegistrationTask).toHaveBeenCalledWith({
+      task_id: "task_123",
+      session_id: session.session_id,
+    });
     expect(result?.status).toBe("detected");
+  });
+
+  it("does not requeue registration work when a confirmed webhook arrives after the pass is already attached", async () => {
+    const session = makeCheckoutSession({
+      status: "detected",
+      registration_status: "registered",
+      luma_registration_json: {
+        guest_lookup: {
+          guest: {
+            id: "guest_123",
+          },
+        },
+      },
+    });
+    const updatedSession = {
+      ...session,
+      status: "confirmed" as const,
+      last_event_type: "invoice.confirmed",
+      confirmed_at: "2026-03-24T12:01:10.000Z",
+    };
+
+    mockGetSessionByInvoiceId.mockResolvedValueOnce(session);
+    mockPutWebhookDelivery.mockImplementation(async (delivery) => delivery);
+    mockUpdateWebhookDelivery.mockImplementation(async (id, receivedAt, patch) => ({
+      id,
+      receivedAt,
+      patch,
+    }));
+    mockUpdateSession.mockResolvedValueOnce(updatedSession);
+
+    const result = await processCipherPayWebhook({
+      requestBody: {
+        invoice_id: "invoice_123",
+        event: "invoice.confirmed",
+        timestamp: "2026-03-24T12:01:10.000Z",
+      },
+      eventType: "invoice.confirmed",
+      invoiceId: "invoice_123",
+      signatureValid: true,
+      validationError: null,
+      requestHeaders: {},
+      txid: "txid_2",
+    });
+
+    expect(mockEnsureRegistrationTaskForSession).not.toHaveBeenCalled();
+    expect(mockProcessRegistrationTask).not.toHaveBeenCalled();
+    expect(result?.status).toBe("confirmed");
   });
 
   it("records and applies valid Luma event webhooks by refreshing mirrored events", async () => {
