@@ -32,8 +32,8 @@ The repository is designed to run in two environments:
 2. Ops syncs mirrored events and tickets from Luma.
 3. Ops connects CipherPay for that calendar and validates the tenant-scoped payment configuration.
 4. Public checkout happens under `/c/[calendarSlug]` and `/c/[calendarSlug]/events/[eventId]`.
-5. CipherPay webhooks update payment state and enqueue a registration task.
-6. The registration worker processes tasks through `/api/ops/process-registration-tasks` or the ops recovery UI.
+5. CipherPay webhooks update payment state and immediately attempt registration once payment is detected in the mempool.
+6. The registration worker processes any follow-up retries through `/api/ops/process-registration-tasks` or the ops recovery UI.
 7. Successful registrations are attached back to the checkout session and recorded in the usage ledger.
 
 ## Main Routes

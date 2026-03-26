@@ -10,6 +10,7 @@ import {
 } from "@/lib/app-state/state";
 import type { CheckoutSession, WebhookDelivery } from "@/lib/app-state/types";
 import {
+  asRecord,
   calculateServiceFeeAmount,
   cipherPayStatusFromEvent,
   normalizeEmailAddress,
@@ -26,6 +27,7 @@ import {
 import { handleCalendarRefreshWebhook } from "@/lib/sync/luma-sync";
 import {
   ensureRegistrationTaskForSession,
+  processRegistrationTask,
   processDueRegistrationTasks,
   retryRegistrationTaskForSession,
 } from "@/lib/tasks/registration-tasks";
@@ -41,6 +43,23 @@ type CreateCheckoutInput = {
   event_api_id: string;
   ticket_type_api_id: string;
 };
+
+function hasRegistrationGuestLookup(session: CheckoutSession) {
+  const registration = asRecord(session.luma_registration_json);
+  const guestLookup = asRecord(registration?.guest_lookup);
+  return Boolean(asRecord(guestLookup?.guest));
+}
+
+function shouldAttemptInlineRegistration(session: CheckoutSession) {
+  if (
+    session.registration_status === "registered" &&
+    hasRegistrationGuestLookup(session)
+  ) {
+    return false;
+  }
+
+  return session.status === "detected" || session.status === "confirmed";
+}
 
 function canReuseCheckoutSession(session: CheckoutSession) {
   if (session.status === "expired" || session.status === "refunded") {
@@ -313,8 +332,11 @@ export async function processCipherPayWebhook({
         : session.refunded_at,
   });
 
-  if (nextSession.status === "detected" || nextSession.status === "confirmed") {
-    await ensureRegistrationTaskForSession(nextSession);
+  if (shouldAttemptInlineRegistration(nextSession)) {
+    const task = await ensureRegistrationTaskForSession(nextSession);
+    if (task.status !== "in_progress") {
+      await processRegistrationTask(task);
+    }
     nextSession = (await getSessionByInvoiceId(nextSession.cipherpay_invoice_id)) || nextSession;
   }
 
