@@ -56,9 +56,14 @@ export default async function OpsOverviewPage() {
               <p className="subtle-text">
                 {entry.active_calendar_count} active calendars · {entry.open_registration_tasks} queued tasks · {entry.dead_letter_tasks} dead letters
               </p>
-              <Link className="button button-secondary button-small" href={`/ops/tenants/${encodeURIComponent(entry.tenant.tenant_id)}`}>
-                Open tenant
-              </Link>
+              <div className="button-row">
+                <Link className="button button-secondary button-small" href={`/ops/tenants/${encodeURIComponent(entry.tenant.tenant_id)}/dashboard`}>
+                  Dashboard
+                </Link>
+                <Link className="button button-secondary button-small" href={`/ops/tenants/${encodeURIComponent(entry.tenant.tenant_id)}`}>
+                  Open tenant
+                </Link>
+              </div>
             </article>
           ))}
         </div>
