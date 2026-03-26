@@ -23,6 +23,13 @@ export default async function TenantDetailPage({
     notFound();
   }
 
+  const calendarNamesById = new Map(
+    detail.calendars.map((calendar) => [
+      calendar.calendar_connection_id,
+      calendar.display_name,
+    ]),
+  );
+
   return (
     <>
       <section className="console-section">
@@ -140,7 +147,12 @@ export default async function TenantDetailPage({
         <div className="console-section-header">
           <div>
             <h2>Add CipherPay connection</h2>
-            <p className="subtle-text">Attach one organizer-owned payment account to one calendar connection.</p>
+            <p className="subtle-text">
+              Attach one organizer-owned payment account to one calendar connection.
+              Saving for a calendar that already has a CipherPay connection will replace
+              the current secrets and endpoints on that connection instead of creating a
+              second live checkout mapping.
+            </p>
           </div>
         </div>
 
@@ -191,21 +203,37 @@ export default async function TenantDetailPage({
         <div className="console-card-grid">
           {detail.cipherpay_connections.map((connection) => {
             const previews = detail.cipherpay_secret_previews.get(connection.cipherpay_connection_id);
+            const activeConnection = detail.active_cipherpay_connections_by_calendar.get(
+              connection.calendar_connection_id,
+            );
+            const isCurrentConnection =
+              activeConnection?.cipherpay_connection_id === connection.cipherpay_connection_id;
+            const calendarName =
+              calendarNamesById.get(connection.calendar_connection_id) || "Unknown calendar";
             return (
               <article className="console-detail-card" key={connection.cipherpay_connection_id}>
-                <p className="console-kpi-label">{connection.status}</p>
+                <p className="console-kpi-label">
+                  {connection.status} · {isCurrentConnection ? "current" : "historical"}
+                </p>
                 <h3>{connection.network}</h3>
+                <p className="subtle-text">{calendarName}</p>
                 <p className="subtle-text">{connection.api_base_url}</p>
                 <p className="subtle-text">
                   API {previews?.api.preview || "missing"} · webhook {previews?.webhook.preview || "missing"}
                 </p>
-                <form action={validateCipherPayConnectionAction}>
-                  <input name="cipherpay_connection_id" type="hidden" value={connection.cipherpay_connection_id} />
-                  <input name="redirect_to" type="hidden" value={`/ops/tenants/${detail.tenant.tenant_id}`} />
-                  <button className="button button-secondary button-small" type="submit">
-                    Mark validated
-                  </button>
-                </form>
+                {isCurrentConnection ? (
+                  <form action={validateCipherPayConnectionAction}>
+                    <input name="cipherpay_connection_id" type="hidden" value={connection.cipherpay_connection_id} />
+                    <input name="redirect_to" type="hidden" value={`/ops/tenants/${detail.tenant.tenant_id}`} />
+                    <button className="button button-secondary button-small" type="submit">
+                      Mark validated
+                    </button>
+                  </form>
+                ) : (
+                  <p className="subtle-text">
+                    This saved row is not the connection currently used for checkout.
+                  </p>
+                )}
               </article>
             );
           })}

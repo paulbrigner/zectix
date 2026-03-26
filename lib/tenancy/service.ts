@@ -167,27 +167,52 @@ export async function createCipherPayConnection(input: {
 }) {
   const timestamp = nowIso();
   const defaults = cipherPayDefaultsForNetwork(input.network);
-  const apiSecretRef = await getSecretStore().setSecret(null, input.cipherpay_api_key);
+  const existingConnection = await getCipherPayConnectionByCalendar(
+    input.calendar_connection_id,
+  );
+  if (existingConnection && existingConnection.tenant_id !== input.tenant_id) {
+    throw new Error(
+      "That calendar is already attached to a different tenant's CipherPay connection.",
+    );
+  }
+
+  const apiSecretRef = await getSecretStore().setSecret(
+    existingConnection?.cipherpay_api_secret_ref || null,
+    input.cipherpay_api_key,
+  );
   const webhookSecretRef = await getSecretStore().setSecret(
-    null,
+    existingConnection?.cipherpay_webhook_secret_ref || null,
     input.cipherpay_webhook_secret,
   );
 
-  const connection: CipherPayConnection = {
-    cipherpay_connection_id: randomUUID(),
-    tenant_id: input.tenant_id,
-    calendar_connection_id: input.calendar_connection_id,
-    network: input.network,
-    api_base_url: input.api_base_url?.trim() || defaults.apiBaseUrl,
-    checkout_base_url: input.checkout_base_url?.trim() || defaults.checkoutBaseUrl,
-    cipherpay_api_secret_ref: apiSecretRef,
-    cipherpay_webhook_secret_ref: webhookSecretRef,
-    status: "pending_validation",
-    last_validated_at: null,
-    last_validation_error: null,
-    created_at: timestamp,
-    updated_at: timestamp,
-  };
+  const connection: CipherPayConnection = existingConnection
+    ? {
+        ...existingConnection,
+        network: input.network,
+        api_base_url: input.api_base_url?.trim() || defaults.apiBaseUrl,
+        checkout_base_url: input.checkout_base_url?.trim() || defaults.checkoutBaseUrl,
+        cipherpay_api_secret_ref: apiSecretRef,
+        cipherpay_webhook_secret_ref: webhookSecretRef,
+        status: "pending_validation",
+        last_validated_at: null,
+        last_validation_error: null,
+        updated_at: timestamp,
+      }
+    : {
+        cipherpay_connection_id: randomUUID(),
+        tenant_id: input.tenant_id,
+        calendar_connection_id: input.calendar_connection_id,
+        network: input.network,
+        api_base_url: input.api_base_url?.trim() || defaults.apiBaseUrl,
+        checkout_base_url: input.checkout_base_url?.trim() || defaults.checkoutBaseUrl,
+        cipherpay_api_secret_ref: apiSecretRef,
+        cipherpay_webhook_secret_ref: webhookSecretRef,
+        status: "pending_validation",
+        last_validated_at: null,
+        last_validation_error: null,
+        created_at: timestamp,
+        updated_at: timestamp,
+      };
 
   return putCipherPayConnection(connection);
 }
@@ -218,7 +243,7 @@ export async function validateCipherPayConnection(cipherpayConnectionId: string)
     last_validation_error: null,
     updated_at: nowIso(),
   };
-  await putCipherPayConnection(next);
+  await putCipherPayConnection(next, { attachToCalendar: false });
   return next;
 }
 
@@ -368,6 +393,14 @@ export async function getTenantOpsDetail(tenantId: string) {
     });
   }
 
+  const activeCipherPayConnectionsByCalendar = new Map<string, CipherPayConnection>();
+  for (const calendar of calendars) {
+    const connection = await getCipherPayConnectionByCalendar(calendar.calendar_connection_id);
+    if (connection) {
+      activeCipherPayConnectionsByCalendar.set(calendar.calendar_connection_id, connection);
+    }
+  }
+
   return {
     tenant,
     calendars,
@@ -379,5 +412,6 @@ export async function getTenantOpsDetail(tenantId: string) {
     tickets_by_event: ticketsByEvent,
     calendar_secret_previews: calendarSecretPreviews,
     cipherpay_secret_previews: cipherPaySecretPreviews,
+    active_cipherpay_connections_by_calendar: activeCipherPayConnectionsByCalendar,
   };
 }

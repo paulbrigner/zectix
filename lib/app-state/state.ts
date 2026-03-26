@@ -817,8 +817,11 @@ export async function listCalendarConnectionsByTenant(tenantId: string) {
   }
 }
 
-export async function putCipherPayConnection(connection: CipherPayConnection) {
-  await Promise.all([
+export async function putCipherPayConnection(
+  connection: CipherPayConnection,
+  options?: { attachToCalendar?: boolean },
+) {
+  const writes = [
     getDynamoDocumentClient().send(
       new PutCommand({
         TableName: appStateTableName(),
@@ -841,16 +844,23 @@ export async function putCipherPayConnection(connection: CipherPayConnection) {
         },
       }),
     ),
-    getDynamoDocumentClient().send(
-      new PutCommand({
-        TableName: appStateTableName(),
-        Item: {
-          ...calendarCipherPayKey(connection.calendar_connection_id),
-          cipherpay_connection_id: connection.cipherpay_connection_id,
-        },
-      }),
-    ),
-  ]);
+  ];
+
+  if (options?.attachToCalendar !== false) {
+    writes.push(
+      getDynamoDocumentClient().send(
+        new PutCommand({
+          TableName: appStateTableName(),
+          Item: {
+            ...calendarCipherPayKey(connection.calendar_connection_id),
+            cipherpay_connection_id: connection.cipherpay_connection_id,
+          },
+        }),
+      ),
+    );
+  }
+
+  await Promise.all(writes);
 
   return connection;
 }
