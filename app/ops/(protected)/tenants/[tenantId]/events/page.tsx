@@ -5,6 +5,11 @@ import { getTenantOpsDetail } from "@/lib/tenancy/service";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+function isFutureEvent(startAt: string) {
+  const startAtMs = new Date(startAt).getTime();
+  return Number.isFinite(startAtMs) && startAtMs >= Date.now();
+}
+
 export default async function TenantEventsPage({
   params,
 }: {
@@ -16,6 +21,13 @@ export default async function TenantEventsPage({
     notFound();
   }
 
+  const eventGroups = detail.events
+    .map(({ calendar, events }) => ({
+      calendar,
+      events: events.filter((event) => isFutureEvent(event.start_at)),
+    }))
+    .filter(({ events }) => events.length > 0);
+
   return (
     <section className="console-section">
       <div className="console-section-header">
@@ -23,11 +35,22 @@ export default async function TenantEventsPage({
           <h2>Ticket eligibility controls</h2>
           <p className="subtle-text">
             Public checkout only exposes tickets that pass automatic checks and all operator assertions.
+            Only future mirrored events are shown here.
           </p>
         </div>
       </div>
 
-      {detail.events.map(({ calendar, events }) => (
+      {eventGroups.length === 0 ? (
+        <div className="console-detail-card">
+          <h3>No future events</h3>
+          <p className="subtle-text">
+            Ticket assertions only appear for mirrored events whose start time is still in
+            the future.
+          </p>
+        </div>
+      ) : null}
+
+      {eventGroups.map(({ calendar, events }) => (
         <section className="console-content" key={calendar.calendar_connection_id}>
           <h3>{calendar.display_name}</h3>
           {events.map((event) => (
