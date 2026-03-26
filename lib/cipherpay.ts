@@ -1,5 +1,12 @@
-import type { CipherPaySessionStatus, RuntimeConfigRecord } from "@/lib/app-state/types";
+import type { CipherPayNetwork, CipherPaySessionStatus } from "@/lib/app-state/types";
 import { asFiniteNumber, asIsoTimestamp, asRecord, asString } from "@/lib/app-state/utils";
+
+export type CipherPayClientConfig = {
+  network: CipherPayNetwork;
+  api_base_url: string;
+  checkout_base_url: string;
+  api_key: string;
+};
 
 export type CipherPayInvoice = {
   invoice_id: string;
@@ -79,18 +86,17 @@ function normalizeCipherPayInvoice(value: unknown): CipherPayInvoice {
   };
 }
 
-export function buildCipherPayCheckoutUrl(config: RuntimeConfigRecord, invoiceId: string) {
+export function buildCipherPayCheckoutUrl(
+  config: Pick<CipherPayClientConfig, "checkout_base_url">,
+  invoiceId: string,
+) {
   return `${config.checkout_base_url.replace(/\/+$/, "")}/pay/${encodeURIComponent(invoiceId)}`;
 }
 
 export async function createCipherPayInvoice(
-  config: RuntimeConfigRecord,
+  config: CipherPayClientConfig,
   input: CreateCipherPayInvoiceInput,
 ) {
-  if (!config.api_key) {
-    throw new Error("CipherPay API key is not configured");
-  }
-
   const response = await fetch(`${config.api_base_url}/api/invoices`, {
     method: "POST",
     headers: {
@@ -112,13 +118,9 @@ export async function createCipherPayInvoice(
 }
 
 export async function getCipherPayInvoice(
-  config: RuntimeConfigRecord,
+  config: CipherPayClientConfig,
   invoiceId: string,
 ) {
-  if (!config.api_key) {
-    throw new Error("CipherPay API key is not configured");
-  }
-
   const response = await fetch(
     `${config.api_base_url}/api/invoices/${encodeURIComponent(invoiceId)}`,
     {

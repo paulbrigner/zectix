@@ -16,7 +16,7 @@ export async function requireAdminPageAccess() {
   const cookieStore = await cookies();
   const token = cookieStore.get(ADMIN_SESSION_COOKIE)?.value || null;
   if (!isAdminSessionTokenValid(token)) {
-    redirect("/admin-login");
+    redirect("/ops/login");
   }
 }
 
@@ -34,6 +34,9 @@ export async function ensureAdminApiAccess() {
   return jsonError("Unauthorized", 401);
 }
 
+export const requireOpsPageAccess = requireAdminPageAccess;
+export const ensureOpsApiAccess = ensureAdminApiAccess;
+
 export function adminSessionCookieOptions() {
   return {
     httpOnly: true,
@@ -43,4 +46,3 @@ export function adminSessionCookieOptions() {
     secure: process.env.NODE_ENV === "production",
   };
 }
-

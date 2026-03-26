@@ -1,380 +1,137 @@
+import { randomUUID } from "node:crypto";
 import {
-  addLumaGuest,
-  getLumaEventById,
-  getLumaGuest,
-  listLumaTicketTypes,
-} from "@/lib/luma";
-import { createCipherPayInvoice } from "@/lib/cipherpay";
-import {
-  findLatestSessionForAttendee,
-  getRuntimeConfig,
-  getSession,
-  listSessionsNeedingRegistrationRecovery,
+  getCipherPayConnectionByCalendar,
+  getSessionByInvoiceId,
+  putWebhookDelivery,
+  updateSession,
+  updateWebhookDelivery,
   putSession,
-  putWebhookEvent,
-  upsertSession,
+  findLatestSessionForAttendee,
 } from "@/lib/app-state/state";
-import type {
-  CipherPaySessionStatus,
-  RuntimeConfigRecord,
-  CheckoutSession,
-} from "@/lib/app-state/types";
+import type { CheckoutSession, WebhookDelivery } from "@/lib/app-state/types";
 import {
-  asIsoTimestamp,
-  asRecord,
+  calculateServiceFeeAmount,
   cipherPayStatusFromEvent,
-  isRegistrationRetryDue,
   normalizeEmailAddress,
   nowIso,
-  registrationRetryDelayMinutes,
 } from "@/lib/app-state/utils";
+import { createCipherPayInvoice } from "@/lib/cipherpay";
+import { extractLumaWebhookEventApiId } from "@/lib/luma-webhook";
 import { logEvent } from "@/lib/observability";
+import {
+  getPublicCalendar,
+  getPublicEventPageData,
+  getPublicTicket,
+} from "@/lib/public/public-calendars";
+import { handleCalendarRefreshWebhook } from "@/lib/sync/luma-sync";
+import {
+  ensureRegistrationTaskForSession,
+  processDueRegistrationTasks,
+  retryRegistrationTaskForSession,
+} from "@/lib/tasks/registration-tasks";
+import {
+  resolveCipherPayClientForCalendar,
+  resolveCipherPayWebhookSecretForCalendar,
+} from "@/lib/tenancy/service";
 
 type CreateCheckoutInput = {
   attendee_email: string;
   attendee_name: string;
+  calendar_slug: string;
   event_api_id: string;
-  ticket_type_api_id: string | null;
+  ticket_type_api_id: string;
 };
 
-function requireLumaApiKey(config: RuntimeConfigRecord) {
-  if (!config.luma_api_key) {
-    throw new Error("Luma API key is not configured. Save it on the admin page first.");
-  }
-
-  return config.luma_api_key;
-}
-
-function normalizeSessionStatus(status: CipherPaySessionStatus) {
-  return status === "unknown" ? "pending" : status;
-}
-
-function hasGuestLookup(session: CheckoutSession) {
-  const registration = asRecord(session.luma_registration_json);
-  const guestLookup = asRecord(registration?.guest_lookup);
-  return Boolean(asRecord(guestLookup?.guest));
-}
-
-function recentRegistrationAttempt(session: CheckoutSession, cooldownMs = 30_000) {
-  if (!session.registration_last_attempt_at) {
+function canReuseCheckoutSession(session: CheckoutSession) {
+  if (session.status === "expired" || session.status === "refunded") {
     return false;
   }
 
-  const attemptedAtMs = new Date(session.registration_last_attempt_at).getTime();
-  if (Number.isNaN(attemptedAtMs)) {
-    return false;
+  if (!session.cipherpay_expires_at) {
+    return true;
   }
 
-  return Date.now() - attemptedAtMs < cooldownMs;
+  return new Date(session.cipherpay_expires_at).getTime() > Date.now();
 }
 
-function registrationPayloadWithGuestLookup(
-  session: CheckoutSession,
-  guestLookup: Record<string, unknown>,
-) {
-  return {
-    ...(session.luma_registration_json || {}),
-    guest_lookup: guestLookup,
-  };
-}
-
-const GUEST_ATTACH_RETRY_WINDOW_MS = 30_000;
-const GUEST_ATTACH_MAX_ATTEMPTS = 3;
-
-async function attachGuestLookupToRegisteredSession(
-  session: CheckoutSession,
-  guestLookup: Record<string, unknown>,
-) {
-  return upsertSession(session.session_id, {
-    registration_status: "registered",
-    registration_error: null,
-    registration_failure_code: null,
-    registration_next_retry_at: null,
-    luma_registration_json: registrationPayloadWithGuestLookup(session, guestLookup),
-    registered_at:
-      asIsoTimestamp(asRecord(asRecord(guestLookup)?.guest)?.registered_at) ||
-      session.registered_at ||
-      nowIso(),
-  });
-}
-
-function classifyRegistrationFailure(error: unknown) {
-  const message =
-    error instanceof Error ? error.message : "Luma registration failed";
-  const normalized = message.toLowerCase();
-
-  if (
-    normalized.includes("timeout") ||
-    normalized.includes("timed out") ||
-    normalized.includes("fetch failed") ||
-    normalized.includes("network") ||
-    normalized.includes("429") ||
-    normalized.includes("rate limit") ||
-    normalized.includes("500") ||
-    normalized.includes("502") ||
-    normalized.includes("503") ||
-    normalized.includes("504")
-  ) {
+export async function resolveCipherPayWebhookContext(invoiceId: string | null) {
+  if (!invoiceId) {
     return {
-      code: "transient_provider_error",
-      message,
-      retryable: true,
+      session: null,
+      secret: null,
+    };
+  }
+
+  const session = await getSessionByInvoiceId(invoiceId);
+  if (!session) {
+    return {
+      session: null,
+      secret: null,
     };
   }
 
   return {
-    code: "registration_failed",
-    message,
-    retryable: false,
+    session,
+    secret: await resolveCipherPayWebhookSecretForCalendar(
+      session.calendar_connection_id,
+    ),
   };
-}
-
-async function registerAcceptedSession(
-  session: CheckoutSession,
-  config: RuntimeConfigRecord,
-) {
-  if (session.registration_status === "registered" && hasGuestLookup(session)) {
-    return session;
-  }
-
-  const lumaApiKey = requireLumaApiKey(config);
-  const attemptAt = nowIso();
-  const nextAttemptCount = (session.registration_attempt_count || 0) + 1;
-  const attendeeEmail = normalizeEmailAddress(session.attendee_email);
-
-  logEvent("info", "registration.started", {
-    session_id: session.session_id,
-    invoice_id: session.cipherpay_invoice_id,
-    event_api_id: session.event_api_id,
-    attempt_count: nextAttemptCount,
-  });
-
-  try {
-    const result = await addLumaGuest({
-      apiKey: lumaApiKey,
-      eventApiId: session.event_api_id,
-      attendeeEmail,
-      attendeeName: session.attendee_name,
-      ticketTypeApiId: session.ticket_type_api_id,
-    });
-    const guestLookup = await getLumaGuest({
-      apiKey: lumaApiKey,
-      eventApiId: session.event_api_id,
-      attendeeEmail,
-    }).catch(() => null);
-    const registrationPayload = {
-      ...(asRecord(result) || {}),
-      ...(asRecord(guestLookup) ? { guest_lookup: asRecord(guestLookup) } : {}),
-    };
-
-    if (!asRecord(asRecord(guestLookup)?.guest)) {
-      const exhaustedAttempts = nextAttemptCount >= GUEST_ATTACH_MAX_ATTEMPTS;
-      const nextRetryAt = new Date(
-        Date.now() +
-          (exhaustedAttempts
-            ? registrationRetryDelayMinutes(nextAttemptCount) * 60 * 1000
-            : GUEST_ATTACH_RETRY_WINDOW_MS),
-      ).toISOString();
-      const failureCode = exhaustedAttempts
-        ? "guest_creation_unconfirmed"
-        : "guest_lookup_pending";
-      const registrationMessage = exhaustedAttempts
-        ? "Payment accepted, but Luma did not create the attendee record yet. Please retry from Operations or verify the attendee email in Luma."
-        : "Payment accepted. Waiting for Luma to attach the attendee pass.";
-      logEvent(exhaustedAttempts ? "error" : "warn", exhaustedAttempts ? "registration.guest_creation_unconfirmed" : "registration.pending_guest_lookup", {
-        session_id: session.session_id,
-        invoice_id: session.cipherpay_invoice_id,
-        attempt_count: nextAttemptCount,
-        retry_at: nextRetryAt,
-        attendee_email: attendeeEmail,
-      });
-      return upsertSession(session.session_id, {
-        registration_status: exhaustedAttempts ? "failed" : "pending",
-        registration_error: registrationMessage,
-        registration_failure_code: failureCode,
-        registration_attempt_count: nextAttemptCount,
-        registration_last_attempt_at: attemptAt,
-        registration_next_retry_at: nextRetryAt,
-        luma_registration_json: registrationPayload,
-        registered_at: null,
-      });
-    }
-
-    const registeredSession = await upsertSession(session.session_id, {
-      registration_status: "registered",
-      registration_error: null,
-      registration_failure_code: null,
-      registration_attempt_count: nextAttemptCount,
-      registration_last_attempt_at: attemptAt,
-      registration_next_retry_at: null,
-      luma_registration_json: registrationPayload,
-      registered_at: nowIso(),
-    });
-    logEvent("info", "registration.succeeded", {
-      session_id: session.session_id,
-      invoice_id: session.cipherpay_invoice_id,
-      attempt_count: nextAttemptCount,
-    });
-    return hydrateRegisteredSessionGuestLookup(registeredSession, config);
-  } catch (error) {
-    const failure = classifyRegistrationFailure(error);
-    const nextRetryAt = failure.retryable
-      ? new Date(
-          Date.now() + registrationRetryDelayMinutes(nextAttemptCount) * 60 * 1000,
-        ).toISOString()
-      : null;
-    logEvent(failure.retryable ? "warn" : "error", "registration.failed", {
-      session_id: session.session_id,
-      invoice_id: session.cipherpay_invoice_id,
-      attempt_count: nextAttemptCount,
-      failure_code: failure.code,
-      retry_at: nextRetryAt,
-      error: failure.message,
-    });
-    return upsertSession(session.session_id, {
-      registration_status: "failed",
-      registration_error: failure.message,
-      registration_failure_code: failure.code,
-      registration_attempt_count: nextAttemptCount,
-      registration_last_attempt_at: attemptAt,
-      registration_next_retry_at: nextRetryAt,
-    });
-  }
-}
-
-export async function hydrateRegisteredSessionGuestLookup(
-  session: CheckoutSession,
-  config?: RuntimeConfigRecord,
-) {
-  if (session.registration_status !== "registered" || hasGuestLookup(session)) {
-    return session;
-  }
-
-  const resolvedConfig =
-    config || (await getRuntimeConfig({ allowMissingTable: true }));
-  if (!resolvedConfig.luma_api_key) {
-    return session;
-  }
-
-  const guestLookup = await getLumaGuest({
-    apiKey: resolvedConfig.luma_api_key,
-    eventApiId: session.event_api_id,
-    attendeeEmail: normalizeEmailAddress(session.attendee_email),
-  }).catch(() => null);
-
-  const guestLookupRecord = asRecord(guestLookup);
-  if (!guestLookupRecord) {
-    return session;
-  }
-
-  return attachGuestLookupToRegisteredSession(session, guestLookupRecord);
-}
-
-export async function syncAcceptedSessionRegistration(
-  session: CheckoutSession,
-  config?: RuntimeConfigRecord,
-) {
-  if (!["detected", "confirmed"].includes(session.status) || hasGuestLookup(session)) {
-    return session;
-  }
-
-  const resolvedConfig =
-    config || (await getRuntimeConfig({ allowMissingTable: true }));
-  if (!resolvedConfig.luma_api_key) {
-    return session;
-  }
-
-  const guestLookup = await getLumaGuest({
-    apiKey: resolvedConfig.luma_api_key,
-    eventApiId: session.event_api_id,
-    attendeeEmail: normalizeEmailAddress(session.attendee_email),
-  }).catch(() => null);
-
-  const guestLookupRecord = asRecord(guestLookup);
-  if (asRecord(guestLookupRecord?.guest) && guestLookupRecord) {
-    return attachGuestLookupToRegisteredSession(session, guestLookupRecord);
-  }
-
-  if (recentRegistrationAttempt(session)) {
-    return session;
-  }
-
-  if (
-    (session.registration_status === "pending" ||
-      session.registration_status === "failed") &&
-    !isRegistrationRetryDue(session)
-  ) {
-    return session;
-  }
-
-  return registerAcceptedSession(session, resolvedConfig);
 }
 
 export async function createCheckoutSession(input: CreateCheckoutInput) {
-  const config = await getRuntimeConfig();
-  const lumaApiKey = requireLumaApiKey(config);
-
-  if (!config.api_key) {
-    throw new Error("CipherPay API key is not configured. Save it on the admin page first.");
+  const calendarData = await getPublicCalendar(input.calendar_slug);
+  if (!calendarData) {
+    throw new Error("That public calendar was not found or is not active.");
   }
 
-  const event = await getLumaEventById(lumaApiKey, input.event_api_id);
-  if (!event) {
-    throw new Error("That Luma event was not found.");
-  }
-
-  const ticketTypes = await listLumaTicketTypes(lumaApiKey, event.api_id).catch(
-    () => [],
+  const eventPageData = await getPublicEventPageData(
+    input.calendar_slug,
+    input.event_api_id,
   );
-  const requestedTicket = input.ticket_type_api_id
-    ? ticketTypes.find((ticket) => ticket.api_id === input.ticket_type_api_id) ||
-      null
-    : null;
-
-  if (input.ticket_type_api_id && !requestedTicket) {
-    throw new Error("The selected ticket type was not found.");
+  if (!eventPageData) {
+    throw new Error("That event is not available for managed Zcash checkout.");
   }
 
-  const selectedTicket = requestedTicket || ticketTypes[0] || null;
-  if (!selectedTicket) {
-    throw new Error("This event does not currently expose any active Luma ticket types.");
+  const ticket = await getPublicTicket(
+    input.calendar_slug,
+    input.event_api_id,
+    input.ticket_type_api_id,
+  );
+  if (!ticket) {
+    throw new Error("That ticket is not available for managed Zcash checkout.");
   }
 
-  if (selectedTicket.amount == null || !selectedTicket.currency) {
-    throw new Error(
-      "The selected Luma ticket type does not expose a fixed price, so this app cannot create a CipherPay invoice for it.",
-    );
+  const cipherPayClient = await resolveCipherPayClientForCalendar(
+    calendarData.calendar.calendar_connection_id,
+  );
+  const cipherPayConnection = await getCipherPayConnectionByCalendar(
+    calendarData.calendar.calendar_connection_id,
+  );
+  if (!cipherPayConnection) {
+    throw new Error("An active CipherPay connection is required for this calendar.");
   }
-
-  const amount = selectedTicket.amount;
-  const currency = selectedTicket.currency;
-  const size = selectedTicket.name || null;
-  const productName = event.name;
 
   const existingSession = await findLatestSessionForAttendee({
+    tenantId: calendarData.tenant.tenant_id,
+    calendarConnectionId: calendarData.calendar.calendar_connection_id,
+    eventApiId: input.event_api_id,
+    ticketTypeApiId: input.ticket_type_api_id,
     attendeeEmail: input.attendee_email,
-    eventApiId: event.api_id,
-    ticketTypeApiId: selectedTicket.api_id,
   });
 
-  if (
-    existingSession &&
-    existingSession.registration_status !== "failed" &&
-    existingSession.status !== "expired" &&
-    existingSession.status !== "refunded" &&
-    (!existingSession.cipherpay_expires_at ||
-      new Date(existingSession.cipherpay_expires_at).getTime() > Date.now())
-  ) {
+  if (existingSession && canReuseCheckoutSession(existingSession)) {
     logEvent("info", "checkout.reused", {
       session_id: existingSession.session_id,
       invoice_id: existingSession.cipherpay_invoice_id,
-      attendee_email: existingSession.attendee_email,
+      tenant_id: existingSession.tenant_id,
       event_api_id: existingSession.event_api_id,
     });
+
     return {
-      config,
-      event,
-      ticket: selectedTicket,
+      tenant: calendarData.tenant,
+      calendar: calendarData.calendar,
+      event: eventPageData.event,
+      ticket,
       session: existingSession,
       invoice: {
         invoice_id: existingSession.cipherpay_invoice_id,
@@ -385,34 +142,46 @@ export async function createCheckoutSession(input: CreateCheckoutInput) {
         expires_at: existingSession.cipherpay_expires_at,
         checkout_url: existingSession.checkout_url,
         status: existingSession.status,
-        detected_txid: existingSession.last_txid,
-        detected_at: existingSession.detected_at,
-        confirmed_at: existingSession.confirmed_at,
-        refunded_at: existingSession.refunded_at,
       },
     };
   }
 
-  const { invoice, checkout_url } = await createCipherPayInvoice(config, {
-    amount,
-    currency,
-    product_name: productName,
-    size,
+  const { invoice, checkout_url } = await createCipherPayInvoice(cipherPayClient, {
+    amount: ticket.amount || 0,
+    currency: ticket.currency || "USD",
+    product_name: eventPageData.event.name,
+    size: ticket.name,
   });
 
   const timestamp = nowIso();
   const session: CheckoutSession = {
-    session_id: invoice.invoice_id,
-    network: config.network,
-    event_api_id: event.api_id,
-    event_name: event.name,
-    ticket_type_api_id: selectedTicket.api_id,
-    ticket_type_name: selectedTicket.name,
-    attendee_name: input.attendee_name,
-    attendee_email: input.attendee_email,
-    amount,
-    currency,
-    pricing_source: "luma",
+    session_id: randomUUID(),
+    tenant_id: calendarData.tenant.tenant_id,
+    calendar_connection_id: calendarData.calendar.calendar_connection_id,
+    cipherpay_connection_id: cipherPayConnection.cipherpay_connection_id,
+    public_calendar_slug: calendarData.calendar.slug,
+    network: cipherPayClient.network,
+    event_api_id: eventPageData.event.event_api_id,
+    event_name: eventPageData.event.name,
+    ticket_type_api_id: ticket.ticket_type_api_id,
+    ticket_type_name: ticket.name,
+    attendee_name: input.attendee_name.trim(),
+    attendee_email: normalizeEmailAddress(input.attendee_email),
+    amount: ticket.amount || 0,
+    currency: ticket.currency || "USD",
+    pricing_source: "mirror",
+    pricing_snapshot_json: {
+      amount: ticket.amount,
+      currency: ticket.currency,
+      event_name: eventPageData.event.name,
+      event_start_at: eventPageData.event.start_at,
+      ticket_name: ticket.name,
+    },
+    service_fee_bps_snapshot: calendarData.tenant.service_fee_bps,
+    service_fee_amount_snapshot: calculateServiceFeeAmount(
+      ticket.amount || 0,
+      calendarData.tenant.service_fee_bps,
+    ),
     checkout_url,
     cipherpay_invoice_id: invoice.invoice_id,
     cipherpay_memo_code: invoice.memo_code,
@@ -420,8 +189,9 @@ export async function createCheckoutSession(input: CreateCheckoutInput) {
     cipherpay_zcash_uri: invoice.zcash_uri,
     cipherpay_price_zec: invoice.price_zec,
     cipherpay_expires_at: invoice.expires_at,
-    status: normalizeSessionStatus(invoice.status),
+    status: invoice.status === "unknown" ? "pending" : invoice.status,
     registration_status: "pending",
+    registration_task_id: null,
     registration_error: null,
     registration_failure_code: null,
     registration_attempt_count: 0,
@@ -444,15 +214,16 @@ export async function createCheckoutSession(input: CreateCheckoutInput) {
   logEvent("info", "checkout.created", {
     session_id: session.session_id,
     invoice_id: session.cipherpay_invoice_id,
-    attendee_email: session.attendee_email,
+    tenant_id: session.tenant_id,
     event_api_id: session.event_api_id,
     ticket_type_api_id: session.ticket_type_api_id,
   });
 
   return {
-    config,
-    event,
-    ticket: selectedTicket,
+    tenant: calendarData.tenant,
+    calendar: calendarData.calendar,
+    event: eventPageData.event,
+    ticket,
     session,
     invoice: {
       ...invoice,
@@ -468,7 +239,6 @@ export async function processCipherPayWebhook({
   signatureValid,
   validationError,
   requestHeaders,
-  timestampHeader,
   txid,
 }: {
   requestBody: Record<string, unknown>;
@@ -477,117 +247,201 @@ export async function processCipherPayWebhook({
   signatureValid: boolean;
   validationError: string | null;
   requestHeaders: Record<string, unknown>;
-  timestampHeader: string | null;
   txid: string | null;
 }) {
   const receivedAt = nowIso();
-
-  await putWebhookEvent({
+  const resolved = await resolveCipherPayWebhookContext(invoiceId);
+  const delivery: WebhookDelivery = {
+    webhook_delivery_id: randomUUID(),
+    provider: "cipherpay",
+    tenant_id: resolved.session?.tenant_id || null,
+    calendar_connection_id: resolved.session?.calendar_connection_id || null,
+    session_id: resolved.session?.session_id || null,
     cipherpay_invoice_id: invoiceId,
+    event_api_id: resolved.session?.event_api_id || null,
     event_type: eventType,
-    txid,
     signature_valid: signatureValid,
     validation_error: validationError,
-    timestamp_header: timestampHeader,
     request_body_json: requestBody,
     request_headers_json: requestHeaders,
     received_at: receivedAt,
-  });
-  logEvent(signatureValid ? "info" : "warn", "webhook.received", {
-    invoice_id: invoiceId,
-    event_type: eventType,
-    txid,
-    signature_valid: signatureValid,
-    validation_error: validationError,
-  });
+    applied_at: null,
+    apply_status: "received",
+  };
 
-  if (!signatureValid || !invoiceId) {
+  await putWebhookDelivery(delivery);
+
+  if (!signatureValid) {
+    await updateWebhookDelivery(delivery.webhook_delivery_id, delivery.received_at, {
+      apply_status: "ignored",
+      applied_at: nowIso(),
+    });
     return null;
   }
 
-  const session = await getSession(invoiceId);
+  const session = resolved.session;
   if (!session) {
-    logEvent("warn", "webhook.unknown_session", {
-      invoice_id: invoiceId,
-      event_type: eventType,
-      txid,
+    await updateWebhookDelivery(delivery.webhook_delivery_id, delivery.received_at, {
+      apply_status: "ignored",
+      applied_at: nowIso(),
     });
     return null;
   }
 
   const status = cipherPayStatusFromEvent(eventType, session.status);
-  let next = await upsertSession(session.session_id, {
+  let nextSession = await updateSession(session.session_id, {
     status,
     last_event_type: eventType,
-    last_event_at: asIsoTimestamp(requestBody.timestamp) || receivedAt,
+    last_event_at:
+      (typeof requestBody.timestamp === "string" ? requestBody.timestamp : null) || receivedAt,
     last_txid: txid,
     last_payload_json: requestBody,
     detected_at:
       status === "detected"
-        ? asIsoTimestamp(requestBody.timestamp) || receivedAt
+        ? ((typeof requestBody.timestamp === "string" ? requestBody.timestamp : null) ||
+          receivedAt)
         : session.detected_at,
     confirmed_at:
       status === "confirmed"
-        ? asIsoTimestamp(requestBody.timestamp) || receivedAt
+        ? ((typeof requestBody.timestamp === "string" ? requestBody.timestamp : null) ||
+          receivedAt)
         : session.confirmed_at,
     refunded_at:
       status === "refunded"
-        ? asIsoTimestamp(requestBody.timestamp) || receivedAt
+        ? ((typeof requestBody.timestamp === "string" ? requestBody.timestamp : null) ||
+          receivedAt)
         : session.refunded_at,
   });
-  logEvent("info", "webhook.applied", {
-    session_id: next.session_id,
-    invoice_id: next.cipherpay_invoice_id,
-    event_type: eventType,
-    status: next.status,
-  });
 
-  if (next.status === "detected" || next.status === "confirmed") {
-    const config = await getRuntimeConfig();
-    next = await registerAcceptedSession(next, config);
+  if (nextSession.status === "detected" || nextSession.status === "confirmed") {
+    await ensureRegistrationTaskForSession(nextSession);
+    nextSession = (await getSessionByInvoiceId(nextSession.cipherpay_invoice_id)) || nextSession;
   }
 
-  return next;
+  await updateWebhookDelivery(delivery.webhook_delivery_id, delivery.received_at, {
+    apply_status: "applied",
+    applied_at: nowIso(),
+  });
+
+  logEvent("info", "webhook.applied", {
+    session_id: nextSession.session_id,
+    invoice_id: nextSession.cipherpay_invoice_id,
+    event_type: eventType,
+    status: nextSession.status,
+  });
+
+  return nextSession;
+}
+
+export async function processLumaWebhook({
+  calendarConnectionId,
+  tenantId,
+  requestBody,
+  eventType,
+  signatureValid,
+  validationError,
+  requestHeaders,
+}: {
+  calendarConnectionId: string;
+  tenantId: string;
+  requestBody: Record<string, unknown>;
+  eventType: string | null;
+  signatureValid: boolean;
+  validationError: string | null;
+  requestHeaders: Record<string, unknown>;
+}) {
+  const receivedAt = nowIso();
+  const delivery: WebhookDelivery = {
+    webhook_delivery_id: randomUUID(),
+    provider: "luma",
+    tenant_id: tenantId,
+    calendar_connection_id: calendarConnectionId,
+    session_id: null,
+    cipherpay_invoice_id: null,
+    event_api_id: extractLumaWebhookEventApiId(requestBody),
+    event_type: eventType,
+    signature_valid: signatureValid,
+    validation_error: validationError,
+    request_body_json: requestBody,
+    request_headers_json: requestHeaders,
+    received_at: receivedAt,
+    applied_at: null,
+    apply_status: "received",
+  };
+
+  await putWebhookDelivery(delivery);
+
+  if (!signatureValid) {
+    await updateWebhookDelivery(delivery.webhook_delivery_id, delivery.received_at, {
+      apply_status: "ignored",
+      applied_at: nowIso(),
+    });
+    return {
+      applied: false,
+      ignored: true,
+      reason: validationError || "invalid_signature",
+    };
+  }
+
+  if (
+    eventType !== "event.created" &&
+    eventType !== "event.updated" &&
+    eventType !== "event.canceled"
+  ) {
+    await updateWebhookDelivery(delivery.webhook_delivery_id, delivery.received_at, {
+      apply_status: "ignored",
+      applied_at: nowIso(),
+    });
+    return {
+      applied: false,
+      ignored: true,
+      reason: `unsupported_event:${eventType || "unknown"}`,
+    };
+  }
+
+  try {
+    const result = await handleCalendarRefreshWebhook(calendarConnectionId);
+    await updateWebhookDelivery(delivery.webhook_delivery_id, delivery.received_at, {
+      apply_status: "applied",
+      applied_at: nowIso(),
+    });
+
+    logEvent("info", "luma.webhook.applied", {
+      calendar_connection_id: calendarConnectionId,
+      tenant_id: tenantId,
+      event_type: eventType,
+      event_api_id: delivery.event_api_id,
+      event_count: result.event_count,
+    });
+
+    return {
+      applied: true,
+      ignored: false,
+      ...result,
+    };
+  } catch (error) {
+    await updateWebhookDelivery(delivery.webhook_delivery_id, delivery.received_at, {
+      apply_status: "error",
+      applied_at: nowIso(),
+    });
+
+    const message =
+      error instanceof Error ? error.message : "Luma webhook refresh failed";
+    logEvent("error", "luma.webhook.apply_failed", {
+      calendar_connection_id: calendarConnectionId,
+      tenant_id: tenantId,
+      event_type: eventType,
+      error: message,
+    });
+
+    throw error;
+  }
 }
 
 export async function retryRegistrationForSession(sessionId: string) {
-  const [session, config] = await Promise.all([
-    getSession(sessionId),
-    getRuntimeConfig({ allowMissingTable: true }),
-  ]);
-
-  if (!session) {
-    throw new Error(`Session ${sessionId} was not found.`);
-  }
-
-  if (!["detected", "confirmed"].includes(session.status)) {
-    throw new Error("Only accepted sessions can be retried for registration.");
-  }
-
-  logEvent("info", "registration.retry_requested", {
-    session_id: sessionId,
-    invoice_id: session.cipherpay_invoice_id,
-  });
-  return registerAcceptedSession(session, config);
+  return retryRegistrationTaskForSession(sessionId);
 }
 
 export async function retryDueRegistrations(limit = 10) {
-  const [sessions, config] = await Promise.all([
-    listSessionsNeedingRegistrationRecovery(limit),
-    getRuntimeConfig({ allowMissingTable: true }),
-  ]);
-
-  const results: CheckoutSession[] = [];
-  logEvent("info", "registration.retry_due.started", {
-    candidate_count: sessions.length,
-  });
-  for (const session of sessions) {
-    results.push(await registerAcceptedSession(session, config));
-  }
-
-  logEvent("info", "registration.retry_due.completed", {
-    recovered_count: results.length,
-  });
-
-  return results;
+  return processDueRegistrationTasks(limit);
 }

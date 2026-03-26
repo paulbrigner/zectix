@@ -1,28 +1,20 @@
 # ZecTix
 
-ZecTix is a Next.js application for selling Luma event registrations through CipherPay with Zcash.
+ZecTix is a Next.js 15 managed-service fork for Luma event hosts who want to accept Zcash through CipherPay without custody.
 
-The app:
+This fork is multi-tenant and operator-led:
 
-- loads upcoming events from Luma
-- creates CipherPay invoices from Luma ticket pricing
-- presents an in-app Zcash payment flow with QR and wallet deep link
-- records checkout and webhook state in DynamoDB
-- completes Luma registration after payment is accepted
-- includes `/admin` and `/dashboard` surfaces for configuration and operations
+- each organizer gets a `Tenant`
+- each connected Luma calendar is a billable `CalendarConnection`
+- public pages read from mirrored `EventMirror` and `TicketMirror` records instead of live global Luma config
+- CipherPay invoices are created from tenant-scoped connection data
+- payment fulfillment happens through retryable registration tasks, not inline webhook work
+- integration secrets are stored as references in app state and resolved through a secret-store abstraction
 
-This repository is designed to run in two environments:
+The repository is designed to run in two environments:
 
-- local development with DynamoDB Local
-- AWS Amplify hosting with managed DynamoDB
-
-## Disclaimer
-
-This codebase was generated and iterated with Codex GPT-5.4 and later hardened with additional testing, operational safeguards, and deployment controls.
-
-It has not undergone a formal third-party security audit or professional review.
-
-If you plan to use it in production, you should still perform your own engineering, security, and operational review. Use at your own risk.
+- local development with DynamoDB Local and the local secret store
+- AWS deployment with DynamoDB and AWS Secrets Manager
 
 ## Stack
 
@@ -30,133 +22,70 @@ If you plan to use it in production, you should still perform your own engineeri
 - React 19
 - TypeScript
 - Tailwind CSS 4
-- AWS SDK v3 for DynamoDB
+- AWS SDK v3 for DynamoDB and Secrets Manager
 - Luma API
 - CipherPay API and webhooks
 
-## Core Flow
+## Main Flows
 
-1. A user opens an event page and selects a Luma ticket type.
-2. The app creates a CipherPay invoice using the Luma ticket price.
-3. The buyer pays with Zcash inside the app.
-4. CipherPay webhook callbacks update checkout state.
-5. The app registers the attendee with Luma after payment is accepted.
-6. The checkout page renders a final pass using the Luma guest record.
+1. Ops creates a tenant, connects a Luma calendar, and stores the Luma API key in the secret store.
+2. Ops syncs mirrored events and tickets from Luma.
+3. Ops connects CipherPay for that calendar and validates the tenant-scoped payment configuration.
+4. Public checkout happens under `/c/[calendarSlug]` and `/c/[calendarSlug]/events/[eventId]`.
+5. CipherPay webhooks update payment state and enqueue a registration task.
+6. The registration worker processes tasks through `/api/ops/process-registration-tasks` or the ops recovery UI.
+7. Successful registrations are attached back to the checkout session and recorded in the usage ledger.
 
 ## Main Routes
 
-- `/` home page in production, or `/zectix` in local development by default
-- `/events/[eventId]` event checkout entry page
-- `/checkout/[sessionId]` live payment and registration status page
-- `/admin-login` shared-password sign-in page for operations routes
-- `/admin` runtime configuration page
-- `/dashboard` operational dashboard
-- `/api/checkout` checkout session creation
-- `/api/cipherpay/webhook` CipherPay webhook endpoint
-- `/api/admin/config` admin config API
-- `/api/admin/retry-registration` admin recovery API for failed or stuck registrations
-- `/api/dashboard` dashboard API
-- `/api/health` liveness probe
-- `/api/ready` readiness probe
-- `/api/sessions/[sessionId]` signed checkout-session status API
+- `/` service landing page
+- `/c/[calendarSlug]` public event list for one organizer/calendar
+- `/c/[calendarSlug]/events/[eventId]` public checkout entry page
+- `/checkout/[sessionId]` payment and registration status page
+- `/ops/login` operator sign-in
+- `/ops` operator overview
+- `/ops/tenants` tenant onboarding and inventory
+- `/ops/tenants/[tenantId]` tenant detail and secret validation
+- `/ops/tenants/[tenantId]/events` ticket eligibility controls
+- `/ops/tenants/[tenantId]/recovery` resync and retry tools
+- `/ops/reports` usage reporting and CSV export
 
-## Runtime Configuration
+API routes:
 
-The app can boot with no Luma or CipherPay secrets configured.
+- `/api/checkout`
+- `/api/sessions/[sessionId]`
+- `/api/cipherpay/webhook`
+- `/api/luma/webhook`
+- `/api/ops/login`
+- `/api/ops/logout`
+- `/api/ops/process-registration-tasks`
+- `/api/ops/reports`
+- `/api/health`
+- `/api/ready`
 
-- In local development, the app starts against a local DynamoDB table by default.
-- In AWS, the app starts against a managed DynamoDB table by default.
-- Non-secret settings can be saved later through `/admin`.
+## Secret Storage
 
-### Local secret behavior
+Secrets are no longer stored as one global mutable runtime config.
 
-For local development, you can either:
+Supported backends:
 
-- save Luma and CipherPay secrets through `/admin`
-- or pre-seed them with environment variables
+- `local` for development and tests
+- `aws-secrets-manager` for production
 
-### Production secret behavior
+The backend is selected with `SECRET_STORE_BACKEND`.
 
-In production, secrets should be injected through environment variables or a deployment secret manager.
+Local development stores secret values on disk in a JSON file under `.zectix-local/`.
 
-By default, when `NODE_ENV=production`, the app treats these values as externally managed and does not persist them back into the DynamoDB config record:
+Production stores only secret references in DynamoDB and resolves the actual values from AWS Secrets Manager.
 
-- `LUMA_API_KEY`
-- `CIPHERPAY_API_KEY`
-- `CIPHERPAY_WEBHOOK_SECRET`
+## Eligibility Model
 
-This reduces the blast radius of an application-level config compromise and keeps third-party credentials out of normal mutable app state.
+Only tickets that pass both layers are eligible for public Zcash checkout:
 
-For operators, the practical takeaway is:
+- automatic checks: active, fixed-price, supported currency
+- operator assertions: no approval required, no extra mandatory registration questions, fixed price confirmed
 
-- rotate production secrets in Amplify or your secret manager
-- keep recovery steps and incident checks in [`RUNBOOK.md`](./RUNBOOK.md)
-- avoid reintroducing mutable runtime secret storage unless you explicitly need it
-
-If you intentionally want runtime secret storage enabled in production, you can override that behavior with:
-
-- `ALLOW_RUNTIME_SECRET_STORAGE=true`
-
-That override is not recommended.
-
-## Hardening Included
-
-This repo includes several production-oriented safeguards:
-
-- shared-password protection for `/admin` and `/dashboard`
-- admin login throttling and audit logging
-- same-origin checks on admin mutation routes
-- per-IP and per-attendee checkout throttling on `/api/checkout`
-- idempotent reuse of still-active checkout sessions instead of always minting a new CipherPay invoice
-- signed viewer tokens for `/checkout/[sessionId]` and `/api/sessions/[sessionId]`
-- targeted session lookup items in DynamoDB to avoid full attendee-session scans as volume grows
-- retryable registration recovery state plus an admin retry endpoint
-- `/api/health` and `/api/ready` probes
-- structured operational logging with request and session correlation ids
-- a Vitest-based unit and service test suite
-- operator recovery guidance in [`RUNBOOK.md`](./RUNBOOK.md)
-- support for an AWS-only automation secret on the registration recovery path
-
-### Checkout rate limiting
-
-`/api/checkout` enforces lightweight limits to slow down abuse:
-
-- per IP address
-- per attendee email + event combination
-
-When the limit is exceeded, the API returns `429 Too Many Requests` with a `Retry-After` header.
-
-### Signed session viewer tokens
-
-Checkout session pages and session polling APIs can be protected with a signed viewer token.
-
-By default:
-
-- in production, the app protects session reads using `SESSION_VIEWER_SECRET`, or falls back to `ADMIN_SESSION_SECRET`
-- in local development, session token protection stays off unless `SESSION_VIEWER_SECRET` is set
-
-This prevents anyone who only guesses a `sessionId` from reading checkout state.
-
-## Requirements
-
-- Node.js 22
-- npm
-- Docker Desktop or another way to run DynamoDB Local for local development
-- a Luma Plus subscription for the API access this app depends on
-
-## Scripts
-
-```sh
-npm install
-npm run dev
-npm run build
-npm run start
-npm run lint
-npm test
-npm run typecheck
-npm run db:init
-npm run auth:hash -- "choose-a-shared-password"
-```
+If a ticket does not pass both layers, it stays out of public checkout.
 
 ## Local Development
 
@@ -172,8 +101,6 @@ npm install
 cp .env.local.template .env.local
 ```
 
-You can also leave most values unset and let the app use its defaults.
-
 ### 3. Start DynamoDB Local
 
 ```sh
@@ -186,12 +113,6 @@ docker compose up -d
 npm run db:init
 ```
 
-This creates the default local table:
-
-```text
-zectix
-```
-
 ### 5. Start the dev server
 
 ```sh
@@ -200,32 +121,25 @@ npm run dev
 
 ### 6. Open the app
 
-By default, local development uses a base path of `/zectix`, so the main local URLs are:
+The local base path is usually `/zectix`, so the most useful URLs are:
 
 - `http://localhost:3000/zectix`
-- `http://localhost:3000/zectix/admin`
-- `http://localhost:3000/zectix/dashboard`
+- `http://localhost:3000/zectix/ops/login`
+- `http://localhost:3000/zectix/ops`
+- `http://localhost:3000/zectix/c/[calendarSlug]`
 
-### 7. Save Luma and CipherPay settings in `/admin`
-
-Once those values are saved, the app can create invoices and complete registrations.
-
-Note:
-
-- this app assumes your Luma account has the API access included with Luma Plus
-
-## Local Environment Variables
-
-The local template is in [`./.env.local.template`](./.env.local.template).
+## Environment Variables
 
 Common local variables:
 
 - `APP_BASE_PATH=/zectix`
+- `APP_PUBLIC_ORIGIN=http://localhost:3000`
 - `DYNAMODB_ENDPOINT=http://127.0.0.1:8000`
 - `DYNAMODB_TABLE_NAME=zectix`
 - `AWS_REGION=us-east-1`
 - `AWS_ACCESS_KEY_ID=local`
 - `AWS_SECRET_ACCESS_KEY=local`
+- `SECRET_STORE_BACKEND=local`
 
 Optional shared auth:
 
@@ -236,242 +150,36 @@ Optional session viewer protection:
 
 - `SESSION_VIEWER_SECRET`
 
-Optional preloaded integrations:
+Optional secret-store settings:
 
-- `LUMA_API_KEY`
-- `CIPHERPAY_API_KEY`
-- `CIPHERPAY_WEBHOOK_SECRET`
-- `CIPHERPAY_NETWORK`
-- `CIPHERPAY_API_BASE_URL`
-- `CIPHERPAY_CHECKOUT_BASE_URL`
+- `LOCAL_SECRET_STORE_FILE`
+- `SECRET_STORE_BACKEND=aws-secrets-manager`
+- `SECRET_STORE_PREFIX`
 
-## Operations Authentication
+Optional automation and recovery:
 
-`/admin` and `/dashboard` can be protected with a shared password.
-
-Generate the required values with:
-
-```sh
-npm run auth:hash -- "choose-a-shared-password"
-```
-
-Then set:
-
-- `ADMIN_PASSWORD_HASH`
-- `ADMIN_SESSION_SECRET`
-
-When those variables are present, the app requires sign-in through `/admin-login`.
-
-## Webhooks
-
-### Local webhook URLs
-
-If you expose your local dev server through Caddy or another reverse proxy, the public webhook URL should point to the app's active base path.
-
-For example:
-
-- CipherPay: `https://your-local-domain.example/zectix/api/cipherpay/webhook`
-
-### Production webhook URL
-
-On a dedicated production domain with no base path:
-
-- CipherPay: `https://your-domain.example/api/cipherpay/webhook`
-
-For the current AWS target domain:
-
-- `https://zectix.pgpforcrypto.org/api/cipherpay/webhook`
-
-## AWS Amplify Deployment
-
-This repository is set up for straightforward Amplify deployment.
-
-### Production assumptions
-
-- production runs at the domain root, not under `/zectix`
-- the app uses managed DynamoDB
-- `/admin` and `/dashboard` are protected with shared auth
-- integration secrets are injected through Amplify environment variables
-- the app role, not static AWS credentials, provides DynamoDB access
-
-### Amplify build config
-
-The build configuration is in [`./amplify.yml`](./amplify.yml).
-
-It:
-
-- installs dependencies
-- writes selected Amplify environment variables into `.env.production`
-- runs `npm run build`
-
-### Recommended Amplify environment variables
-
-Required:
-
-- `DYNAMODB_TABLE_NAME=zectix`
-- `ADMIN_PASSWORD_HASH`
-- `ADMIN_SESSION_SECRET`
-
-Recommended for production:
-
-- `SESSION_VIEWER_SECRET`
 - `OPS_AUTOMATION_SECRET`
-- `LUMA_API_KEY`
-- `CIPHERPAY_API_KEY`
-- `CIPHERPAY_WEBHOOK_SECRET`
+- `ALLOW_RUNTIME_SECRET_STORAGE`
 
-Optional overrides:
+## Operator Notes
 
-- `CIPHERPAY_NETWORK`
-- `CIPHERPAY_API_BASE_URL`
-- `CIPHERPAY_CHECKOUT_BASE_URL`
+- `/ops` is the primary console for onboarding, monitoring, retries, and reporting.
+- `validate and sync` now auto-registers a Luma webhook for `event.created`, `event.updated`, and `event.canceled`.
+- `/api/luma/webhook` verifies the raw request body before refreshing mirrored Luma events.
+- `/api/ops/process-registration-tasks` is protected by `OPS_AUTOMATION_SECRET`.
+- `/api/ops/reports` returns JSON by default and CSV when `?format=csv` is supplied.
+- `/api/health` is a simple liveness probe.
+- `/api/ready` verifies the service is ready for tenant traffic.
 
-Recommended production behavior:
-
-- leave `APP_BASE_PATH` unset
-- leave `DYNAMODB_ENDPOINT` unset
-- leave `ALLOW_RUNTIME_SECRET_STORAGE` unset
-
-Notes:
-
-- The app defaults to `us-east-1` if `AWS_REGION` is not set.
-- In Amplify, the compute role should provide DynamoDB access instead of static AWS credentials.
-- If your Amplify runtime exposes temporary AWS credentials, the app supports `AWS_SESSION_TOKEN`.
-
-### AWS resources
-
-The current deployment model expects:
-
-- an Amplify Hosting app for this repository
-- a managed DynamoDB table named `zectix`
-- an Amplify compute role with permission to read and write that table
-- a public domain or subdomain, such as `zectix.pgpforcrypto.org`
-
-### Custom domain note
-
-Amplify deployment and Amplify custom-domain routing are separate concerns.
-
-- `amplify.yml` controls the app build
-- the public hostname only works after Amplify has an attached domain association and a `subdomain -> branch` mapping such as `zectix -> main`
-
-If your DNS is managed in Route53 in the same AWS account, Amplify can usually create the DNS record for you once that mapping is configured.
-
-If you disconnect and reconnect the GitHub repository or recreate the Amplify app, verify that the custom domain still includes the expected subdomain mapping.
-
-For this app, the expected production mapping is:
-
-- domain: `pgpforcrypto.org`
-- subdomain: `zectix`
-- branch: `main`
-
-That should result in:
-
-- `https://zectix.pgpforcrypto.org`
-- `https://zectix.pgpforcrypto.org/api/cipherpay/webhook`
-
-### Deployment order
-
-1. Push `main` to GitHub.
-2. Connect the repo to Amplify.
-3. Configure the required Amplify environment variables.
-4. Ensure the Amplify compute role has access to DynamoDB.
-5. Attach the production custom domain and confirm the `zectix -> main` subdomain mapping exists.
-6. Deploy the app.
-7. Verify that `zectix.pgpforcrypto.org` resolves publicly before configuring webhooks.
-8. Configure the final production webhook URL in CipherPay.
-9. Open `/admin` and save any non-secret runtime settings you want to override.
-10. If you update production secrets, redeploy after changing Amplify environment variables.
-
-## GitHub Automation
-
-GitHub Actions in this repository are limited to repository and CI concerns:
-
-- `CI` runs lint, tests, and production build validation on pushes and pull requests.
-- `Dependency Review` runs on pull requests.
-- `Dependabot` updates npm packages and GitHub Actions weekly.
-
-Production operations such as scheduled recovery and production monitoring are handled in AWS, not GitHub Actions.
-
-## AWS Operations
-
-AWS monitoring and recovery are first-class production operations in this deployment model, not just included helper code.
-
-The repository includes AWS-side handler code under [`./ops/aws`](./ops/aws) for:
-
-- scheduled retry of due registrations
-- production monitoring and readiness/incident metrics
-
-These AWS automation paths use:
-
-- `OPS_AUTOMATION_SECRET` for machine-to-machine authentication to `/api/admin/retry-registration`
-- EventBridge schedules for recurring jobs
-- Lambda functions for recovery and monitoring
-- CloudWatch metrics and alarms for readiness and registration/webhook trouble
-- SNS notifications for alarm delivery
-
-Keep this separation:
-
-- GitHub Actions for repo and CI
-- AWS for production operations
-
-## DynamoDB State
-
-The DynamoDB table stores the orchestration state needed for the application:
-
-- runtime configuration
-- checkout sessions
-- checkout lookup items
-- recorded webhook deliveries
-- checkout rate-limit counters
-
-Luma remains the source of truth for event and registration data.
-
-CipherPay remains the source of truth for invoice and payment state.
-
-## Operational Recovery
-
-The dashboard is the primary operator surface for the app today. When something looks wrong:
-
-- check `/dashboard` for failed registrations and invalid webhooks
-- inspect the affected checkout session for `registration_error` and payment status
-- `Payment accepted` does not guarantee Luma created the guest yet; check `registration_status` and `registration_error`
-- use the dashboard recovery actions or `/api/admin/retry-registration` for stuck registrations
-- check `/api/health` and `/api/ready` before assuming the app or integrations are down
-- confirm the current Amplify environment variables before assuming the code path is broken
-- use `RUNBOOK.md` for the current recovery checklist and incident notes
-
-## Tests
-
-The repository includes a small but high-value Vitest suite covering:
-
-- admin password hashing and session helpers
-- CipherPay webhook signature verification
-- session viewer token generation and validation
-- app-state utility helpers
-- checkout creation and recovery-oriented service logic
-
-Run it with:
+## Verification
 
 ```sh
+npm run lint
 npm test
+npm run typecheck
 ```
 
-## Base Path Behavior
+## Related Docs
 
-Base path behavior is controlled in [`./next.config.mjs`](./next.config.mjs) and [`./lib/app-paths.ts`](./lib/app-paths.ts).
-
-Current defaults:
-
-- local development: `/zectix`
-- production: root `/`
-
-You can override that with `APP_BASE_PATH`.
-
-## License
-
-All code in this workspace is licensed under either of:
-
-- Apache License, Version 2.0 (see [`LICENSE-APACHE`](./LICENSE-APACHE) or [http://www.apache.org/licenses/LICENSE-2.0](http://www.apache.org/licenses/LICENSE-2.0))
-- MIT license (see [`LICENSE-MIT`](./LICENSE-MIT) or [http://opensource.org/licenses/MIT](http://opensource.org/licenses/MIT))
-
-at your option.
+- [`RUNBOOK.md`](./RUNBOOK.md)
+- [`MIGRATION_FROM_DIY.md`](./MIGRATION_FROM_DIY.md)
