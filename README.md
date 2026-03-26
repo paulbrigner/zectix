@@ -164,7 +164,8 @@ Optional automation and recovery:
 ## Operator Notes
 
 - `/ops` is the primary console for onboarding, monitoring, retries, and reporting.
-- `validate and sync` now auto-registers a Luma webhook for `event.created`, `event.updated`, and `event.canceled`.
+- operators save the Luma API key only; managed Luma webhook ids and secrets are stored internally after `validate and sync`.
+- `validate and sync` verifies the Luma API key, auto-registers the managed webhook for `event.created`, `event.updated`, and `event.canceled`, and refreshes mirrored events/tickets.
 - `/api/luma/webhook` verifies the raw request body before refreshing mirrored Luma events.
 - `/api/ops/process-registration-tasks` is protected by `OPS_AUTOMATION_SECRET`.
 - `/api/ops/reports` returns JSON by default and CSV when `?format=csv` is supplied.

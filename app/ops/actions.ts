@@ -61,8 +61,6 @@ export async function createCalendarConnectionAction(formData: FormData) {
     display_name: String(formData.get("display_name") || ""),
     slug: asString(formData.get("slug")),
     luma_api_key: String(formData.get("luma_api_key") || ""),
-    luma_webhook_secret: asString(formData.get("luma_webhook_secret")),
-    luma_webhook_id: asString(formData.get("luma_webhook_id")),
   });
 
   redirectTo(formData, `/ops/tenants/${encodeURIComponent(connection.tenant_id)}`);

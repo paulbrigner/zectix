@@ -33,7 +33,7 @@ export default async function TenantsPage() {
               </label>
               <label className="console-field">
                 <ConsoleFieldLabel
-                  info="Used for internal tenant identity and future organizer URLs. Leave blank to generate it from the name."
+                  info="Used for internal tenant identity and future organizer URLs. Leave blank to generate it from the name and add a numeric suffix if needed."
                   label="Slug"
                   optional
                 />

@@ -9,21 +9,20 @@ export function ConsoleFieldLabel({
 }) {
   return (
     <span className="console-field-label">
-      <span>{label}</span>
-      <span className="console-field-meta">
-        {optional ? <span className="console-field-badge">Optional</span> : null}
-        {info ? (
-          <span
-            aria-label={info}
-            className="console-info-indicator"
-            role="img"
-            tabIndex={0}
-            title={info}
-          >
+      <span className="console-field-label-row">
+        <span>{label}</span>
+        <span className="console-field-meta">
+          {optional ? <span className="console-field-badge">Optional</span> : null}
+        </span>
+      </span>
+      {info ? (
+        <span className="console-field-help">
+          <span aria-hidden="true" className="console-info-indicator">
             i
           </span>
-        ) : null}
-      </span>
+          <span>{info}</span>
+        </span>
+      ) : null}
     </span>
   );
 }
