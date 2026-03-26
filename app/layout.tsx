@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { Inter, Space_Grotesk } from "next/font/google";
 import { appPath } from "@/lib/app-paths";
+import "./styles/tokens.css";
 import "./globals.css";
+import "./styles/landing.css";
 
 const inter = Inter({ subsets: ["latin"] });
 const spaceGrotesk = Space_Grotesk({

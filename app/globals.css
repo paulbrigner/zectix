@@ -12,18 +12,6 @@
   --color-gray-700: #374151;
   --color-gray-800: #1f2937;
   --color-gray-900: #111827;
-
-  --color-pink-400: #f472b6;
-  --color-pink-500: #ec4899;
-  --color-pink-600: #db2777;
-}
-
-:root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
-  --background-end-rgb: 255, 255, 255;
-  --font-display: "Space Grotesk", sans-serif;
-  color-scheme: light;
 }
 
 html {
@@ -81,7 +69,7 @@ select {
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--color-pink-600);
+  color: var(--accent-text);
 }
 
 .subtle-text {
@@ -104,8 +92,8 @@ select {
   padding: 0 1rem;
   border: 1px solid transparent;
   border-radius: 999px;
-  background: linear-gradient(135deg, #ec4899, #db2777);
-  color: white;
+  background: linear-gradient(135deg, var(--accent-bright), var(--accent));
+  color: var(--surface-dark);
   font-weight: 600;
   text-decoration: none;
   transition:
@@ -113,7 +101,7 @@ select {
     box-shadow 160ms ease,
     opacity 160ms ease,
     background 160ms ease;
-  box-shadow: 0 12px 24px rgba(219, 39, 119, 0.18);
+  box-shadow: 0 12px 24px var(--accent-glow);
 }
 
 .button:hover {
@@ -171,9 +159,9 @@ select {
 .console-shell,
 .checkout-shell {
   background:
-    radial-gradient(circle at top left, rgba(244, 114, 182, 0.16), transparent 30rem),
-    radial-gradient(circle at top right, rgba(59, 130, 246, 0.12), transparent 28rem),
-    linear-gradient(180deg, #f8fafc, #eef2ff 55%, #fdf2f8);
+    radial-gradient(circle at top left, rgba(247, 147, 26, 0.14), transparent 30rem),
+    radial-gradient(circle at top right, rgba(59, 130, 246, 0.10), transparent 28rem),
+    linear-gradient(180deg, #f8fafc, #f5f3ee 55%, #faf8f4);
 }
 
 .console-card-shell,
@@ -264,9 +252,9 @@ select {
 }
 
 .console-nav-link-active {
-  background: rgba(236, 72, 153, 0.12);
-  border-color: rgba(236, 72, 153, 0.28);
-  color: var(--color-pink-600);
+  background: var(--accent-subtle);
+  border-color: var(--accent-border);
+  color: var(--accent-text);
 }
 
 .console-nav-link-disabled {
@@ -507,9 +495,9 @@ select {
 }
 
 .console-input:focus {
-  outline: 2px solid rgba(236, 72, 153, 0.18);
+  outline: 2px solid rgba(212, 146, 10, 0.18);
   outline-offset: 2px;
-  border-color: rgba(236, 72, 153, 0.45);
+  border-color: rgba(212, 146, 10, 0.45);
 }
 
 .console-status {
@@ -701,8 +689,8 @@ select {
 }
 
 .checkout-ticket-option-selected {
-  border-color: rgba(236, 72, 153, 0.35);
-  background: rgba(253, 242, 248, 0.9);
+  border-color: rgba(212, 146, 10, 0.35);
+  background: rgba(255, 248, 236, 0.9);
 }
 
 .checkout-ticket-option input {
@@ -923,8 +911,8 @@ select {
   height: 0.7rem;
   margin-top: 0.42rem;
   border-radius: 999px;
-  background: linear-gradient(180deg, #f97316, #ec4899);
-  box-shadow: 0 0 0 6px rgba(249, 115, 22, 0.12);
+  background: linear-gradient(135deg, var(--accent-bright), var(--accent-warm));
+  box-shadow: 0 0 0 6px var(--accent-subtle);
 }
 
 .checkout-flow-item strong {
@@ -940,12 +928,14 @@ select {
   line-height: 1.65;
 }
 
+/* ── Old homepage styles (used by calendar page) ── */
+
 .home-shell {
   min-height: 100vh;
   background:
-    radial-gradient(circle at top left, rgba(247, 147, 26, 0.22), transparent 24rem),
-    radial-gradient(circle at 85% 15%, rgba(236, 72, 153, 0.18), transparent 26rem),
-    linear-gradient(180deg, #fff8ec 0%, #fffaf2 22%, #f8fbff 58%, #f3f4ff 100%);
+    radial-gradient(circle at top left, rgba(247, 147, 26, 0.18), transparent 24rem),
+    radial-gradient(circle at 85% 15%, rgba(212, 146, 10, 0.12), transparent 26rem),
+    linear-gradient(180deg, #fff8ec 0%, #fffaf2 22%, #f8fbff 58%, #f5f5f2 100%);
 }
 
 .home-main {
@@ -992,7 +982,7 @@ select {
   left: -3rem;
   width: 16rem;
   height: 16rem;
-  background: radial-gradient(circle, rgba(236, 72, 153, 0.24), transparent 70%);
+  background: radial-gradient(circle, rgba(212, 146, 10, 0.18), transparent 70%);
 }
 
 .home-hero-grid {
@@ -1309,7 +1299,7 @@ select {
   height: 6.2rem;
   border-radius: 20px;
   overflow: hidden;
-  background: linear-gradient(180deg, rgba(247, 147, 26, 0.12), rgba(236, 72, 153, 0.12));
+  background: linear-gradient(180deg, rgba(247, 147, 26, 0.12), rgba(212, 146, 10, 0.08));
 }
 
 .home-event-image {
