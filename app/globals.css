@@ -1169,6 +1169,32 @@ select {
   box-shadow: 0 0 0 0.35rem rgba(255, 203, 69, 0.18);
 }
 
+.hub-preview-card {
+  gap: 0.8rem;
+}
+
+.hub-preview-title,
+.hub-preview-copy {
+  margin: 0;
+}
+
+.hub-preview-title {
+  color: white;
+  font-size: clamp(1.28rem, 2.2vw, 1.7rem);
+  line-height: 1.14;
+}
+
+.hub-preview-copy {
+  color: rgba(255, 255, 255, 0.74);
+  line-height: 1.6;
+}
+
+.hub-preview-card-direct {
+  border-color: rgba(255, 203, 69, 0.16);
+  background:
+    linear-gradient(180deg, rgba(255, 203, 69, 0.16), rgba(255, 255, 255, 0.05));
+}
+
 .home-events-section {
   display: grid;
   gap: 1.4rem;
@@ -1336,6 +1362,184 @@ select {
   display: grid;
   gap: 1rem;
   grid-auto-rows: 1fr;
+}
+
+.ticket-path-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.ticket-path-card {
+  display: grid;
+  align-content: start;
+  gap: 1rem;
+  padding: 1.45rem;
+  border-radius: 28px;
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  box-shadow:
+    0 18px 40px rgba(15, 23, 42, 0.07),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.ticket-path-card h3,
+.ticket-path-card p,
+.ticket-path-label {
+  margin: 0;
+}
+
+.ticket-path-card h3 {
+  font-size: clamp(1.4rem, 2vw, 1.95rem);
+  line-height: 1.08;
+  text-wrap: balance;
+}
+
+.ticket-path-card p {
+  line-height: 1.68;
+}
+
+.ticket-path-label {
+  color: #ca5d00;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.ticket-path-card-direct {
+  background:
+    linear-gradient(145deg, rgba(18, 24, 39, 0.98), rgba(30, 38, 64, 0.95)),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), transparent);
+  color: white;
+}
+
+.ticket-path-card-direct .ticket-path-label {
+  color: #ffcb45;
+}
+
+.ticket-path-card-direct p,
+.ticket-path-card-direct h3 {
+  color: white;
+}
+
+.ticket-path-card-direct p {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.ticket-path-card-managed {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.94));
+  color: #131b2d;
+}
+
+.ticket-path-card-managed p,
+.ticket-path-card-managed h3 {
+  color: #131b2d;
+}
+
+.ticket-path-card-managed p {
+  color: #475569;
+}
+
+.ticket-path-list {
+  display: grid;
+  gap: 0.8rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.ticket-path-list li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.65rem;
+  align-items: start;
+  line-height: 1.55;
+}
+
+.ticket-path-list li::before {
+  content: "";
+  width: 0.7rem;
+  height: 0.7rem;
+  margin-top: 0.38rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #ffcb45, #f7931a);
+  box-shadow: 0 0 0 0.25rem rgba(247, 147, 26, 0.12);
+}
+
+.ticket-path-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  margin-top: 0.15rem;
+}
+
+.ticket-path-inline-link {
+  color: inherit;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.ticket-path-card-direct .ticket-path-inline-link {
+  color: #ffcb45;
+}
+
+.cipherpay-direct-section {
+  margin-top: 1.55rem;
+}
+
+.cipherpay-direct-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.8fr);
+  gap: 1.15rem;
+  align-items: start;
+}
+
+.cipherpay-direct-heading {
+  max-width: 44rem;
+}
+
+.cipherpay-direct-aside {
+  display: grid;
+  gap: 1rem;
+  padding: 1.2rem;
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  border-radius: 24px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(248, 250, 252, 0.94));
+  box-shadow:
+    0 18px 40px rgba(15, 23, 42, 0.07),
+    inset 0 1px 0 rgba(255, 255, 255, 0.65);
+}
+
+.cipherpay-direct-points {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.cipherpay-direct-points p {
+  position: relative;
+  margin: 0;
+  padding-left: 1.15rem;
+  color: #475569;
+  line-height: 1.65;
+}
+
+.cipherpay-direct-points p::before {
+  content: "";
+  position: absolute;
+  top: 0.68rem;
+  left: 0;
+  width: 0.48rem;
+  height: 0.48rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #ffcb45, #f7931a);
+}
+
+.cipherpay-direct-link {
+  color: #ca5d00;
+  font-weight: 700;
+  text-decoration: none;
 }
 
 .marketing-feature-grid {
@@ -2398,7 +2602,9 @@ select {
 @media (max-width: 960px) {
   .checkout-layout,
   .checkout-status-grid,
-  .home-hero-grid {
+  .home-hero-grid,
+  .ticket-path-grid,
+  .cipherpay-direct-layout {
     grid-template-columns: 1fr;
   }
 
@@ -2512,6 +2718,10 @@ select {
 
   .home-actions {
     flex-direction: column;
+  }
+
+  .ticket-path-card {
+    padding: 1.2rem;
   }
 
   .home-event-card-inner {
