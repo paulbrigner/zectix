@@ -40,12 +40,12 @@ export async function handler(event = {}) {
       ? event.session_id.trim()
       : "";
 
-  const response = await fetch(joinUrl(baseUrl, "/api/admin/retry-registration"), {
+  const response = await fetch(joinUrl(baseUrl, "/api/ops/retry-registration"), {
     method: "POST",
     headers: {
       "content-type": "application/json",
       accept: "application/json",
-      "x-zectix-automation-secret": automationSecret,
+      "x-ops-automation-secret": automationSecret,
       "x-ops-source": "aws-eventbridge",
     },
     body: JSON.stringify(sessionId ? { session_id: sessionId } : {}),

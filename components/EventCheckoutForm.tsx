@@ -2,51 +2,39 @@
 
 import { FormEvent, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import type { LumaTicketType } from "@/lib/luma";
-import type { CheckoutSession } from "@/lib/app-state/types";
+import type { CheckoutSession, TicketMirror } from "@/lib/app-state/types";
 import { formatFiatAmount } from "@/lib/app-state/utils";
-import { appApiPath, readJsonOrThrow } from "@/app/(console)/client-utils";
+import { appApiPath, readJsonOrThrow } from "@/lib/client-http";
 
 type CheckoutResponse = {
   session: CheckoutSession;
   viewer_token: string | null;
   invoice: {
     invoice_id: string;
-    memo_code: string | null;
-    payment_address: string | null;
-    zcash_uri: string | null;
-    price_zec: number | null;
-    expires_at: string | null;
-    checkout_url: string;
+    checkout_url: string | null;
   };
 };
 
 type EventCheckoutFormProps = {
+  calendarSlug: string;
   eventApiId: string;
-  ticketTypes: LumaTicketType[];
-  checkoutEnabled: boolean;
-  disabledReason: string | null;
+  ticketTypes: TicketMirror[];
 };
 
-function ticketPriceLabel(ticket: LumaTicketType | null) {
-  if (ticket?.amount != null && ticket.currency) {
-    return formatFiatAmount(ticket.amount, ticket.currency);
-  }
-
-  return "Price unavailable";
+function ticketPriceLabel(ticket: TicketMirror | null) {
+  return formatFiatAmount(ticket?.amount || null, ticket?.currency || null);
 }
 
 export function EventCheckoutForm({
+  calendarSlug,
   eventApiId,
   ticketTypes,
-  checkoutEnabled,
-  disabledReason,
 }: EventCheckoutFormProps) {
   const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [selectedTicketId, setSelectedTicketId] = useState(
-    ticketTypes[0]?.api_id || "",
+    ticketTypes[0]?.ticket_type_api_id || "",
   );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -54,29 +42,13 @@ export function EventCheckoutForm({
   const [isPending, startTransition] = useTransition();
 
   const selectedTicket =
-    ticketTypes.find((ticket) => ticket.api_id === selectedTicketId) || null;
-  const selectedTicketHasPrice = Boolean(
-    selectedTicket && selectedTicket.amount != null && selectedTicket.currency,
-  );
-  const hasAnyPricedTicket = ticketTypes.some(
-    (ticket) => ticket.amount != null && Boolean(ticket.currency),
-  );
-  const effectiveDisabledReason =
-    disabledReason ||
-    (!ticketTypes.length
-      ? "This event does not currently expose any active Luma ticket types for checkout."
-      : !hasAnyPricedTicket
-        ? "None of this event's Luma ticket types expose a fixed price, so this app cannot create a CipherPay invoice."
-        : selectedTicket && !selectedTicketHasPrice
-          ? "Select a Luma ticket type with a fixed price before creating a checkout."
-          : null);
-  const canSubmit = checkoutEnabled && !effectiveDisabledReason;
+    ticketTypes.find((ticket) => ticket.ticket_type_api_id === selectedTicketId) ||
+    null;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-
-    if (!canSubmit) {
-      setError(effectiveDisabledReason || "Checkout is not configured yet.");
+    if (!selectedTicket) {
+      setError("Select a Zcash-enabled ticket before continuing.");
       return;
     }
 
@@ -92,15 +64,16 @@ export function EventCheckoutForm({
             "content-type": "application/json",
           },
           body: JSON.stringify({
+            calendar_slug: calendarSlug,
             attendee_name: name,
             attendee_email: email,
             event_api_id: eventApiId,
-            ticket_type_api_id: selectedTicket?.api_id || undefined,
+            ticket_type_api_id: selectedTicket.ticket_type_api_id,
           }),
         }),
       );
 
-      setNotice(`Invoice ${response.invoice.invoice_id} created. Loading payment details...`);
+      setNotice(`Invoice ${response.invoice.invoice_id} is ready. Loading payment details...`);
 
       startTransition(() => {
         const nextUrl = response.viewer_token
@@ -125,7 +98,7 @@ export function EventCheckoutForm({
         <div className="public-section-head">
           <h2>Attendee</h2>
           <p className="subtle-text">
-            Luma uses this information for the ticket and calendar invite.
+            Luma will use this information for the attendee record and event entry pass.
           </p>
         </div>
 
@@ -160,55 +133,44 @@ export function EventCheckoutForm({
 
       <section className="public-section-card">
         <div className="public-section-head">
-          <h2>Tickets</h2>
+          <h2>Eligible tickets</h2>
           <p className="subtle-text">
-            Select the ticket you want to pay for with Zcash.
+            These tickets passed the managed-service checks and were explicitly enabled by ops.
           </p>
         </div>
 
-        {ticketTypes.length ? (
-          <div className="public-ticket-grid">
-            {ticketTypes.map((ticket) => {
-              const selected = selectedTicketId === ticket.api_id;
-
-              return (
-                <label
-                  className={`public-ticket-card${selected ? " public-ticket-card-selected" : ""}`}
-                  key={ticket.api_id}
-                >
-                  <input
-                    checked={selected}
-                    name="ticket"
-                    onChange={() => setSelectedTicketId(ticket.api_id)}
-                    type="radio"
-                    value={ticket.api_id}
-                  />
-                  <div className="public-ticket-card-body">
-                    <div className="public-ticket-card-top">
-                      <div>
-                        <p className="public-ticket-name">{ticket.name}</p>
-                        {ticket.description ? (
-                          <p className="subtle-text">{ticket.description}</p>
-                        ) : null}
-                      </div>
-                      <span className="public-ticket-price">
-                        {ticketPriceLabel(ticket)}
-                      </span>
+        <div className="public-ticket-grid">
+          {ticketTypes.map((ticket) => {
+            const selected = selectedTicketId === ticket.ticket_type_api_id;
+            return (
+              <label
+                className={`public-ticket-card${selected ? " public-ticket-card-selected" : ""}`}
+                key={ticket.ticket_type_api_id}
+              >
+                <input
+                  checked={selected}
+                  name="ticket"
+                  onChange={() => setSelectedTicketId(ticket.ticket_type_api_id)}
+                  type="radio"
+                  value={ticket.ticket_type_api_id}
+                />
+                <div className="public-ticket-card-body">
+                  <div className="public-ticket-card-top">
+                    <div>
+                      <p className="public-ticket-name">{ticket.name}</p>
+                      {ticket.description ? (
+                        <p className="subtle-text">{ticket.description}</p>
+                      ) : null}
                     </div>
+                    <span className="public-ticket-price">
+                      {ticketPriceLabel(ticket)}
+                    </span>
                   </div>
-                </label>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="checkout-banner">
-            <strong>No tickets are available for this event.</strong>
-            <p className="subtle-text">
-              Luma must expose at least one active fixed-price ticket before
-              checkout can be created.
-            </p>
-          </div>
-        )}
+                </div>
+              </label>
+            );
+          })}
+        </div>
       </section>
 
       <section className="public-section-card public-total-card">
@@ -217,25 +179,18 @@ export function EventCheckoutForm({
             <span className="public-total-label">You&apos;ll pay</span>
             <strong>{ticketPriceLabel(selectedTicket)}</strong>
           </div>
-          <span className="public-status-chip">Zcash invoice</span>
+          <span className="public-status-chip">CipherPay invoice</span>
         </div>
         <p className="subtle-text">
-          CipherPay quotes the final ZEC amount on the next step.
+          The invoice quotes the final ZEC amount on the next screen.
         </p>
-
-        {effectiveDisabledReason ? (
-          <div className="checkout-banner checkout-banner-warning">
-            <strong>Checkout is not ready yet.</strong>
-            <p className="subtle-text">{effectiveDisabledReason}</p>
-          </div>
-        ) : null}
 
         {error ? <p className="console-error-text">{error}</p> : null}
         {notice ? <p className="console-valid-text">{notice}</p> : null}
 
         <button
           className="button"
-          disabled={submitting || isPending || !canSubmit}
+          disabled={submitting || isPending || !selectedTicket}
           type="submit"
         >
           {submitting || isPending ? "Creating invoice..." : "Continue to payment"}
