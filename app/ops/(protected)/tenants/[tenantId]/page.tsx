@@ -7,6 +7,8 @@ import {
   validateAndSyncCalendarAction,
   validateCipherPayConnectionAction,
 } from "@/app/ops/actions";
+import { ConsoleDisclosure } from "@/components/ConsoleDisclosure";
+import { ConsoleFieldLabel } from "@/components/ConsoleFieldLabel";
 import { getTenantOpsDetail } from "@/lib/tenancy/service";
 
 export const runtime = "nodejs";
@@ -59,7 +61,10 @@ export default async function TenantDetailPage({
           <input name="redirect_to" type="hidden" value={`/ops/tenants/${detail.tenant.tenant_id}`} />
           <div className="public-field-grid">
             <label className="console-field">
-              <span>Tenant status</span>
+              <ConsoleFieldLabel
+                info="Only active tenants resolve public calendar pages."
+                label="Tenant status"
+              />
               <select
                 className="console-input"
                 defaultValue={detail.tenant.status}
@@ -89,35 +94,59 @@ export default async function TenantDetailPage({
           </div>
         </div>
 
-        <form action={createCalendarConnectionAction} className="console-content">
-          <input name="tenant_id" type="hidden" value={detail.tenant.tenant_id} />
-          <input name="redirect_to" type="hidden" value={`/ops/tenants/${detail.tenant.tenant_id}`} />
-          <div className="public-field-grid">
-            <label className="console-field">
-              <span>Display name</span>
-              <input className="console-input" name="display_name" required type="text" />
-            </label>
-            <label className="console-field">
-              <span>Public slug</span>
-              <input className="console-input" name="slug" type="text" />
-            </label>
-            <label className="console-field">
-              <span>Luma API key</span>
-              <input className="console-input" name="luma_api_key" required type="password" />
-            </label>
-            <label className="console-field">
-              <span>Luma webhook secret</span>
-              <input className="console-input" name="luma_webhook_secret" type="password" />
-            </label>
-            <label className="console-field">
-              <span>Luma webhook id</span>
-              <input className="console-input" name="luma_webhook_id" type="text" />
-            </label>
-          </div>
-          <button className="button" type="submit">
-            Save calendar connection
-          </button>
-        </form>
+        <ConsoleDisclosure
+          defaultOpen={!detail.calendars.length}
+          description="Leave the optional webhook fields blank for new setups. Validate and sync will register them."
+          title="New calendar connection"
+        >
+          <form action={createCalendarConnectionAction} className="console-content">
+            <input name="tenant_id" type="hidden" value={detail.tenant.tenant_id} />
+            <input name="redirect_to" type="hidden" value={`/ops/tenants/${detail.tenant.tenant_id}`} />
+            <div className="public-field-grid">
+              <label className="console-field">
+                <ConsoleFieldLabel
+                  info="Shown in ops and used as the default public label for this calendar."
+                  label="Display name"
+                />
+                <input className="console-input" name="display_name" required type="text" />
+              </label>
+              <label className="console-field">
+                <ConsoleFieldLabel
+                  info="Public URL path under /c/{slug}. Leave blank to generate it from the display name."
+                  label="Public slug"
+                  optional
+                />
+                <input className="console-input" name="slug" type="text" />
+              </label>
+              <label className="console-field">
+                <ConsoleFieldLabel
+                  info="Organizer-owned Luma API key used to mirror events and attach attendees."
+                  label="Luma API key"
+                />
+                <input className="console-input" name="luma_api_key" required type="password" />
+              </label>
+              <label className="console-field">
+                <ConsoleFieldLabel
+                  info="Only needed when importing an existing Luma webhook. Leave blank for new setups."
+                  label="Luma webhook secret"
+                  optional
+                />
+                <input className="console-input" name="luma_webhook_secret" type="password" />
+              </label>
+              <label className="console-field">
+                <ConsoleFieldLabel
+                  info="Only needed when importing an existing Luma webhook. Leave blank for new setups."
+                  label="Luma webhook id"
+                  optional
+                />
+                <input className="console-input" name="luma_webhook_id" type="text" />
+              </label>
+            </div>
+            <button className="button" type="submit">
+              Save calendar connection
+            </button>
+          </form>
+        </ConsoleDisclosure>
 
         <div className="console-card-grid">
           {detail.calendars.map((calendar) => {
@@ -159,49 +188,75 @@ export default async function TenantDetailPage({
           </div>
         </div>
 
-        <form action={createCipherPayConnectionAction} className="console-content">
-          <input name="tenant_id" type="hidden" value={detail.tenant.tenant_id} />
-          <input name="redirect_to" type="hidden" value={`/ops/tenants/${detail.tenant.tenant_id}`} />
-          <div className="public-field-grid">
-            <label className="console-field">
-              <span>Calendar connection</span>
-              <select className="console-input" name="calendar_connection_id" required>
-                <option value="">Select calendar</option>
-                {detail.calendars.map((calendar) => (
-                  <option key={calendar.calendar_connection_id} value={calendar.calendar_connection_id}>
-                    {calendar.display_name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="console-field">
-              <span>Network</span>
-              <select className="console-input" name="network" required>
-                <option value="testnet">testnet</option>
-                <option value="mainnet">mainnet</option>
-              </select>
-            </label>
-            <label className="console-field">
-              <span>API base URL</span>
-              <input className="console-input" name="api_base_url" type="text" />
-            </label>
-            <label className="console-field">
-              <span>Checkout base URL</span>
-              <input className="console-input" name="checkout_base_url" type="text" />
-            </label>
-            <label className="console-field">
-              <span>CipherPay API key</span>
-              <input className="console-input" name="cipherpay_api_key" required type="password" />
-            </label>
-            <label className="console-field">
-              <span>CipherPay webhook secret</span>
-              <input className="console-input" name="cipherpay_webhook_secret" required type="password" />
-            </label>
-          </div>
-          <button className="button" type="submit">
-            Save CipherPay connection
-          </button>
-        </form>
+        <ConsoleDisclosure
+          defaultOpen={detail.calendars.length > 0 && !detail.cipherpay_connections.length}
+          description="Leave the base URLs blank unless this tenant uses custom CipherPay endpoints."
+          title="New CipherPay connection"
+        >
+          <form action={createCipherPayConnectionAction} className="console-content">
+            <input name="tenant_id" type="hidden" value={detail.tenant.tenant_id} />
+            <input name="redirect_to" type="hidden" value={`/ops/tenants/${detail.tenant.tenant_id}`} />
+            <div className="public-field-grid">
+              <label className="console-field">
+                <ConsoleFieldLabel
+                  info="Choose which mirrored calendar this payment account should serve."
+                  label="Calendar connection"
+                />
+                <select className="console-input" name="calendar_connection_id" required>
+                  <option value="">Select calendar</option>
+                  {detail.calendars.map((calendar) => (
+                    <option key={calendar.calendar_connection_id} value={calendar.calendar_connection_id}>
+                      {calendar.display_name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="console-field">
+                <ConsoleFieldLabel
+                  info="Use testnet for staging and mainnet for real payments."
+                  label="Network"
+                />
+                <select className="console-input" name="network" required>
+                  <option value="testnet">testnet</option>
+                  <option value="mainnet">mainnet</option>
+                </select>
+              </label>
+              <label className="console-field">
+                <ConsoleFieldLabel
+                  info="Override only for a custom CipherPay deployment. Leave blank to use the default for the selected network."
+                  label="API base URL"
+                  optional
+                />
+                <input className="console-input" name="api_base_url" type="text" />
+              </label>
+              <label className="console-field">
+                <ConsoleFieldLabel
+                  info="Override only for a custom CipherPay checkout host. Leave blank to use the default for the selected network."
+                  label="Checkout base URL"
+                  optional
+                />
+                <input className="console-input" name="checkout_base_url" type="text" />
+              </label>
+              <label className="console-field">
+                <ConsoleFieldLabel
+                  info="Organizer-owned CipherPay API key used to create invoices."
+                  label="CipherPay API key"
+                />
+                <input className="console-input" name="cipherpay_api_key" required type="password" />
+              </label>
+              <label className="console-field">
+                <ConsoleFieldLabel
+                  info="Webhook secret configured in CipherPay for /api/cipherpay/webhook."
+                  label="CipherPay webhook secret"
+                />
+                <input className="console-input" name="cipherpay_webhook_secret" required type="password" />
+              </label>
+            </div>
+            <button className="button" type="submit">
+              Save CipherPay connection
+            </button>
+          </form>
+        </ConsoleDisclosure>
 
         <div className="console-card-grid">
           {detail.cipherpay_connections.map((connection) => {
