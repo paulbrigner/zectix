@@ -1330,6 +1330,99 @@ select {
   line-height: 1.7;
 }
 
+.marketing-feature-grid,
+.marketing-proof-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.marketing-feature-card,
+.marketing-proof-card {
+  display: grid;
+  gap: 0.65rem;
+  padding: 1.1rem;
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  border-radius: 24px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.94));
+  box-shadow:
+    0 18px 40px rgba(15, 23, 42, 0.07),
+    inset 0 1px 0 rgba(255, 255, 255, 0.65);
+}
+
+.marketing-card-kicker {
+  margin: 0;
+  color: #ca5d00;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.marketing-feature-card h3,
+.marketing-proof-card h3 {
+  margin: 0;
+  color: #131b2d;
+  font-size: 1.15rem;
+  line-height: 1.28;
+}
+
+.marketing-feature-card p,
+.marketing-proof-card p {
+  margin: 0;
+  color: #475569;
+  line-height: 1.68;
+}
+
+.marketing-spotlight {
+  margin-top: 1.65rem;
+  padding: 1.45rem;
+  background:
+    linear-gradient(145deg, rgba(18, 24, 39, 0.97), rgba(20, 35, 58, 0.95)),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.18), transparent);
+  color: white;
+}
+
+.marketing-spotlight-copy {
+  display: grid;
+  gap: 0.95rem;
+  align-content: start;
+  min-width: 0;
+}
+
+.marketing-spotlight-title {
+  margin: 0;
+  max-width: 13ch;
+  color: white;
+  font-size: clamp(1.95rem, 4vw, 3.1rem);
+  line-height: 1.02;
+}
+
+.marketing-note {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.95rem 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.marketing-note strong {
+  color: #ffcb45;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.marketing-note p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.78);
+  line-height: 1.62;
+}
+
 .public-home-shell {
   min-height: 100vh;
   background:
@@ -2320,6 +2413,15 @@ select {
     padding-top: 0.75rem;
   }
 
+  .public-home-topbar {
+    flex-wrap: wrap;
+    justify-content: space-between;
+  }
+
+  .public-home-nav-links {
+    flex-wrap: wrap;
+  }
+
   .event-page-card {
     padding: 1rem;
   }
@@ -2361,6 +2463,14 @@ select {
   .public-home-copy h1 {
     max-width: none;
     font-size: clamp(2.25rem, 11vw, 3.4rem);
+  }
+
+  .marketing-spotlight {
+    padding: 1rem;
+  }
+
+  .marketing-spotlight-title {
+    max-width: none;
   }
 
   .public-event-row {
