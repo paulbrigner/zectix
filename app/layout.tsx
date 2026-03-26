@@ -13,18 +13,18 @@ const spaceGrotesk = Space_Grotesk({
 export const metadata: Metadata = {
   title: "ZecTix",
   description:
-    "Private Zcash checkout for Luma organizers with dual payment paths, organizer-owned CipherPay settlement, and Luma-first event operations.",
+    "A home for Zcash ticketing with direct CipherPay events and a managed Luma + CipherPay integration.",
   openGraph: {
     title: "ZecTix",
     description:
-      "Private Zcash checkout for Luma organizers with dual payment paths, organizer-owned CipherPay settlement, and Luma-first event operations.",
+      "A home for Zcash ticketing with direct CipherPay events and a managed Luma + CipherPay integration.",
     type: "website",
   },
   twitter: {
     card: "summary",
     title: "ZecTix",
     description:
-      "Private Zcash checkout for Luma organizers with dual payment paths, organizer-owned CipherPay settlement, and Luma-first event operations.",
+      "A home for Zcash ticketing with direct CipherPay events and a managed Luma + CipherPay integration.",
   },
   icons: {
     icon: appPath("/icon.png"),

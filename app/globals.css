@@ -1004,6 +1004,10 @@ select {
   align-items: stretch;
 }
 
+.hub-hero-grid {
+  grid-template-columns: minmax(0, 1.18fr) minmax(320px, 0.86fr);
+}
+
 .home-hero-copy,
 .home-hero-panel {
   display: grid;
@@ -1195,6 +1199,46 @@ select {
     linear-gradient(180deg, rgba(255, 203, 69, 0.16), rgba(255, 255, 255, 0.05));
 }
 
+.hub-choice-list {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.hub-choice-card {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.95rem 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.hub-choice-card h3,
+.hub-choice-card p,
+.hub-choice-kicker {
+  margin: 0;
+}
+
+.hub-choice-kicker {
+  color: #ffcb45;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.hub-choice-card h3 {
+  color: white;
+  font-size: clamp(1.18rem, 1.8vw, 1.45rem);
+  line-height: 1.18;
+}
+
+.hub-choice-card p {
+  color: rgba(255, 255, 255, 0.76);
+  line-height: 1.58;
+}
+
 .home-events-section {
   display: grid;
   gap: 1.4rem;
@@ -1364,13 +1408,15 @@ select {
   grid-auto-rows: 1fr;
 }
 
-.ticket-path-grid {
+.ticket-path-grid,
+.ticketing-option-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
 }
 
-.ticket-path-card {
+.ticket-path-card,
+.ticketing-option-card {
   display: grid;
   align-content: start;
   gap: 1rem;
@@ -1384,26 +1430,42 @@ select {
 
 .ticket-path-card h3,
 .ticket-path-card p,
-.ticket-path-label {
+.ticket-path-label,
+.ticketing-option-card h3,
+.ticketing-option-card p,
+.ticketing-option-label {
   margin: 0;
 }
 
-.ticket-path-card h3 {
+.ticket-path-card h3,
+.ticketing-option-card h3 {
   font-size: clamp(1.4rem, 2vw, 1.95rem);
   line-height: 1.08;
   text-wrap: balance;
 }
 
-.ticket-path-card p {
+.ticket-path-card p,
+.ticketing-option-card p {
   line-height: 1.68;
 }
 
-.ticket-path-label {
+.ticket-path-label,
+.ticketing-option-label {
   color: #ca5d00;
   font-size: 0.8rem;
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+}
+
+.ticketing-option-card {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(248, 250, 252, 0.94));
+  color: #131b2d;
+}
+
+.ticketing-option-description {
+  color: #475569;
 }
 
 .ticket-path-card-direct {
@@ -1441,7 +1503,8 @@ select {
   color: #475569;
 }
 
-.ticket-path-list {
+.ticket-path-list,
+.ticketing-option-list {
   display: grid;
   gap: 0.8rem;
   padding: 0;
@@ -1449,12 +1512,17 @@ select {
   list-style: none;
 }
 
-.ticket-path-list li {
+.ticket-path-list li,
+.ticketing-option-point {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   gap: 0.65rem;
   align-items: start;
   line-height: 1.55;
+}
+
+.ticketing-option-point p {
+  margin: 0;
 }
 
 .ticket-path-list li::before {
@@ -1467,7 +1535,17 @@ select {
   box-shadow: 0 0 0 0.25rem rgba(247, 147, 26, 0.12);
 }
 
-.ticket-path-actions {
+.ticketing-option-dot {
+  width: 0.7rem;
+  height: 0.7rem;
+  margin-top: 0.38rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #ffcb45, #f7931a);
+  box-shadow: 0 0 0 0.25rem rgba(247, 147, 26, 0.12);
+}
+
+.ticket-path-actions,
+.ticketing-option-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.7rem;
@@ -1540,6 +1618,17 @@ select {
   color: #ca5d00;
   font-weight: 700;
   text-decoration: none;
+}
+
+.hub-flow-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 0.15rem;
+}
+
+.hub-flow-card {
+  height: 100%;
 }
 
 .marketing-feature-grid {
@@ -2604,13 +2693,15 @@ select {
   .checkout-status-grid,
   .home-hero-grid,
   .ticket-path-grid,
+  .ticketing-option-grid,
   .cipherpay-direct-layout {
     grid-template-columns: 1fr;
   }
 
   .ops-fit-layout,
   .marketing-spotlight-header,
-  .marketing-spotlight-steps {
+  .marketing-spotlight-steps,
+  .hub-flow-grid {
     grid-template-columns: 1fr;
   }
 
@@ -2666,6 +2757,7 @@ select {
   }
 
   .ops-fit-grid,
+  .hub-flow-grid,
   .marketing-feature-grid,
   .marketing-proof-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2720,7 +2812,8 @@ select {
     flex-direction: column;
   }
 
-  .ticket-path-card {
+  .ticket-path-card,
+  .ticketing-option-card {
     padding: 1.2rem;
   }
 
@@ -2799,6 +2892,7 @@ select {
   }
 
   .ops-fit-grid,
+  .hub-flow-grid,
   .marketing-feature-grid,
   .marketing-proof-grid {
     grid-template-columns: 1fr;

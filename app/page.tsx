@@ -1,132 +1,140 @@
 export const runtime = "nodejs";
 
-const externalLinkProps = {
-  rel: "noreferrer",
-  target: "_blank",
-} as const;
-
-const ticketPaths = [
+const heroChoices = [
   {
-    variant: "direct",
-    label: "CipherPay direct",
-    title: "Sell tickets directly through CipherPay.",
-    preview:
-      "Use CipherPay itself as the ticketing and checkout layer when you want a pure Zcash flow.",
+    label: "Self-serve",
+    title: "CipherPay-only ticketing",
     description:
-      "Best when you want enhanced privacy, no extra third-party subscription layer, and a straightforward merchant-owned Zcash checkout.",
-    highlights: [
-      "Hosted checkout with QR code and payment address",
-      "Invoice or product creation through the dashboard, API, or product pages",
-      "Dashboard visibility plus webhook updates as payment is detected and confirmed",
-    ],
-    primaryAction: {
-      href: "https://www.cipherpay.app/en/dashboard/login",
-      label: "Open CipherPay dashboard",
-    },
-    secondaryAction: {
-      href: "https://www.cipherpay.app/",
-      label: "Learn about CipherPay",
-    },
+      "Create events, ticket tiers, and hosted Zcash checkout directly in the CipherPay dashboard.",
   },
   {
-    variant: "managed",
-    label: "Luma + CipherPay",
-    title: "Add Zcash to a Luma-based event stack.",
-    preview:
-      "Keep Luma in charge of event operations while ZecTix adds a managed Zcash path.",
+    label: "Managed",
+    title: "Luma + CipherPay integration",
     description:
-      "Best when your event pages, guest records, approvals, reminders, and check-in already live in Luma and you want Zcash alongside the existing flow.",
-    highlights: [
-      "Mirror only supported Luma inventory into public Zcash checkout",
-      "Attach accepted attendees back into Luma after payment",
-      "Use the managed service layer for sync, webhook visibility, and recovery",
-    ],
-    primaryAction: {
-      href: "#luma-managed",
-      label: "See the managed flow",
-    },
-    secondaryAction: {
-      href: "#managed-fit",
-      label: "Why this path is managed",
-    },
+      "Keep Luma as the system of record for event operations while ZecTix adds a managed Zcash checkout option.",
   },
 ] as const;
 
-const directCipherPayFlow = [
+const ticketingOptions = [
   {
-    title: "Create the ticket or invoice in CipherPay.",
+    label: "Direct path",
+    title: "CipherPay-only ticketing",
     description:
-      "CipherPay's docs describe invoice creation through the dashboard, API, or product pages, which makes the direct path workable for Zcash-native ticket sales.",
+      "Run Zcash-native ticket sales straight from CipherPay when you want the shortest route to hosted checkout, direct settlement, and a privacy-forward buyer flow.",
+    bullets: [
+      "Create events, ticket tiers, capacities, and checkout links from the CipherPay dashboard.",
+      "Use hosted Zcash checkout with QR codes, wallet payment URIs, and direct-to-wallet settlement.",
+      "Avoid layering in a separate event-platform subscription just to sell tickets for Zcash.",
+    ],
+    primaryHref: "https://www.cipherpay.app/en/dashboard/login",
+    primaryLabel: "Open CipherPay dashboard",
+    secondaryHref: "https://www.cipherpay.app/",
+    secondaryLabel: "Learn about CipherPay",
   },
   {
-    title: "Send buyers to CipherPay's hosted checkout.",
+    label: "Managed path",
+    title: "Luma + CipherPay",
     description:
-      "The buyer sees a QR code and payment address, then pays shielded ZEC from their wallet through CipherPay's hosted checkout surface.",
-  },
-  {
-    title: "Watch dashboard and webhook status updates.",
-    description:
-      "CipherPay detects payments quickly, later marks them confirmed, and updates both the merchant dashboard and webhook stream so fulfillment can continue.",
+      "Add Zcash to an existing Luma workflow without asking the organizer to abandon Luma pages, guests, approvals, reminders, or check-in.",
+    bullets: [
+      "Keep Luma as the source of truth for event publishing, approvals, guest records, and day-of-event workflows.",
+      "Mirror only supported tickets into a Zcash-ready public surface powered by CipherPay settlement.",
+      "Use this path when the organizer already depends on Luma and wants Zcash beside the existing checkout story.",
+    ],
+    primaryHref: "#luma-managed",
+    primaryLabel: "See the managed flow",
+    secondaryHref: "#why-zectix",
+    secondaryLabel: "Why this path exists",
   },
 ] as const;
 
-const directCipherPayNotes = [
-  "You want a Zcash-first ticket flow without a separate event-management platform in the middle.",
-  "You want hosted checkout, webhook updates, and merchant-owned settlement directly to your own wallet.",
-  "You want the shortest path from ticket listing to shielded Zcash payment.",
+const cipherPayOrganizerFlow = [
+  {
+    title: "Create the event and ticket tiers in CipherPay.",
+    description:
+      "CipherPay’s event tooling can define ticket names, pricing, capacities, and the checkout link that buyers will use.",
+  },
+  {
+    title: "Share a hosted Zcash checkout page.",
+    description:
+      "The buyer lands on a purpose-built payment page with QR code, wallet URI, and invoice state handled by CipherPay.",
+  },
+  {
+    title: "Track detection, webhooks, and check-in from the same product.",
+    description:
+      "CipherPay handles fast payment detection, confirmation updates, webhook delivery, and event-side follow-up tools.",
+  },
+] as const;
+
+const cipherPayBuyerFlow = [
+  {
+    title: "Open the event checkout and choose the ticket.",
+    description:
+      "The direct CipherPay path keeps the buyer on a native Zcash payment flow rather than routing through another event platform first.",
+  },
+  {
+    title: "Pay from a Zcash wallet using shielded checkout.",
+    description:
+      "The hosted page presents the QR code and URI, and CipherPay watches the mempool and chain for the payment.",
+  },
+  {
+    title: "See payment state update quickly.",
+    description:
+      "CipherPay documents fast mempool detection, later confirmation, and webhook or dashboard updates for the merchant side.",
+  },
 ] as const;
 
 const lumaContinuity = [
   {
-    title: "Event publishing and pages",
+    title: "Event publishing and pages stay in Luma.",
     description:
-      "Organizers still create events, manage details, and keep the canonical event experience in Luma.",
+      "Organizers still create events, manage descriptions, and keep the canonical event page in the product their community already knows.",
   },
   {
-    title: "Guest and attendee records",
+    title: "Guest records, approvals, reminders, and check-in stay put.",
     description:
-      "Accepted buyers are attached back into Luma so teams can keep using familiar guest-management workflows.",
+      "The managed path is designed for teams that want Zcash without giving up Luma’s attendee workflows or event-day tooling.",
   },
   {
-    title: "Approvals, reminders, and check-in",
+    title: "ZecTix only layers in the Zcash checkout surface.",
     description:
-      "The day-of-event and attendee-lifecycle tools remain where organizers already expect them to be.",
-  },
-] as const;
-
-const organizerFlow = [
-  {
-    title: "Connect Luma and CipherPay",
-    description:
-      "The organizer keeps their own accounts. ZecTix just wires them together as a managed service layer.",
-  },
-  {
-    title: "Mirror only the events and tickets that qualify",
-    description:
-      "Supported inventory is synced from Luma into a public Zcash-ready surface without relying on live global config.",
-  },
-  {
-    title: "Accept payment and attach the attendee back into Luma",
-    description:
-      "CipherPay handles invoice creation and webhooks, while ZecTix advances the registration workflow automatically.",
+      "The public ticketing surface, sync rules, and registration handoff are managed so the organizer does not need to build the glue themselves.",
   },
 ] as const;
 
-const managedOperationalNotes = [
+const lumaManagedFlow = [
   {
-    title: "Ticket-by-ticket control",
+    title: "Connect Luma and CipherPay.",
     description:
-      "Only mirrored tickets that pass automatic checks and operator assertions are exposed to public Zcash checkout.",
+      "You keep both accounts under your control, and ZecTix connects them for the beta without replacing your existing event workflow.",
   },
   {
-    title: "Observable webhook handling",
+    title: "Mirror only the events and tickets that qualify.",
     description:
-      "Webhook deliveries, retryable registration tasks, and recovery paths stay visible to the service team during pilots.",
+      "Supported inventory is synced from Luma into a public Zcash-ready surface so only the right tickets are offered through this path.",
   },
   {
-    title: "Future organizer dashboard",
+    title: "Attach the attendee back into Luma after payment.",
     description:
-      "The current service-manager workflow is laying the groundwork for a tenant-facing organizer dashboard later on.",
+      "CipherPay handles invoice creation and payment state, and ZecTix moves the attendee back into Luma so your normal operations stay intact.",
+  },
+] as const;
+
+const platformNotes = [
+  {
+    title: "Start with the path that fits your event stack",
+    description:
+      "Some organizers want direct Zcash-native ticketing right away, while others want to add Zcash without moving off Luma. This beta supports both.",
+  },
+  {
+    title: "Private payments, organizer-owned settlement",
+    description:
+      "Both options keep Zcash checkout and organizer-controlled CipherPay settlement at the center of the buyer experience.",
+  },
+  {
+    title: "Initial no-cost trial for early partners",
+    description:
+      "ZecTix is opening as an early beta with an initial no-cost trial so organizers can test the fit before the product expands further.",
   },
 ] as const;
 
@@ -139,43 +147,45 @@ export default function Home() {
             <span>ZecTix</span>
           </div>
           <div className="public-home-nav-links">
-            <a href="#options">Options</a>
-            <a href="#cipherpay-direct">CipherPay direct</a>
+            <a href="#ticketing-paths">Ticketing paths</a>
+            <a href="#cipherpay-events">CipherPay-only</a>
             <a href="#luma-managed">Luma + CipherPay</a>
+            <a href="#why-zectix">Why ZecTix</a>
           </div>
         </nav>
 
         <section className="card home-hero">
-          <div className="home-hero-grid">
+          <div className="home-hero-grid hub-hero-grid">
             <div className="home-hero-copy">
-              <p className="home-badge">One home for Zcash ticketing</p>
+              <p className="home-badge">Early beta</p>
               <h1 className="home-display">
-                Two live ways to sell tickets for Zcash today.
+                One home for Zcash ticketing, with two paths live today.
               </h1>
               <p className="home-lede">
-                Start directly in CipherPay when you want a Zcash-native ticket
-                flow with enhanced privacy and no extra third-party subscription
-                layer. Choose the managed Luma + CipherPay path when you want to
-                preserve Luma as the system of record for event operations and
-                add Zcash selectively.
+                ZecTix now gives organizers one place to choose between direct
+                CipherPay ticketing and a managed Luma + CipherPay integration.
+                Both keep Zcash settlement front and center, and both are being
+                introduced through an initial no-cost beta for early organizers
+                who want to test private Zcash payments in real event flows.
               </p>
               <div className="home-actions">
-                <a className="button" href="#options">
-                  Compare ticketing paths
+                <a className="button" href="#ticketing-paths">
+                  Compare the paths
                 </a>
                 <a
                   className="button button-secondary"
                   href="https://www.cipherpay.app/en/dashboard/login"
-                  {...externalLinkProps}
+                  target="_blank"
+                  rel="noreferrer"
                 >
                   Open CipherPay dashboard
                 </a>
               </div>
               <div className="public-chip-row">
-                <span className="public-chip">CipherPay direct ticketing</span>
-                <span className="public-chip">Managed Luma + CipherPay</span>
-                <span className="public-chip">Privacy-forward checkout</span>
-                <span className="public-chip">More paths coming</span>
+                <span className="public-chip">CipherPay-only ticketing</span>
+                <span className="public-chip">Luma + CipherPay</span>
+                <span className="public-chip">Organizer-owned settlement</span>
+                <span className="public-chip">Initial no-cost beta</span>
               </div>
 
               <article className="home-summary-card home-summary-wide">
@@ -183,22 +193,19 @@ export default function Home() {
                   <div className="home-summary-item">
                     <span>Direct path</span>
                     <strong>
-                      Hosted CipherPay checkout with dashboard control and
-                      merchant-owned settlement.
+                      Native CipherPay events, hosted checkout, and direct-to-wallet Zcash settlement.
                     </strong>
                   </div>
                   <div className="home-summary-item">
                     <span>Managed path</span>
                     <strong>
-                      Mirrored Luma inventory with attendee attachment back into
-                      Luma after payment.
+                      Luma remains the system of record while ZecTix layers in managed Zcash checkout.
                     </strong>
                   </div>
                   <div className="home-summary-item">
-                    <span>This homepage</span>
+                    <span>Beta offer</span>
                     <strong>
-                      A single starting point for current and future Zcash
-                      ticketing options.
+                      Early organizers can try the product now through a no-cost beta while the ZecTix ticketing hub continues to expand.
                     </strong>
                   </div>
                 </div>
@@ -206,184 +213,149 @@ export default function Home() {
             </div>
 
             <div className="home-hero-panel">
-              {ticketPaths.map((path) => (
-                <article
-                  className={`home-panel-card hub-preview-card hub-preview-card-${path.variant}`}
-                  key={path.title}
-                >
-                  <p className="home-panel-label">{path.label}</p>
-                  <h2 className="hub-preview-title">{path.title}</h2>
-                  <p className="hub-preview-copy">{path.preview}</p>
-                  <a
-                    className={`button ${
-                      path.variant === "direct" ? "button-secondary" : "button-ghost"
-                    }`}
-                    href={path.primaryAction.href}
-                    {...(path.variant === "direct" ? externalLinkProps : {})}
-                  >
-                    {path.primaryAction.label}
-                  </a>
-                </article>
-              ))}
+              <article className="home-panel-card">
+                <p className="home-panel-label">Available in beta</p>
+                <div className="hub-choice-list">
+                  {heroChoices.map((choice) => (
+                    <div className="hub-choice-card" key={choice.title}>
+                      <p className="hub-choice-kicker">{choice.label}</p>
+                      <h3>{choice.title}</h3>
+                      <p>{choice.description}</p>
+                    </div>
+                  ))}
+                </div>
+              </article>
+
+              <article className="home-panel-card">
+                <p className="home-panel-label">How to think about the split</p>
+                <p className="home-panel-inline">
+                  <span className="home-inline-dot" />
+                  Use direct CipherPay when you want a Zcash-native ticketing
+                  surface with hosted checkout and no extra event-platform layer
+                  in the way.
+                </p>
+                <p className="home-panel-inline">
+                  <span className="home-inline-dot" />
+                  Use managed Luma + CipherPay when the organizer already runs
+                  event operations in Luma and wants Zcash to sit beside that
+                  existing workflow.
+                </p>
+                <p className="home-panel-inline">
+                  <span className="home-inline-dot" />
+                  Join through the early beta now, then choose the path that
+                  best matches your event stack and operational needs.
+                </p>
+              </article>
             </div>
           </div>
         </section>
 
-        <section className="home-events-section" id="options">
+        <section className="home-events-section" id="ticketing-paths">
           <div className="home-section-heading">
-            <p className="eyebrow">Current options</p>
+            <p className="eyebrow">Ticketing paths</p>
             <h2 className="home-display">
-              Choose the Zcash ticketing path that matches your stack today.
+              Choose the Zcash ticketing path that matches how you want to run
+              events.
             </h2>
             <p className="subtle-text">
-              ZecTix is no longer just one integration story. It is the landing
-              point for the Zcash ticketing paths that are available now, with
-              room to add more later.
+              Today that means a direct CipherPay route and a managed Luma +
+              CipherPay route. Both are available as part of the current
+              early-access beta, with room for more Zcash ticketing paths to
+              join over time.
             </p>
           </div>
 
-          <div className="ticket-path-grid">
-            {ticketPaths.map((path) => (
-              <article
-                className={`ticket-path-card ticket-path-card-${path.variant}`}
-                id={path.variant === "managed" ? undefined : "cipherpay-option"}
-                key={path.title}
-              >
-                <p className="ticket-path-label">{path.label}</p>
-                <h3>{path.title}</h3>
-                <p>{path.description}</p>
-                <ul className="ticket-path-list">
-                  {path.highlights.map((highlight) => (
-                    <li key={highlight}>{highlight}</li>
+          <div className="ticketing-option-grid">
+            {ticketingOptions.map((option) => (
+              <article className="ticketing-option-card" key={option.title}>
+                <p className="ticketing-option-label">{option.label}</p>
+                <h3>{option.title}</h3>
+                <p className="ticketing-option-description">{option.description}</p>
+
+                <div className="ticketing-option-list">
+                  {option.bullets.map((bullet) => (
+                    <div className="ticketing-option-point" key={bullet}>
+                      <span className="ticketing-option-dot" />
+                      <p>{bullet}</p>
+                    </div>
                   ))}
-                </ul>
-                <div className="ticket-path-actions">
+                </div>
+
+                <div className="ticketing-option-actions">
                   <a
                     className="button"
-                    href={path.primaryAction.href}
-                    {...(path.variant === "direct" ? externalLinkProps : {})}
+                    href={option.primaryHref}
+                    {...(option.primaryHref.startsWith("http")
+                      ? { target: "_blank", rel: "noreferrer" }
+                      : {})}
                   >
-                    {path.primaryAction.label}
+                    {option.primaryLabel}
                   </a>
                   <a
-                    className={`button ${
-                      path.variant === "direct" ? "button-ghost" : "button-secondary"
-                    }`}
-                    href={path.secondaryAction.href}
-                    {...(path.variant === "direct" ? externalLinkProps : {})}
+                    className="button button-secondary"
+                    href={option.secondaryHref}
+                    {...(option.secondaryHref.startsWith("http")
+                      ? { target: "_blank", rel: "noreferrer" }
+                      : {})}
                   >
-                    {path.secondaryAction.label}
+                    {option.secondaryLabel}
                   </a>
                 </div>
-                {path.variant === "direct" ? (
-                  <a
-                    className="ticket-path-inline-link"
-                    href="https://testnet.cipherpay.app/en/docs"
-                    {...externalLinkProps}
-                  >
-                    Read CipherPay docs
-                  </a>
-                ) : null}
               </article>
             ))}
           </div>
         </section>
 
-        <section
-          className="home-events-section cipherpay-direct-section"
-          id="cipherpay-direct"
-        >
-          <div className="cipherpay-direct-layout">
-            <div className="home-section-heading cipherpay-direct-heading">
-              <p className="eyebrow">CipherPay direct</p>
-              <h2 className="home-display">
-                Use CipherPay itself as the ticketing and checkout layer.
+        <section className="card marketing-spotlight" id="cipherpay-events">
+          <div className="marketing-spotlight-header">
+            <div className="marketing-spotlight-copy">
+              <p className="home-badge">CipherPay-only</p>
+              <h2 className="marketing-spotlight-title home-display">
+                Direct Zcash ticketing through the CipherPay dashboard.
               </h2>
-              <p className="subtle-text">
-                CipherPay&apos;s documented flow is straightforward: create an
-                invoice through the dashboard, API, or product pages; send the
-                buyer to a hosted checkout; then watch dashboard and webhook
-                updates as payment is detected and later confirmed. For teams
-                that do not need Luma, that makes CipherPay the cleanest Zcash
-                ticketing path on this page.
+              <p className="home-lede">
+                CipherPay now has its own event and ticketing flow, so an
+                organizer can create ticket tiers, generate checkout links, accept
+                shielded Zcash, and manage the event from the CipherPay side
+                without routing the event through Luma.
               </p>
               <div className="home-actions">
                 <a
                   className="button"
                   href="https://www.cipherpay.app/en/dashboard/login"
-                  {...externalLinkProps}
+                  target="_blank"
+                  rel="noreferrer"
                 >
                   Open CipherPay dashboard
                 </a>
                 <a
-                  className="button button-secondary"
-                  href="https://www.cipherpay.app/"
-                  {...externalLinkProps}
+                  className="button button-ghost"
+                  href="https://testnet.cipherpay.app/en/docs"
+                  target="_blank"
+                  rel="noreferrer"
                 >
-                  CipherPay home
+                  Read CipherPay docs
                 </a>
               </div>
             </div>
 
-            <aside className="cipherpay-direct-aside">
-              <p className="marketing-card-kicker">Good fit when</p>
-              <div className="cipherpay-direct-points">
-                {directCipherPayNotes.map((note) => (
-                  <p key={note}>{note}</p>
-                ))}
-              </div>
-              <a
-                className="cipherpay-direct-link"
-                href="https://testnet.cipherpay.app/en/docs"
-                {...externalLinkProps}
-              >
-                Review CipherPay docs
-              </a>
-            </aside>
-          </div>
-
-          <div className="marketing-feature-grid cipherpay-flow-grid">
-            {directCipherPayFlow.map((step, index) => (
-              <article className="marketing-feature-card" key={step.title}>
-                <p className="marketing-card-kicker">Step {index + 1}</p>
-                <h3>{step.title}</h3>
-                <p>{step.description}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="card marketing-spotlight" id="luma-managed">
-          <div className="marketing-spotlight-header">
-            <div className="marketing-spotlight-copy">
-              <p className="home-badge">Managed Luma + CipherPay</p>
-              <h2 className="marketing-spotlight-title home-display">
-                Keep Luma in charge and add Zcash where it makes sense.
-              </h2>
-              <p className="home-lede">
-                This is the managed-service path ZecTix is building today.
-                Supported Luma inventory is mirrored into a public Zcash checkout,
-                and accepted attendees attach back into Luma so organizers keep
-                their existing event, guest, approval, reminder, and check-in
-                workflows.
-              </p>
-            </div>
-
             <aside className="marketing-spotlight-side">
               <div className="marketing-note">
-                <strong>Best when</strong>
+                <strong>Why choose this path</strong>
                 <p>
-                  Your team already runs the event in Luma and wants Zcash as an
-                  additional checkout path, not a replacement for Luma.
+                  Use direct CipherPay when privacy-forward Zcash checkout is the
+                  product, and you do not need Luma&apos;s event-management layer
+                  in the middle. It is the cleanest way to start testing
+                  Zcash-only ticket sales during the beta.
                 </p>
               </div>
 
               <div className="marketing-spotlight-surface">
-                <p className="marketing-surface-label">Managed path characteristics</p>
+                <p className="marketing-surface-label">CipherPay capabilities</p>
                 <div className="marketing-spotlight-pills">
-                  <span className="public-chip">Mirrored Luma inventory</span>
-                  <span className="public-chip">Organizer-owned CipherPay</span>
-                  <span className="public-chip">Automatic attendee attachment</span>
+                  <span className="public-chip">Hosted ticket checkout</span>
+                  <span className="public-chip">Ticket tiers and capacity</span>
+                  <span className="public-chip">Fast detection + webhooks</span>
                 </div>
               </div>
             </aside>
@@ -391,9 +363,9 @@ export default function Home() {
 
           <div className="marketing-spotlight-steps">
             <article className="home-panel-card">
-              <p className="home-panel-label">What stays in Luma</p>
+              <p className="home-panel-label">Organizer flow</p>
               <div className="home-flow-list">
-                {lumaContinuity.map((item, index) => (
+                {cipherPayOrganizerFlow.map((item, index) => (
                   <div className="home-flow-item" key={item.title}>
                     <span className="home-flow-step">{index + 1}</span>
                     <div>
@@ -406,9 +378,9 @@ export default function Home() {
             </article>
 
             <article className="home-panel-card">
-              <p className="home-panel-label">Managed flow</p>
+              <p className="home-panel-label">Buyer flow</p>
               <div className="home-flow-list">
-                {organizerFlow.map((item, index) => (
+                {cipherPayBuyerFlow.map((item, index) => (
                   <div className="home-flow-item" key={item.title}>
                     <span className="home-flow-step">{index + 1}</span>
                     <div>
@@ -422,32 +394,28 @@ export default function Home() {
           </div>
         </section>
 
-        <section
-          className="home-events-section ops-fit-section"
-          id="managed-fit"
-        >
-          <div className="ops-fit-layout">
+        <section className="home-events-section" id="luma-managed">
+          <div className="ops-fit-layout hub-split-layout">
             <div className="home-section-heading ops-fit-heading">
-              <p className="eyebrow">Managed-service fit</p>
+              <p className="eyebrow">Luma + CipherPay</p>
               <h2 className="home-display">
-                Why the Luma path is operator-led today.
+                Keep Luma in charge of event operations and add Zcash where it fits.
               </h2>
               <p className="subtle-text">
-                Unlike the direct CipherPay path, the managed Luma integration
-                mirrors inventory, enforces ticket eligibility, tracks webhooks,
-                and retries attendee attachment back into Luma. That additional
-                surface area is why the service manager currently handles the
-                operational layer.
+                The managed ZecTix path is for organizers who already rely on
+                Luma for publishing, approvals, reminders, guest management,
+                and check-in, but want selected tickets to expose a Zcash
+                option through CipherPay. It is a good fit for early partners
+                who want to pilot Zcash payments without replatforming their
+                event stack.
               </p>
             </div>
 
-            <div className="ops-fit-grid">
-              {managedOperationalNotes.map((item, index) => (
+            <div className="ops-fit-grid hub-luma-grid">
+              {lumaContinuity.map((item, index) => (
                 <article
                   className={`marketing-proof-card ops-fit-card${
-                    index === managedOperationalNotes.length - 1
-                      ? " ops-fit-card-wide"
-                      : ""
+                    index === lumaContinuity.length - 1 ? " ops-fit-card-wide" : ""
                   }`}
                   key={item.title}
                 >
@@ -456,6 +424,41 @@ export default function Home() {
                 </article>
               ))}
             </div>
+          </div>
+
+          <div className="hub-flow-grid">
+            {lumaManagedFlow.map((item, index) => (
+              <article className="marketing-feature-card hub-flow-card" key={item.title}>
+                <p className="marketing-card-kicker">Step {index + 1}</p>
+                <h3>{item.title}</h3>
+                <p>{item.description}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="home-events-section" id="why-zectix">
+          <div className="home-section-heading">
+            <p className="eyebrow">Why ZecTix</p>
+            <h2 className="home-display">
+              A single Zcash ticketing home is more useful than a one-size-fits-all
+              product story.
+            </h2>
+            <p className="subtle-text">
+              Some organizers want direct Zcash-native ticketing. Others want
+              Zcash to live alongside an existing event platform. ZecTix is
+              opening with an initial no-cost beta that supports both cleanly,
+              and it can make room for additional approaches over time.
+            </p>
+          </div>
+
+          <div className="marketing-proof-grid">
+            {platformNotes.map((item) => (
+              <article className="marketing-proof-card" key={item.title}>
+                <h3>{item.title}</h3>
+                <p>{item.description}</p>
+              </article>
+            ))}
           </div>
         </section>
       </div>
