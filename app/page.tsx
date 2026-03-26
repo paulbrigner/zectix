@@ -218,7 +218,7 @@ export default function Home() {
         </section>
 
         <section className="card marketing-spotlight" id="product-flow">
-          <div className="home-hero-grid">
+          <div className="marketing-spotlight-header">
             <div className="marketing-spotlight-copy">
               <p className="home-badge">How it works</p>
               <h2 className="marketing-spotlight-title home-display">
@@ -229,6 +229,9 @@ export default function Home() {
                 buyers choose pay with Zcash, and the attendee is attached back
                 into Luma after payment is detected.
               </p>
+            </div>
+
+            <aside className="marketing-spotlight-side">
               <div className="marketing-note">
                 <strong>Dual-path by design</strong>
                 <p>
@@ -237,61 +240,70 @@ export default function Home() {
                   creates value.
                 </p>
               </div>
-            </div>
 
-            <div className="home-hero-panel">
-              <article className="home-panel-card">
-                <p className="home-panel-label">Organizer flow</p>
-                <div className="home-flow-list">
-                  {organizerFlow.map((item, index) => (
-                    <div className="home-flow-item" key={item.title}>
-                      <span className="home-flow-step">{index + 1}</span>
-                      <div>
-                        <strong>{item.title}</strong>
-                        <p>{item.description}</p>
-                      </div>
-                    </div>
-                  ))}
+              <div className="marketing-spotlight-surface">
+                <p className="marketing-surface-label">System shape</p>
+                <div className="marketing-spotlight-pills">
+                  <span className="public-chip">Mirrored Luma inventory</span>
+                  <span className="public-chip">Organizer-owned CipherPay</span>
+                  <span className="public-chip">Automatic attendee attachment</span>
                 </div>
-              </article>
+              </div>
+            </aside>
+          </div>
 
-              <article className="home-panel-card">
-                <p className="home-panel-label">Attendee experience</p>
-                <div className="home-flow-list">
-                  <div className="home-flow-item">
-                    <span className="home-flow-step">1</span>
+          <div className="marketing-spotlight-steps">
+            <article className="home-panel-card">
+              <p className="home-panel-label">Organizer flow</p>
+              <div className="home-flow-list">
+                {organizerFlow.map((item, index) => (
+                  <div className="home-flow-item" key={item.title}>
+                    <span className="home-flow-step">{index + 1}</span>
                     <div>
-                      <strong>Choose a supported event and ticket.</strong>
-                      <p>
-                        The public page only shows mirrored inventory that has been
-                        explicitly enabled for managed Zcash checkout.
-                      </p>
+                      <strong>{item.title}</strong>
+                      <p>{item.description}</p>
                     </div>
                   </div>
-                  <div className="home-flow-item">
-                    <span className="home-flow-step">2</span>
-                    <div>
-                      <strong>Pay with Zcash through CipherPay.</strong>
-                      <p>
-                        The attendee sees a purpose-built checkout flow instead of
-                        a generic operator console surface.
-                      </p>
-                    </div>
-                  </div>
-                  <div className="home-flow-item">
-                    <span className="home-flow-step">3</span>
-                    <div>
-                      <strong>Get attached back into the Luma event.</strong>
-                      <p>
-                        Once payment is accepted, the system advances registration
-                        and keeps the organizer&apos;s attendee operations anchored in
-                        Luma.
-                      </p>
-                    </div>
+                ))}
+              </div>
+            </article>
+
+            <article className="home-panel-card">
+              <p className="home-panel-label">Attendee experience</p>
+              <div className="home-flow-list">
+                <div className="home-flow-item">
+                  <span className="home-flow-step">1</span>
+                  <div>
+                    <strong>Choose a supported event and ticket.</strong>
+                    <p>
+                      The public page only shows mirrored inventory that has been
+                      explicitly enabled for managed Zcash checkout.
+                    </p>
                   </div>
                 </div>
-              </article>
-            </div>
+                <div className="home-flow-item">
+                  <span className="home-flow-step">2</span>
+                  <div>
+                    <strong>Pay with Zcash through CipherPay.</strong>
+                    <p>
+                      The attendee sees a purpose-built checkout flow instead of
+                      a generic operator console surface.
+                    </p>
+                  </div>
+                </div>
+                <div className="home-flow-item">
+                  <span className="home-flow-step">3</span>
+                  <div>
+                    <strong>Get attached back into the Luma event.</strong>
+                    <p>
+                      Once payment is accepted, the system advances registration
+                      and keeps the organizer&apos;s attendee operations anchored in
+                      Luma.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </article>
           </div>
         </section>
 
