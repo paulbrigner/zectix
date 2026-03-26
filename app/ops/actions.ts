@@ -4,10 +4,12 @@ import { redirect } from "next/navigation";
 import { asBoolean, asNonNegativeInteger, asString } from "@/lib/app-state/utils";
 import { retryRegistrationForSession, retryDueRegistrations } from "@/lib/app-state/service";
 import { requireOpsPageAccess } from "@/lib/admin-auth-server";
+import type { TenantStatus } from "@/lib/app-state/types";
 import {
   createCalendarConnection,
   createCipherPayConnection,
   createTenant,
+  setTenantStatus,
   setTicketOperatorAssertions,
   validateAndSyncCalendar,
   validateCipherPayConnection,
@@ -16,6 +18,15 @@ import {
 function redirectTo(formData: FormData, fallback: string) {
   const next = asString(formData.get("redirect_to"));
   redirect(next || fallback);
+}
+
+function asTenantStatus(value: unknown, fallback: TenantStatus = "draft"): TenantStatus {
+  return value === "active" ||
+    value === "suspended" ||
+    value === "archived" ||
+    value === "draft"
+    ? value
+    : fallback;
 }
 
 export async function createTenantAction(formData: FormData) {
@@ -33,6 +44,14 @@ export async function createTenantAction(formData: FormData) {
   });
 
   redirect(`/ops/tenants/${encodeURIComponent(tenant.tenant_id)}`);
+}
+
+export async function setTenantStatusAction(formData: FormData) {
+  await requireOpsPageAccess();
+  const tenantId = String(formData.get("tenant_id") || "");
+  const status = asTenantStatus(formData.get("status"), "draft");
+  await setTenantStatus(tenantId, status);
+  redirectTo(formData, `/ops/tenants/${encodeURIComponent(tenantId)}`);
 }
 
 export async function createCalendarConnectionAction(formData: FormData) {

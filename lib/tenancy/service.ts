@@ -26,6 +26,7 @@ import type {
   CipherPayConnection,
   SecretPreview,
   Tenant,
+  TenantStatus,
   TicketMirror,
 } from "@/lib/app-state/types";
 import {
@@ -101,6 +102,21 @@ export async function createTenant(input: {
   };
 
   return putTenant(tenant);
+}
+
+export async function setTenantStatus(tenantId: string, status: TenantStatus) {
+  const tenant = await getTenant(tenantId);
+  if (!tenant) {
+    throw new Error(`Tenant ${tenantId} was not found.`);
+  }
+
+  const nextTenant: Tenant = {
+    ...tenant,
+    status,
+    updated_at: nowIso(),
+  };
+
+  return putTenant(nextTenant);
 }
 
 export async function createCalendarConnection(input: {
