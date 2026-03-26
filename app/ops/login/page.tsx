@@ -7,6 +7,7 @@ import {
   isAdminSessionTokenValid,
 } from "@/lib/admin-auth";
 import { appPath } from "@/lib/app-paths";
+import { Button, Input } from "@/components/ui";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -49,17 +50,19 @@ export default async function OpsLoginPage({
             ) : null}
 
             <form action={appPath("/api/ops/login")} className="console-content" method="post">
-              <label className="console-field">
-                <span>Password</span>
-                <input className="console-input" name="password" required type="password" />
-              </label>
+              <Input
+                label="Password"
+                name="password"
+                required
+                type="password"
+              />
               <div className="button-row">
-                <button className="button" type="submit">
+                <Button type="submit">
                   Sign in
-                </button>
-                <Link className="button button-secondary" href="/">
+                </Button>
+                <Button variant="secondary" href="/">
                   Back home
-                </Link>
+                </Button>
               </div>
             </form>
           </section>
