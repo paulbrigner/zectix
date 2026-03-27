@@ -39,7 +39,7 @@ When something looks off, check these in order:
 
 1. Confirm `cipherpay_expires_at` has passed.
 2. Refresh the checkout page.
-3. Verify the session now shows the expired state rather than active payment controls.
+3. Verify the session shows the expired state rather than active payment controls.
 4. If the page still looks active, confirm the deployed frontend is current and the session viewer token is valid.
 
 ### Readiness or deployment looks wrong
@@ -66,12 +66,12 @@ When something looks off, check these in order:
 
 - The ops console is the main recovery surface.
 - The tenant detail page is the quickest place to compare the current live Luma feed against mirrored inventory when something looks off.
-- The tenant events page now separates upstream-only future Luma events from mirrored events and supports event-focused sync/import actions.
-- Event-focused sync still runs the existing full-calendar refresh in the backend, but the UI now returns a scoped diff for the selected event: imported, updated, removed from the current feed, and ticket-tier changes.
+- The tenant events page separates upstream-only future Luma events from mirrored events and supports event-focused sync/import actions.
+- Event-focused sync still runs the existing full-calendar refresh in the backend, but the UI returns a scoped diff for the selected event: imported, updated, removed from the current feed, and ticket-tier changes.
 - Keep production secrets in AWS Secrets Manager or your chosen secret manager.
 - Do not use mutable runtime config as the source of truth for production secrets.
 - Operators do not manually enter Luma webhook ids or secrets; those are managed internally during `validate and sync`.
-- Registration retries are stateful: the first registration attempt now starts inline when CipherPay reports a detected payment, and any follow-up retries can be run from the ops UI or `/api/ops/process-registration-tasks`.
+- Registration retries are stateful: the first registration attempt starts inline when CipherPay reports a detected payment, and any follow-up retries can be run from the ops UI or `/api/ops/process-registration-tasks`.
 - The attendee-facing checkout should move through four recognizable states: awaiting payment, payment accepted, preparing your pass, and pass ready.
 - Once the pass is ready, the checkout page can save a standalone local pass file in addition to the print/save-PDF flow.
 - Structured logs emit checkout, webhook, and registration events with correlation-friendly metadata.

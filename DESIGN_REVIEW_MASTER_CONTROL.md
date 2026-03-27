@@ -72,7 +72,7 @@ This makes the code easier to reason about and easier to test later, even though
 
 For this problem size, the architecture is appropriate. It does **not** need microservices, queues everywhere, or a heavyweight workflow engine yet. A server-rendered Next.js app with API routes and DynamoDB is a sensible shape.
 
-That said, the architecture is currently optimized for **simplicity**, not **operational resilience**. That is fine for an early product, but it shows up in a few places:
+That said, the architecture is optimized for **simplicity**, not **operational resilience**. That is fine for an early product, but it shows up in a few places:
 
 - registration after payment is done inline in webhook processing
 - there is no retry/queue layer for failed downstream registration work
@@ -116,10 +116,10 @@ The UI components are not doing too much domain work. `EventCheckoutForm.tsx` an
 A few organization issues stood out:
 
 - Some naming is a little broad or generic (`state.ts`, `service.ts`, `utils.ts`). It works at this scale, but those files could become junk drawers as the app grows.
-- `lib/luma.ts` currently loads all events and filters client-side in `getLumaEventById()`. That is acceptable now, but it’s a mild design smell if event volume grows.
+- `lib/luma.ts` loads all events and filters client-side in `getLumaEventById()`. That is acceptable at current event volumes, but it’s a mild design smell if event volume grows.
 - Operational and security concepts are spread across route handlers and helper modules rather than having dedicated policy modules. Not a problem yet, but worth watching.
 
-Bottom line: the organization is good now, but future growth will need sharper module boundaries inside `lib/app-state/` and possibly dedicated policy/ops modules.
+Bottom line: the organization is good, but future growth will need sharper module boundaries inside `lib/app-state/` and possibly dedicated policy/ops modules.
 
 ---
 
@@ -418,7 +418,7 @@ If this app is going to process money and event registrations, the docs should h
 - How do I know?
 - What do I do next?
 
-Right now, the repo only partially answers that.
+The repo only partially answers that.
 
 ---
 
