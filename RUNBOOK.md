@@ -45,6 +45,13 @@ When something looks off, check these in order:
 3. If `/api/ready` shows missing tenant data, finish onboarding at `/ops/tenants`.
 4. If `/api/ready` shows DynamoDB errors, verify the AWS role and table permissions.
 
+### Luma integration inquiries are not arriving
+
+1. Confirm `LUMA_INTEREST_FROM_EMAIL` and `LUMA_INTEREST_INBOX_EMAIL` are set on the deployed branch.
+2. Confirm the `from` address or its domain is verified in SES and has sending enabled.
+3. Confirm the Amplify compute role has `ses:SendEmail` permission for the selected identity.
+4. Submit a test inquiry from `/luma-integration` and check CloudWatch logs for the route error.
+
 ### Operator sign-in fails
 
 1. Confirm `ADMIN_PASSWORD_HASH` and `ADMIN_SESSION_SECRET` are set.
@@ -76,6 +83,8 @@ Required production values:
 - `APP_PUBLIC_ORIGIN`
 - `ADMIN_PASSWORD_HASH`
 - `ADMIN_SESSION_SECRET`
+- `LUMA_INTEREST_FROM_EMAIL`
+- `LUMA_INTEREST_INBOX_EMAIL`
 
 ## Probes
 

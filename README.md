@@ -161,9 +161,16 @@ Optional automation and recovery:
 - `OPS_AUTOMATION_SECRET`
 - `ALLOW_RUNTIME_SECRET_STORAGE`
 
+Optional inbox for the Luma integration beta application:
+
+- `LUMA_INTEREST_FROM_EMAIL`
+- `LUMA_INTEREST_INBOX_EMAIL`
+
 ## Operator Notes
 
 - `/ops` is the primary console for onboarding, monitoring, retries, and reporting.
+- `/luma-integration` is the public-facing beta application page for the managed Luma integration.
+- `/api/luma-integration-interest` validates the application payload and sends an SES email to the configured inbox.
 - operators save the Luma API key only; managed Luma webhook ids and secrets are stored internally after `validate and sync`.
 - `validate and sync` verifies the Luma API key, auto-registers the managed webhook for `event.created`, `event.updated`, and `event.canceled`, and refreshes mirrored events/tickets.
 - `/api/luma/webhook` verifies the raw request body before refreshing mirrored Luma events.
