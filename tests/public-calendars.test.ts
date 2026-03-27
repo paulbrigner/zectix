@@ -34,7 +34,7 @@ beforeEach(() => {
 });
 
 describe("getPublicEventPageData", () => {
-  it("returns eligible tickets separately from unavailable mirrored ticket tiers", async () => {
+  it("returns only eligible tickets for the public event page", async () => {
     const tenant = makeTenant();
     const calendar = makeCalendarConnection({ slug: "demo-calendar", status: "active" });
     const event = makeEventMirror({
@@ -81,8 +81,5 @@ describe("getPublicEventPageData", () => {
     expect(result?.tickets.map((ticket) => ticket.ticket_type_api_id)).toEqual([
       "ticket_enabled",
     ]);
-    expect(
-      result?.unavailable_tickets.map((ticket) => ticket.ticket_type_api_id),
-    ).toEqual(["ticket_hidden", "ticket_inactive"]);
   });
 });
