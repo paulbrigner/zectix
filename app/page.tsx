@@ -210,7 +210,7 @@ export default function Home() {
             target="_blank"
             rel="noreferrer"
           >
-            Sign up the ZecTix Luma integration
+            Sign up for the ZecTix Luma integration
           </Button>
                     <Button
             variant="landing-ghost"
