@@ -29,7 +29,7 @@ The repository is designed to run in two environments:
 ## Main Flows
 
 1. Ops creates a tenant, connects a Luma calendar, and stores the Luma API key in the secret store.
-2. The tenant detail page shows both the live Luma event preview and the currently mirrored inventory for review.
+2. The tenant detail page shows both the live Luma event preview and the mirrored inventory for review.
 3. Ops syncs mirrored events and tickets from Luma.
 4. Ops connects CipherPay for that calendar and validates the tenant-scoped payment configuration.
 5. Public checkout happens under `/c/[calendarSlug]` and `/c/[calendarSlug]/events/[eventId]`.
@@ -174,14 +174,14 @@ Optional inbox for the Luma integration beta application:
 - `/luma-integration` is the public-facing beta application page for the managed Luma integration.
 - `/api/luma-integration-interest` validates the application payload and sends an SES email to the configured inbox.
 - operators save the Luma API key only; managed Luma webhook ids and secrets are stored internally after `validate and sync`.
-- the tenant detail page shows both the live Luma feed and the currently mirrored events so operators can review what will be exposed publicly, along with the last successful validation time for the saved key.
+- the tenant detail page shows both the live Luma feed and the mirrored events so operators can review what will be exposed publicly, along with the last successful validation time for the saved key.
 - `validate and sync` verifies the Luma API key, auto-registers the managed webhook for `event.created`, `event.updated`, and `event.canceled`, and refreshes mirrored events/tickets.
-- the tenant events page now separates mirrored events from upstream-only Luma events that are visible to the saved key but not yet in the mirrored checkout surface.
+- the tenant events page separates mirrored events from upstream-only Luma events that are visible to the saved key but not yet in the mirrored checkout surface.
 - event-focused sync controls let ops sync one mirrored or upstream-only event at a time while still using the existing full-calendar refresh as the backend source of truth.
-- upstream-only events now have a surgical import path in the UI: syncing one selected upstream event imports it into mirrored inventory if it is still present in Luma, and the result is shown as an event-focused diff.
+- upstream-only events have a surgical import path in the UI: syncing one selected upstream event imports it into mirrored inventory if it is still present in Luma, and the result is shown as an event-focused diff.
 - the tenant dashboard is the internal organizer-style view for connection health, upcoming mirrored inventory, recent sessions, and webhook visibility.
-- the public event form shows enabled ticket tiers first and explains when mirrored tiers are currently unavailable for managed Zcash checkout.
-- the checkout page now centers the attendee-facing payment/pass states: pay with Zcash, preparing your pass, pass ready, open on Luma, and save pass.
+- the public event form shows enabled ticket tiers first and explains when mirrored tiers are unavailable for managed Zcash checkout.
+- the checkout page centers the attendee-facing payment/pass states: pay with Zcash, preparing your pass, pass ready, open on Luma, and save pass.
 - `/api/luma/webhook` verifies the raw request body before refreshing mirrored Luma events.
 - `/api/ops/process-registration-tasks` is protected by `OPS_AUTOMATION_SECRET`.
 - `/api/ops/reports` returns JSON by default and CSV when `?format=csv` is supplied.

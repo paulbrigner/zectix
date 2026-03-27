@@ -9,7 +9,7 @@ Kept here for reference — some of this may be useful for docs, FAQ, or onboard
 
 > One home for Zcash ticketing, with two paths live today.
 
-> ZecTix now gives organizers one place to choose between direct CipherPay ticketing and a managed Luma + CipherPay integration. Both keep Zcash settlement front and center, and both are being introduced through an initial no-cost beta for early organizers who want to test private Zcash payments in real event flows.
+> ZecTix gives organizers one place to choose between direct CipherPay ticketing and a managed Luma + CipherPay integration. Both keep Zcash settlement front and center, and both are being introduced through an initial no-cost beta for early organizers who want to test private Zcash payments in real event flows.
 
 ## CipherPay-only path (original)
 
@@ -51,7 +51,7 @@ Kept here for reference — some of this may be useful for docs, FAQ, or onboard
 
 - Use direct CipherPay when you want a Zcash-native ticketing surface with hosted checkout and no extra event-platform layer in the way.
 - Use managed Luma + CipherPay when the organizer already runs event operations in Luma and wants Zcash to sit beside that existing workflow.
-- Join through the early beta now, then choose the path that best matches your event stack and operational needs.
+- Join through the early beta, then choose the path that best matches your event stack and operational needs.
 
 ## Why ZecTix (original)
 
@@ -63,7 +63,7 @@ Kept here for reference — some of this may be useful for docs, FAQ, or onboard
 
 > Direct Zcash ticketing through the CipherPay dashboard.
 
-> CipherPay now has its own event and ticketing flow, so an organizer can create ticket tiers, generate checkout links, accept shielded Zcash, and manage the event from the CipherPay side without routing the event through Luma.
+> CipherPay has its own event and ticketing flow, so an organizer can create ticket tiers, generate checkout links, accept shielded Zcash, and manage the event from the CipherPay side without routing the event through Luma.
 
 ### Why choose this path
 > Use direct CipherPay when privacy-forward Zcash checkout is the product, and you do not need Luma's event-management layer in the middle. It is the cleanest way to start testing Zcash-only ticket sales during the beta.

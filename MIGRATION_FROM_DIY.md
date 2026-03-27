@@ -5,10 +5,10 @@ This document explains how the managed-service fork diverges from the original D
 ## What Changed
 
 - The old single global runtime configuration model is replaced by tenant-scoped records.
-- Public event discovery now lives under `/c/[calendarSlug]` instead of the DIY single-calendar homepage flow.
+- Public event discovery lives under `/c/[calendarSlug]` instead of the DIY single-calendar homepage flow.
 - Public checkout uses mirrored `EventMirror` and `TicketMirror` data instead of live Luma lookups on every request.
 - Each organizer brings their own Luma API key and CipherPay account, stored as secret references rather than plaintext runtime config.
-- CipherPay webhooks now enqueue registration work instead of completing Luma fulfillment inline.
+- CipherPay webhooks enqueue registration work instead of completing Luma fulfillment inline.
 - Operator recovery happens through `/ops` and `/api/ops/process-registration-tasks` rather than the DIY dashboard flow.
 
 ## New Core Concepts
@@ -22,7 +22,7 @@ This document explains how the managed-service fork diverges from the original D
 
 ## URL Changes
 
-- `/` is now a service landing page.
+- `/` is the service landing page.
 - `/c/[calendarSlug]` is the public organizer calendar.
 - `/c/[calendarSlug]/events/[eventId]` is the public event checkout entry.
 - `/ops` is the operator console.
