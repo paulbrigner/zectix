@@ -19,30 +19,16 @@ type EventCheckoutFormProps = {
   calendarSlug: string;
   eventApiId: string;
   ticketTypes: TicketMirror[];
-  unavailableTicketTypes?: TicketMirror[];
 };
 
 function ticketPriceLabel(ticket: TicketMirror | null) {
   return formatFiatAmount(ticket?.amount || null, ticket?.currency || null);
 }
 
-function unavailableTicketReason(ticket: TicketMirror) {
-  if (!ticket.active) {
-    return "This ticket tier is not currently active on the Luma event.";
-  }
-
-  return (
-    ticket.zcash_enabled_reason ||
-    ticket.automatic_eligibility_reasons[0] ||
-    "This ticket tier is not currently available for managed Zcash checkout."
-  );
-}
-
 export function EventCheckoutForm({
   calendarSlug,
   eventApiId,
   ticketTypes,
-  unavailableTicketTypes = [],
 }: EventCheckoutFormProps) {
   const router = useRouter();
   const [name, setName] = useState("");
@@ -187,46 +173,6 @@ export function EventCheckoutForm({
           })}
         </div>
 
-        {unavailableTicketTypes.length ? (
-          <div className="public-ticket-unavailable-section">
-            <div className="public-section-head">
-              <h3>Other mirrored ticket tiers</h3>
-              <p className="subtle-text">
-                These tiers are visible from the mirrored event, but they are not currently
-                available for managed Zcash checkout.
-              </p>
-            </div>
-
-            <div className="public-ticket-grid">
-              {unavailableTicketTypes.map((ticket) => (
-                <article
-                  className="public-ticket-card public-ticket-card-disabled"
-                  key={ticket.ticket_type_api_id}
-                >
-                  <div className="public-ticket-card-body">
-                    <div className="public-ticket-card-top">
-                      <div>
-                        <p className="public-ticket-status public-ticket-status-muted">
-                          Currently unavailable
-                        </p>
-                        <p className="public-ticket-name">{ticket.name}</p>
-                        {ticket.description ? (
-                          <p className="subtle-text">{ticket.description}</p>
-                        ) : null}
-                      </div>
-                      <span className="public-ticket-price">
-                        {ticketPriceLabel(ticket)}
-                      </span>
-                    </div>
-                    <p className="subtle-text public-ticket-unavailable-note">
-                      {unavailableTicketReason(ticket)}
-                    </p>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </div>
-        ) : null}
       </section>
 
       <section className="public-section-card public-total-card">

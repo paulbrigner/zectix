@@ -74,9 +74,6 @@ export async function getPublicEventPageData(
     calendar: calendarData.calendar,
     event,
     tickets,
-    unavailable_tickets: mirroredTickets.filter(
-      (ticket) => !ticket.active || !ticket.zcash_enabled,
-    ),
   };
 }
 

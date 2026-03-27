@@ -80,7 +80,6 @@ export default async function PublicEventPage({
             calendarSlug={data.calendar.slug}
             eventApiId={data.event.event_api_id}
             ticketTypes={data.tickets}
-            unavailableTicketTypes={data.unavailable_tickets}
           />
         </section>
       </section>
