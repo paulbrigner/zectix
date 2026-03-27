@@ -9,6 +9,7 @@ import {
   createCalendarConnection,
   createCipherPayConnection,
   createTenant,
+  disableCalendarConnection,
   setTenantStatus,
   setTicketOperatorAssertions,
   syncCalendarEventForOps,
@@ -132,6 +133,13 @@ export async function updateCalendarConnectionLumaKeyAction(formData: FormData) 
     calendarConnectionId,
     String(formData.get("luma_api_key") || ""),
   );
+  redirectTo(formData, `/ops/tenants/${encodeURIComponent(connection.tenant_id)}`);
+}
+
+export async function disableCalendarConnectionAction(formData: FormData) {
+  await requireOpsPageAccess();
+  const calendarConnectionId = String(formData.get("calendar_connection_id") || "");
+  const connection = await disableCalendarConnection(calendarConnectionId);
   redirectTo(formData, `/ops/tenants/${encodeURIComponent(connection.tenant_id)}`);
 }
 

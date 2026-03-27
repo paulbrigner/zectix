@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import {
   createCalendarConnectionAction,
   createCipherPayConnectionAction,
+  disableCalendarConnectionAction,
   setTenantStatusAction,
   validateAndSyncCalendarAction,
   validateCipherPayConnectionAction,
@@ -54,6 +55,10 @@ function calendarConnectionHealthLabel(
   calendar: CalendarConnection,
   hasSavedKey: boolean,
 ) {
+  if (calendar.status === "disabled") {
+    return "Disabled";
+  }
+
   if (!hasSavedKey) {
     return "Not configured";
   }
@@ -239,12 +244,20 @@ export default async function TenantDetailPage({
               calendar,
               Boolean(previews?.luma.has_value),
             );
-            const validateLabel = calendar.last_validated_at
-              ? "Re-sync now"
-              : "Validate and sync";
+            const validateLabel =
+              calendar.status === "disabled"
+                ? "Re-enable and sync"
+                : calendar.last_validated_at
+                  ? "Re-sync now"
+                  : "Validate and sync";
             const liveOnlyCount = nextLiveEvents.filter(
               (event) => !mirroredByEventId.has(event.api_id),
             ).length;
+            const webhookState = calendar.status === "disabled"
+              ? "Disabled"
+              : webhookConfigured
+                ? "Configured"
+                : "Pending";
 
             return (
               <article
@@ -275,12 +288,14 @@ export default async function TenantDetailPage({
                         {validateLabel}
                       </button>
                     </form>
-                    <Link
-                      className="button button-secondary button-small"
-                      href={publicCalendarHref}
-                    >
-                      Open public calendar
-                    </Link>
+                    {calendar.status === "active" ? (
+                      <Link
+                        className="button button-secondary button-small"
+                        href={publicCalendarHref}
+                      >
+                        Open public calendar
+                      </Link>
+                    ) : null}
                     <Link
                       className="button button-secondary button-small"
                       href={`/ops/tenants/${encodeURIComponent(detail.tenant.tenant_id)}/events`}
@@ -293,6 +308,23 @@ export default async function TenantDetailPage({
                     >
                       Recovery
                     </Link>
+                    {calendar.status !== "disabled" ? (
+                      <form action={disableCalendarConnectionAction}>
+                        <input
+                          name="calendar_connection_id"
+                          type="hidden"
+                          value={calendar.calendar_connection_id}
+                        />
+                        <input
+                          name="redirect_to"
+                          type="hidden"
+                          value={`/ops/tenants/${detail.tenant.tenant_id}`}
+                        />
+                        <button className="button button-secondary button-small" type="submit">
+                          Disable calendar
+                        </button>
+                      </form>
+                    ) : null}
                   </div>
                 </div>
 
@@ -319,9 +351,11 @@ export default async function TenantDetailPage({
                   </div>
                   <div className="console-signal-card">
                     <span className="console-kpi-label">Managed webhook</span>
-                    <strong>{webhookConfigured ? "Configured" : "Pending"}</strong>
+                    <strong>{webhookState}</strong>
                     <p className="subtle-text">
-                      {calendar.luma_webhook_id || "Created during validation"}
+                      {calendar.status === "disabled"
+                        ? "Removed from managed intake until the calendar is re-enabled."
+                        : calendar.luma_webhook_id || "Created during validation"}
                     </p>
                   </div>
                   <div className="console-signal-card">
@@ -349,6 +383,13 @@ export default async function TenantDetailPage({
 
                 {calendar.last_sync_error ? (
                   <p className="console-error-text">{calendar.last_sync_error}</p>
+                ) : null}
+
+                {calendar.status === "disabled" ? (
+                  <p className="subtle-text">
+                    This calendar is disabled. Public checkout is off for this calendar until you
+                    run <code>Re-enable and sync</code>.
+                  </p>
                 ) : null}
 
                 <div className="console-inline-action">

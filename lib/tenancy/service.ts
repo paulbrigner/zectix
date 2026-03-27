@@ -45,7 +45,7 @@ import {
   syncCalendarConnection,
   validateCalendarConnection,
 } from "@/lib/sync/luma-sync";
-import { listLumaEvents } from "@/lib/luma";
+import { deleteLumaWebhook, listLumaEvents } from "@/lib/luma";
 import type { LumaEvent } from "@/lib/luma";
 
 async function dedupeSlug(
@@ -298,6 +298,40 @@ export async function updateCalendarConnectionLumaKey(
     luma_webhook_secret_ref: null,
     luma_webhook_id: null,
     last_validated_at: null,
+    last_sync_error: null,
+    updated_at: nowIso(),
+  };
+
+  return putCalendarConnection(nextConnection);
+}
+
+export async function disableCalendarConnection(calendarConnectionId: string) {
+  const connection = await getCalendarConnection(calendarConnectionId);
+  if (!connection) {
+    throw new Error(`Calendar connection ${calendarConnectionId} was not found.`);
+  }
+
+  const secretStore = getSecretStore();
+  const lumaApiKey = connection.luma_api_secret_ref
+    ? await secretStore.getSecret(connection.luma_api_secret_ref)
+    : null;
+
+  if (lumaApiKey && connection.luma_webhook_id) {
+    try {
+      await deleteLumaWebhook({
+        apiKey: lumaApiKey,
+        id: connection.luma_webhook_id,
+      });
+    } catch {
+      // Continue disabling locally even if the upstream webhook was already removed.
+    }
+  }
+
+  const nextConnection: CalendarConnection = {
+    ...connection,
+    status: "disabled",
+    luma_webhook_secret_ref: null,
+    luma_webhook_id: null,
     last_sync_error: null,
     updated_at: nowIso(),
   };
