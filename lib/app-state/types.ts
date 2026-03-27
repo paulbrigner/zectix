@@ -58,6 +58,7 @@ export type CalendarConnection = {
   status: CalendarConnectionStatus;
   luma_api_secret_ref: string | null;
   luma_webhook_secret_ref: string | null;
+  luma_webhook_token_ref: string | null;
   luma_webhook_id: string | null;
   last_validated_at: string | null;
   last_synced_at: string | null;

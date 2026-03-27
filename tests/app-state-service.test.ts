@@ -330,6 +330,7 @@ describe("webhook service", () => {
         },
       },
       eventType: "event.updated",
+      requestAuthenticated: true,
       signatureValid: true,
       validationError: null,
       requestHeaders: {},
@@ -372,6 +373,7 @@ describe("webhook service", () => {
         },
       },
       eventType: "event.created",
+      requestAuthenticated: false,
       signatureValid: false,
       validationError: "signature_mismatch",
       requestHeaders: {},
@@ -384,6 +386,40 @@ describe("webhook service", () => {
         applied: false,
         ignored: true,
         reason: "signature_mismatch",
+      }),
+    );
+  });
+
+  it("accepts Luma event webhooks authenticated by the callback token fallback", async () => {
+    mockPutWebhookDelivery.mockImplementation(async (delivery) => delivery);
+    mockUpdateWebhookDelivery.mockImplementation(async (id, receivedAt, patch) => ({
+      id,
+      receivedAt,
+      patch,
+    }));
+
+    const result = await processLumaWebhook({
+      calendarConnectionId: "calendar_123",
+      tenantId: "tenant_123",
+      requestBody: {
+        type: "event.created",
+        data: {
+          id: "event_123",
+        },
+      },
+      eventType: "event.created",
+      requestAuthenticated: true,
+      signatureValid: false,
+      validationError: "accepted_via_callback_token",
+      requestHeaders: {},
+    });
+
+    expect(mockHandleCalendarRefreshWebhook).toHaveBeenCalledWith("calendar_123");
+    expect(result).toEqual(
+      expect.objectContaining({
+        applied: true,
+        ignored: false,
+        event_count: 3,
       }),
     );
   });

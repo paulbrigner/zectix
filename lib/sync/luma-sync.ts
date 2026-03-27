@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import {
   getCalendarConnection,
   listEventMirrorsByCalendar,
@@ -46,9 +46,12 @@ function eventTypesMatch(current: string[], expected: readonly string[]) {
   return left.every((value, index) => value === right[index]);
 }
 
-function lumaWebhookCallbackUrl(calendarConnectionId: string) {
+function lumaWebhookCallbackUrlWithToken(
+  calendarConnectionId: string,
+  token: string,
+) {
   const url = appUrl(
-    `/api/luma/webhook?calendar_connection_id=${encodeURIComponent(calendarConnectionId)}`,
+    `/api/luma/webhook?calendar_connection_id=${encodeURIComponent(calendarConnectionId)}&token=${encodeURIComponent(token)}`,
   );
   if (!url) {
     throw new Error(
@@ -57,6 +60,10 @@ function lumaWebhookCallbackUrl(calendarConnectionId: string) {
   }
 
   return url;
+}
+
+function generateLumaWebhookCallbackToken() {
+  return randomBytes(24).toString("hex");
 }
 
 async function listAllLumaWebhooks(apiKey: string) {
@@ -222,7 +229,14 @@ export async function ensureCalendarConnectionWebhookSubscription(
     throw new Error("Luma API secret could not be resolved from the secret store.");
   }
 
-  const callbackUrl = lumaWebhookCallbackUrl(connection.calendar_connection_id);
+  const existingToken = connection.luma_webhook_token_ref
+    ? await secretStore.getSecret(connection.luma_webhook_token_ref)
+    : null;
+  const callbackToken = existingToken || generateLumaWebhookCallbackToken();
+  const callbackUrl = lumaWebhookCallbackUrlWithToken(
+    connection.calendar_connection_id,
+    callbackToken,
+  );
   const existingSecret = connection.luma_webhook_secret_ref
     ? await secretStore.getSecret(connection.luma_webhook_secret_ref)
     : null;
@@ -247,6 +261,7 @@ export async function ensureCalendarConnectionWebhookSubscription(
 
   let webhookId = connection.luma_webhook_id;
   let webhookSecretRef = connection.luma_webhook_secret_ref;
+  let webhookTokenRef = connection.luma_webhook_token_ref;
 
   if (!matchedWebhook) {
     const createdWebhook = await createLumaWebhook({
@@ -262,6 +277,10 @@ export async function ensureCalendarConnectionWebhookSubscription(
     webhookSecretRef = await secretStore.setSecret(
       connection.luma_webhook_secret_ref,
       createdWebhook.secret,
+    );
+    webhookTokenRef = await secretStore.setSecret(
+      connection.luma_webhook_token_ref,
+      callbackToken,
     );
   } else {
     if (
@@ -283,12 +302,17 @@ export async function ensureCalendarConnectionWebhookSubscription(
         matchedWebhook.secret,
       );
     }
+    webhookTokenRef = await secretStore.setSecret(
+      connection.luma_webhook_token_ref,
+      callbackToken,
+    );
   }
 
   const nextConnection = {
     ...connection,
     luma_webhook_id: webhookId || null,
     luma_webhook_secret_ref: webhookSecretRef || null,
+    luma_webhook_token_ref: webhookTokenRef || null,
     updated_at: nowIso(),
   };
   await putCalendarConnection(nextConnection);

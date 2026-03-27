@@ -34,6 +34,7 @@ export function makeCalendarConnection(
     status: "active",
     luma_api_secret_ref: "local-secret/luma",
     luma_webhook_secret_ref: "local-secret/luma-webhook",
+    luma_webhook_token_ref: "local-secret/luma-webhook-token",
     luma_webhook_id: "whk_123",
     last_validated_at: "2026-03-24T12:00:00.000Z",
     last_synced_at: "2026-03-24T12:00:00.000Z",

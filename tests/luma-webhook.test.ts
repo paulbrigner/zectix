@@ -3,6 +3,7 @@ import {
   computeLumaWebhookSignature,
   extractLumaWebhookEventApiId,
   extractLumaWebhookEventType,
+  verifyLumaWebhookCallbackToken,
   verifyLumaWebhookSignature,
 } from "@/lib/luma-webhook";
 
@@ -52,6 +53,31 @@ describe("luma webhook helper", () => {
         secret: "super-secret",
       }),
     ).toEqual({ ok: false, reason: "signature_mismatch" });
+  });
+
+  it("accepts a matching callback token as a fallback auth check", () => {
+    expect(
+      verifyLumaWebhookCallbackToken({
+        token: "callback-token",
+        expectedToken: "callback-token",
+      }),
+    ).toEqual({ ok: true });
+  });
+
+  it("rejects missing or mismatched callback tokens", () => {
+    expect(
+      verifyLumaWebhookCallbackToken({
+        token: null,
+        expectedToken: "callback-token",
+      }),
+    ).toEqual({ ok: false, reason: "missing_callback_token" });
+
+    expect(
+      verifyLumaWebhookCallbackToken({
+        token: "wrong-token",
+        expectedToken: "callback-token",
+      }),
+    ).toEqual({ ok: false, reason: "callback_token_mismatch" });
   });
 
   it("extracts event metadata from event-level webhook payloads", () => {

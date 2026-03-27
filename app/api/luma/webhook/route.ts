@@ -3,6 +3,7 @@ import { getCalendarConnection } from "@/lib/app-state/state";
 import { asRecord, asString } from "@/lib/app-state/utils";
 import {
   extractLumaWebhookEventType,
+  verifyLumaWebhookCallbackToken,
   resolveLumaWebhookSecretHeader,
   resolveLumaWebhookSignatureHeader,
   verifyLumaWebhookSignature,
@@ -32,8 +33,9 @@ export async function POST(request: Request) {
     return jsonError("Invalid JSON body");
   }
 
+  const requestUrl = new URL(request.url);
   const calendarConnectionId =
-    asString(new URL(request.url).searchParams.get("calendar_connection_id")) ||
+    asString(requestUrl.searchParams.get("calendar_connection_id")) ||
     asString(body.calendar_connection_id);
   if (!calendarConnectionId) {
     return jsonError("calendar_connection_id is required", 400);
@@ -44,14 +46,16 @@ export async function POST(request: Request) {
     return jsonError("Calendar connection not found.", 404);
   }
 
+  const secretStore = getSecretStore();
   const webhookSecret = connection.luma_webhook_secret_ref
-    ? await getSecretStore().getSecret(connection.luma_webhook_secret_ref)
+    ? await secretStore.getSecret(connection.luma_webhook_secret_ref)
     : null;
-  if (!webhookSecret) {
-    return jsonError("Luma webhook secret is not configured", 503);
-  }
+  const callbackTokenSecret = connection.luma_webhook_token_ref
+    ? await secretStore.getSecret(connection.luma_webhook_token_ref)
+    : null;
 
   const eventType = extractLumaWebhookEventType(body);
+  const callbackToken = asString(requestUrl.searchParams.get("token"));
   const signatureHeader = resolveLumaWebhookSignatureHeader(request.headers);
   const legacySecretHeader = resolveLumaWebhookSecretHeader(request.headers);
   const signatureVerification = verifyLumaWebhookSignature({
@@ -59,21 +63,35 @@ export async function POST(request: Request) {
     signature: signatureHeader,
     secret: webhookSecret,
   });
-  const signatureValid =
-    signatureVerification.ok || legacySecretHeader === webhookSecret;
-  const validationError = signatureValid
-    ? null
+  const signatureValid = signatureVerification.ok;
+  const legacySecretValid = Boolean(
+    webhookSecret && legacySecretHeader && legacySecretHeader === webhookSecret,
+  );
+  const callbackTokenVerification = verifyLumaWebhookCallbackToken({
+    token: callbackToken,
+    expectedToken: callbackTokenSecret,
+  });
+  const callbackTokenValid = callbackTokenVerification.ok;
+  const requestAuthenticated =
+    signatureValid || legacySecretValid || callbackTokenValid;
+  const validationError = requestAuthenticated
+    ? callbackTokenValid && !signatureValid && !legacySecretValid
+      ? "accepted_via_callback_token"
+      : null
     : signatureHeader
       ? signatureVerification.reason || "signature_mismatch"
       : legacySecretHeader
         ? "legacy_secret_mismatch"
-        : "missing_signature";
+        : callbackToken
+          ? callbackTokenVerification.reason || "callback_token_mismatch"
+          : "missing_signature";
 
   const result = await processLumaWebhook({
     calendarConnectionId: connection.calendar_connection_id,
     tenantId: connection.tenant_id,
     requestBody: body,
     eventType,
+    requestAuthenticated,
     signatureValid,
     validationError,
     requestHeaders: {
@@ -82,12 +100,13 @@ export async function POST(request: Request) {
       "x-signature": request.headers.get("x-signature"),
       "x-luma-webhook-secret": request.headers.get("x-luma-webhook-secret"),
       authorization: request.headers.get("authorization"),
+      callback_token_present: Boolean(callbackToken),
       "user-agent": request.headers.get("user-agent"),
       "x-forwarded-for": request.headers.get("x-forwarded-for"),
     },
   });
 
-  if (!signatureValid) {
+  if (!requestAuthenticated) {
     logEvent("warn", "luma.webhook.rejected_invalid_signature", {
       request_id: requestId,
       calendar_connection_id: connection.calendar_connection_id,
@@ -95,7 +114,7 @@ export async function POST(request: Request) {
       event_type: eventType,
       reason: validationError,
     });
-    return jsonError("Invalid Luma webhook signature", 401);
+    return jsonError("Invalid Luma webhook authentication", 401);
   }
 
   logEvent("info", "luma.webhook.accepted", {
