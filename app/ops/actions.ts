@@ -1,6 +1,6 @@
 "use server";
 
-import { redirect } from "next/navigation";
+import { redirect, unstable_rethrow } from "next/navigation";
 import { asBoolean, asNonNegativeInteger, asString } from "@/lib/app-state/utils";
 import { retryRegistrationForSession, retryDueRegistrations } from "@/lib/app-state/service";
 import { requireOpsPageAccess } from "@/lib/admin-auth-server";
@@ -114,6 +114,8 @@ export async function syncCalendarEventAction(formData: FormData) {
     params.set("sync_at", result.review.happened_at);
     redirectToWithQuery(redirectBase, params);
   } catch (error) {
+    unstable_rethrow(error);
+
     const params = new URLSearchParams();
     params.set(
       "sync_error",
