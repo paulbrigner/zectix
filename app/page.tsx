@@ -206,13 +206,11 @@ export default function Home() {
         <div className="landing-section-actions">
           <Button
             variant="landing-primary"
-            href="https://www.cipherpay.app/en/dashboard/login"
-            target="_blank"
-            rel="noreferrer"
+            href="/luma-integration"
           >
             Sign up for the ZecTix Luma integration
           </Button>
-                    <Button
+          <Button
             variant="landing-ghost"
             href="https://zectix.com/c/pgpforcrypto"
             target="_blank"
