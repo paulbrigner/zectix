@@ -10,10 +10,45 @@ import {
 import { ConsoleDisclosure } from "@/components/ConsoleDisclosure";
 import { ConsoleFieldLabel } from "@/components/ConsoleFieldLabel";
 import { ConsoleInfoTip } from "@/components/ConsoleInfoTip";
+import { LocalDateTime } from "@/components/LocalDateTime";
+import type { CalendarConnection } from "@/lib/app-state/types";
 import { getTenantOpsDetail } from "@/lib/tenancy/service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+function isFutureEvent(startAt: string) {
+  const startAtMs = new Date(startAt).getTime();
+  return Number.isFinite(startAtMs) && startAtMs >= Date.now();
+}
+
+function summarizeCalendarInventory(
+  detail: Awaited<ReturnType<typeof getTenantOpsDetail>>,
+  calendar: CalendarConnection,
+) {
+  const mirroredEvents =
+    detail?.events.find(
+      (entry) => entry.calendar.calendar_connection_id === calendar.calendar_connection_id,
+    )?.events || [];
+  const mirroredByEventId = new Map(
+    mirroredEvents.map((event) => [event.event_api_id, event] as const),
+  );
+  const futureMirroredEvents = mirroredEvents.filter((event) =>
+    isFutureEvent(event.start_at),
+  );
+  const tickets = mirroredEvents.flatMap(
+    (event) => detail?.tickets_by_event.get(event.event_api_id) || [],
+  );
+
+  return {
+    mirroredEvents,
+    mirroredByEventId,
+    futureMirroredEvents,
+    tickets,
+    enabledEvents: mirroredEvents.filter((event) => event.zcash_enabled),
+    enabledTickets: tickets.filter((ticket) => ticket.zcash_enabled),
+  };
+}
 
 export default async function TenantDetailPage({
   params,
@@ -158,28 +193,115 @@ export default async function TenantDetailPage({
           </form>
         </ConsoleDisclosure>
 
-        <div className="console-card-grid">
+        <div className="console-luma-card-stack">
           {detail.calendars.map((calendar) => {
             const previews = detail.calendar_secret_previews.get(calendar.calendar_connection_id);
+            const livePreview =
+              detail.upstream_luma_events_by_calendar.get(
+                calendar.calendar_connection_id,
+              ) || null;
+            const {
+              mirroredByEventId,
+              futureMirroredEvents,
+              tickets,
+              enabledEvents,
+              enabledTickets,
+            } = summarizeCalendarInventory(detail, calendar);
+            const previewEvents = livePreview?.events.filter((event) =>
+              isFutureEvent(event.start_at),
+            );
+            const nextLiveEvents =
+              previewEvents && previewEvents.length > 0
+                ? previewEvents.slice(0, 4)
+                : livePreview?.events.slice(0, 4) || [];
+            const liveEventCount = livePreview?.events.length || 0;
+            const ticketCount = tickets.length;
+            const webhookConfigured =
+              Boolean(calendar.luma_webhook_id) && Boolean(previews?.lumaWebhook.has_value);
+
             return (
-              <article className="console-detail-card" key={calendar.calendar_connection_id}>
-                <p className="console-kpi-label">{calendar.status}</p>
-                <h3>{calendar.display_name}</h3>
-                <p className="subtle-text">Public URL: /c/{calendar.slug}</p>
-                <p className="subtle-text">
-                  Luma key {previews?.luma.preview || "missing"} · managed webhook {calendar.luma_webhook_id ? "configured" : "not configured yet"}
-                </p>
-                <p className="subtle-text">
-                  Last sync {calendar.last_synced_at || "not yet"} {calendar.last_sync_error ? `· ${calendar.last_sync_error}` : ""}
-                </p>
+              <article
+                className="console-detail-card console-luma-card"
+                key={calendar.calendar_connection_id}
+              >
+                <div className="console-luma-card-head">
+                  <div>
+                    <p className="console-kpi-label">{calendar.status}</p>
+                    <h3>{calendar.display_name}</h3>
+                    <p className="subtle-text">Public URL: /c/{calendar.slug}</p>
+                  </div>
+                  <div className="button-row">
+                    <form action={validateAndSyncCalendarAction}>
+                      <input
+                        name="calendar_connection_id"
+                        type="hidden"
+                        value={calendar.calendar_connection_id}
+                      />
+                      <input
+                        name="redirect_to"
+                        type="hidden"
+                        value={`/ops/tenants/${detail.tenant.tenant_id}`}
+                      />
+                      <button className="button button-secondary button-small" type="submit">
+                        Validate and sync
+                      </button>
+                    </form>
+                    <Link
+                      className="button button-secondary button-small"
+                      href={`/ops/tenants/${encodeURIComponent(detail.tenant.tenant_id)}/events`}
+                    >
+                      Ticket controls
+                    </Link>
+                  </div>
+                </div>
+
+                <div className="console-signal-grid">
+                  <div className="console-signal-card">
+                    <span className="console-kpi-label">Luma key</span>
+                    <strong>{previews?.luma.has_value ? "Saved" : "Missing"}</strong>
+                    <p className="subtle-text">
+                      {previews?.luma.preview || "No secret saved yet"}
+                    </p>
+                  </div>
+                  <div className="console-signal-card">
+                    <span className="console-kpi-label">Managed webhook</span>
+                    <strong>{webhookConfigured ? "Configured" : "Pending"}</strong>
+                    <p className="subtle-text">
+                      {calendar.luma_webhook_id || "Created during validation"}
+                    </p>
+                  </div>
+                  <div className="console-signal-card">
+                    <span className="console-kpi-label">Mirrored inventory</span>
+                    <strong>
+                      {futureMirroredEvents.length} future events · {ticketCount} tickets
+                    </strong>
+                    <p className="subtle-text">
+                      {enabledEvents.length} events and {enabledTickets.length} tickets are
+                      currently Zcash-enabled
+                    </p>
+                  </div>
+                  <div className="console-signal-card">
+                    <span className="console-kpi-label">Last sync</span>
+                    <strong>{calendar.last_synced_at ? "Completed" : "Not yet synced"}</strong>
+                    <p className="subtle-text">
+                      {calendar.last_synced_at ? (
+                        <LocalDateTime iso={calendar.last_synced_at} />
+                      ) : (
+                        "Run validation to verify the key and mirror the calendar."
+                      )}
+                    </p>
+                  </div>
+                </div>
+
+                {calendar.last_sync_error ? (
+                  <p className="console-error-text">{calendar.last_sync_error}</p>
+                ) : null}
+
                 <div className="console-inline-action">
-                  <form action={validateAndSyncCalendarAction}>
-                    <input name="calendar_connection_id" type="hidden" value={calendar.calendar_connection_id} />
-                    <input name="redirect_to" type="hidden" value={`/ops/tenants/${detail.tenant.tenant_id}`} />
-                    <button className="button button-secondary button-small" type="submit">
-                      Validate and sync
-                    </button>
-                  </form>
+                  <p className="subtle-text">
+                    Live Luma preview: {liveEventCount} event
+                    {liveEventCount === 1 ? "" : "s"} available from the saved key.
+                  </p>
                   <ConsoleInfoTip label="What Validate and sync does">
                     <p>
                       Checks that the saved Luma API key can read the calendar,
@@ -190,6 +312,97 @@ export default async function TenantDetailPage({
                     </p>
                   </ConsoleInfoTip>
                 </div>
+
+                {livePreview?.error ? (
+                  <div className="console-preview-empty">
+                    <strong>Could not load current Luma events</strong>
+                    <p className="subtle-text">{livePreview.error}</p>
+                  </div>
+                ) : nextLiveEvents.length ? (
+                  <div className="console-preview-list">
+                    {nextLiveEvents.map((event) => {
+                      const mirroredEvent = mirroredByEventId.get(event.api_id) || null;
+                      const mirroredTickets =
+                        detail.tickets_by_event.get(event.api_id) || [];
+                      const publicEventHref = mirroredEvent
+                        ? `/c/${calendar.slug}/events/${encodeURIComponent(event.api_id)}`
+                        : null;
+
+                      return (
+                        <article className="console-preview-card" key={event.api_id}>
+                          {event.cover_url ? (
+                            <div className="console-preview-media">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img alt={event.name} src={event.cover_url} />
+                            </div>
+                          ) : (
+                            <div className="console-preview-media console-preview-media-fallback">
+                              <span>{event.name.slice(0, 2).toUpperCase()}</span>
+                            </div>
+                          )}
+                          <div className="console-preview-body">
+                            <div className="console-preview-body-head">
+                              <div>
+                                <p className="console-kpi-label">
+                                  {mirroredEvent ? "Mirrored event" : "Live in Luma"}
+                                </p>
+                                <h4>{event.name}</h4>
+                              </div>
+                              <div className="console-mini-pill-row">
+                                <span className="console-mini-pill">
+                                  {mirroredEvent ? "Mirrored" : "Not mirrored yet"}
+                                </span>
+                                <span className="console-mini-pill">
+                                  {mirroredEvent?.zcash_enabled
+                                    ? "Public checkout enabled"
+                                    : "Public checkout hidden"}
+                                </span>
+                              </div>
+                            </div>
+                            <p className="subtle-text">
+                              <LocalDateTime iso={event.start_at} />
+                              {event.location_label ? ` · ${event.location_label}` : ""}
+                            </p>
+                            <p className="subtle-text">
+                              {mirroredTickets.length} mirrored ticket
+                              {mirroredTickets.length === 1 ? "" : "s"} ·{" "}
+                              {mirroredTickets.filter((ticket) => ticket.zcash_enabled).length}{" "}
+                              enabled
+                            </p>
+                            <div className="button-row">
+                              {event.url ? (
+                                <a
+                                  className="button button-secondary button-small"
+                                  href={event.url}
+                                  rel="noreferrer noopener"
+                                  target="_blank"
+                                >
+                                  Open on Luma
+                                </a>
+                              ) : null}
+                              {publicEventHref ? (
+                                <Link
+                                  className="button button-secondary button-small"
+                                  href={publicEventHref}
+                                >
+                                  Open public event
+                                </Link>
+                              ) : null}
+                            </div>
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="console-preview-empty">
+                    <strong>No live Luma events to review yet</strong>
+                    <p className="subtle-text">
+                      Once this key can read upcoming Luma events, they will appear here before
+                      and after each sync.
+                    </p>
+                  </div>
+                )}
               </article>
             );
           })}

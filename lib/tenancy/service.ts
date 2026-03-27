@@ -43,6 +43,8 @@ import {
   syncCalendarConnection,
   validateCalendarConnection,
 } from "@/lib/sync/luma-sync";
+import { listLumaEvents } from "@/lib/luma";
+import type { LumaEvent } from "@/lib/luma";
 
 async function dedupeSlug(
   baseSlug: string,
@@ -388,6 +390,61 @@ export async function getTenantOpsDetail(tenantId: string) {
     });
   }
 
+  const upstreamLumaEventsByCalendar = new Map<
+    string,
+    { events: LumaEvent[]; error: string | null }
+  >(
+    await Promise.all(
+      calendars.map(async (calendar) => {
+        if (!calendar.luma_api_secret_ref) {
+          return [
+            calendar.calendar_connection_id,
+            {
+              events: [] as LumaEvent[],
+              error: "Luma API key is not configured yet.",
+            },
+          ] as const;
+        }
+
+        try {
+          const apiKey = await getSecretStore().getSecret(calendar.luma_api_secret_ref);
+          if (!apiKey) {
+            return [
+              calendar.calendar_connection_id,
+              {
+                events: [] as LumaEvent[],
+                error: "Luma API key could not be resolved from the secret store.",
+              },
+            ] as const;
+          }
+
+          const events = await listLumaEvents(apiKey);
+          return [
+            calendar.calendar_connection_id,
+            {
+              events: events.sort(
+                (left, right) =>
+                  new Date(left.start_at).getTime() - new Date(right.start_at).getTime(),
+              ),
+              error: null,
+            },
+          ] as const;
+        } catch (error) {
+          return [
+            calendar.calendar_connection_id,
+            {
+              events: [] as LumaEvent[],
+              error:
+                error instanceof Error
+                  ? error.message
+                  : "Could not load current Luma events for review.",
+            },
+          ] as const;
+        }
+      }),
+    ),
+  );
+
   const activeCipherPayConnectionsByCalendar = new Map<string, CipherPayConnection>();
   for (const calendar of calendars) {
     const connection = await getCipherPayConnectionByCalendar(calendar.calendar_connection_id);
@@ -407,6 +464,7 @@ export async function getTenantOpsDetail(tenantId: string) {
     tickets_by_event: ticketsByEvent,
     calendar_secret_previews: calendarSecretPreviews,
     cipherpay_secret_previews: cipherPaySecretPreviews,
+    upstream_luma_events_by_calendar: upstreamLumaEventsByCalendar,
     active_cipherpay_connections_by_calendar: activeCipherPayConnectionsByCalendar,
   };
 }
