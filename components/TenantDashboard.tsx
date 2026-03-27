@@ -35,6 +35,13 @@ function isFutureEvent(startAt: string) {
   return Number.isFinite(startAtMs) && startAtMs >= Date.now();
 }
 
+function usesCallbackTokenFallback(delivery: TenantOpsDetail["webhooks"][number]) {
+  return (
+    delivery.validation_error === "accepted_via_callback_token" &&
+    delivery.apply_status !== "ignored"
+  );
+}
+
 function summarizeCalendar(detail: TenantOpsDetail, calendarConnectionId: string) {
   const mirroredEvents =
     detail.events.find(
@@ -73,7 +80,7 @@ export function TenantDashboard({
     (session) => session.registration_status === "registered",
   ).length;
   const invalidWebhooks = detail.webhooks.filter(
-    (delivery) => !delivery.signature_valid,
+    (delivery) => !delivery.signature_valid && !usesCallbackTokenFallback(delivery),
   ).length;
   const upcomingEvents = detail.events.flatMap(({ calendar, events }) =>
     events
@@ -489,7 +496,7 @@ export function TenantDashboard({
           <div>
             <h2>Webhook log</h2>
             <p className="subtle-text">
-              Latest tenant-scoped deliveries from CipherPay and Luma, including signature results.
+              Latest tenant-scoped deliveries from CipherPay and Luma, including request authentication results.
             </p>
           </div>
         </div>
@@ -505,12 +512,15 @@ export function TenantDashboard({
                   <th>Provider</th>
                   <th>Event</th>
                   <th>Invoice</th>
-                  <th>Signature</th>
+                  <th>Auth</th>
                   <th>Apply</th>
                 </tr>
               </thead>
               <tbody>
-                {detail.webhooks.slice(0, 20).map((delivery) => (
+                {detail.webhooks.slice(0, 20).map((delivery) => {
+                  const acceptedViaCallbackToken = usesCallbackTokenFallback(delivery);
+
+                  return (
                   <tr key={delivery.webhook_delivery_id}>
                     <td>
                       <LocalDateTime iso={delivery.received_at} />
@@ -528,16 +538,26 @@ export function TenantDashboard({
                       {delivery.cipherpay_invoice_id || "n/a"}
                     </td>
                     <td>
-                      <span
-                        className={
-                          delivery.signature_valid
-                            ? "console-valid-text"
-                            : "console-error-text"
-                        }
-                      >
-                        {delivery.signature_valid ? "valid" : "invalid"}
-                      </span>
-                      {delivery.validation_error ? (
+                      {acceptedViaCallbackToken ? (
+                        <>
+                          <span className="console-valid-text">callback token</span>
+                          <p className="subtle-text console-table-note">
+                            accepted via callback token
+                          </p>
+                        </>
+                      ) : (
+                        <span
+                          className={
+                            delivery.signature_valid
+                              ? "console-valid-text"
+                              : "console-error-text"
+                          }
+                        >
+                          {delivery.signature_valid ? "valid" : "invalid"}
+                        </span>
+                      )}
+                      {delivery.validation_error &&
+                      !acceptedViaCallbackToken ? (
                         <p className="subtle-text console-table-note">
                           {delivery.validation_error}
                         </p>
@@ -545,7 +565,8 @@ export function TenantDashboard({
                     </td>
                     <td>{delivery.apply_status}</td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

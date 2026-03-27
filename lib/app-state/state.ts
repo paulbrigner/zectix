@@ -301,6 +301,7 @@ function normalizeCalendarConnection(value: unknown): CalendarConnection | null 
         : "pending_validation",
     luma_api_secret_ref: asString(item?.luma_api_secret_ref),
     luma_webhook_secret_ref: asString(item?.luma_webhook_secret_ref),
+    luma_webhook_token_ref: asString(item?.luma_webhook_token_ref),
     luma_webhook_id: asString(item?.luma_webhook_id),
     last_validated_at: asIsoTimestamp(item?.last_validated_at),
     last_synced_at: asIsoTimestamp(item?.last_synced_at),

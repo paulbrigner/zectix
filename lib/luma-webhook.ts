@@ -7,6 +7,15 @@ export const LUMA_WEBHOOK_SIGNATURE_HEADERS = [
   "x-signature",
 ] as const;
 
+function timingSafeEqualText(left: string, right: string) {
+  const leftBuffer = Buffer.from(left, "utf8");
+  const rightBuffer = Buffer.from(right, "utf8");
+  return (
+    leftBuffer.length === rightBuffer.length &&
+    timingSafeEqual(leftBuffer, rightBuffer)
+  );
+}
+
 function normalizeHexSignature(value: string | null | undefined) {
   const trimmed = value?.trim().toLowerCase();
   if (!trimmed) {
@@ -92,6 +101,26 @@ export function verifyLumaWebhookSignature({
   }
 
   return { ok: true as const };
+}
+
+export function verifyLumaWebhookCallbackToken({
+  token,
+  expectedToken,
+}: {
+  token: string | null | undefined;
+  expectedToken: string | null | undefined;
+}) {
+  if (!expectedToken) {
+    return { ok: false as const, reason: "missing_callback_token_secret" };
+  }
+
+  if (!token) {
+    return { ok: false as const, reason: "missing_callback_token" };
+  }
+
+  return timingSafeEqualText(token, expectedToken)
+    ? { ok: true as const }
+    : { ok: false as const, reason: "callback_token_mismatch" };
 }
 
 export function extractLumaWebhookEventType(payload: unknown) {

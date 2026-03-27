@@ -31,9 +31,10 @@ When something looks off, check these in order:
 2. Confirm the request signature validation result.
 3. For CipherPay, compare the webhook invoice id to the checkout session id.
 4. For Luma event hooks, confirm the calendar connection has both `luma_webhook_id` and a resolvable `luma_webhook_secret_ref`.
-5. Use the tenant detail page to confirm the Luma key preview, last validation time, webhook status, and latest live Luma feed are all present.
-6. If Luma event hooks are not arriving, confirm `APP_PUBLIC_ORIGIN` points at the deployed service origin used during `validate and sync`.
-7. If the organizer recently replaced the Luma API key, run `validate and sync` again before expecting webhook intake or upstream preview refreshes to recover.
+5. Confirm the callback URL was registered after tokenized fallback auth was added. If not, run `validate and sync` again to recreate the webhook with the current tokenized callback URL.
+6. Use the tenant detail page to confirm the Luma key preview, last validation time, webhook status, and latest live Luma feed are all present.
+7. If Luma event hooks are not arriving, confirm `APP_PUBLIC_ORIGIN` points at the deployed service origin used during `validate and sync`.
+8. If the organizer recently replaced the Luma API key, run `validate and sync` again before expecting webhook intake or upstream preview refreshes to recover.
 
 ### Checkout is stuck on payment details after expiry
 
@@ -72,6 +73,7 @@ When something looks off, check these in order:
 - Keep production secrets in AWS Secrets Manager or your chosen secret manager.
 - Do not use mutable runtime config as the source of truth for production secrets.
 - Operators do not manually enter Luma webhook ids or secrets; those are managed internally during `validate and sync`.
+- Managed Luma webhook callbacks also include a per-calendar fallback token so event refreshes can still be authenticated if Luma omits signature headers.
 - Registration retries are stateful: the first registration attempt starts inline when CipherPay reports a detected payment, and any follow-up retries can be run from the ops UI or `/api/ops/process-registration-tasks`.
 - The attendee-facing checkout should move through four recognizable states: awaiting payment, payment accepted, preparing your pass, and pass ready.
 - Once the pass is ready, the checkout page can save a standalone local pass file in addition to the print/save-PDF flow.

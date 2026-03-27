@@ -360,6 +360,7 @@ export async function processLumaWebhook({
   tenantId,
   requestBody,
   eventType,
+  requestAuthenticated,
   signatureValid,
   validationError,
   requestHeaders,
@@ -368,6 +369,7 @@ export async function processLumaWebhook({
   tenantId: string;
   requestBody: Record<string, unknown>;
   eventType: string | null;
+  requestAuthenticated: boolean;
   signatureValid: boolean;
   validationError: string | null;
   requestHeaders: Record<string, unknown>;
@@ -393,7 +395,7 @@ export async function processLumaWebhook({
 
   await putWebhookDelivery(delivery);
 
-  if (!signatureValid) {
+  if (!requestAuthenticated) {
     await updateWebhookDelivery(delivery.webhook_delivery_id, delivery.received_at, {
       apply_status: "ignored",
       applied_at: nowIso(),

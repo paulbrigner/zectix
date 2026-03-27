@@ -212,6 +212,7 @@ describe("createCalendarConnection", () => {
     expect(result.luma_api_secret_ref).toBe("secret://luma-api");
     expect(result.luma_webhook_id).toBeNull();
     expect(result.luma_webhook_secret_ref).toBeNull();
+    expect(result.luma_webhook_token_ref).toBeNull();
   });
 });
 
@@ -241,6 +242,7 @@ describe("updateCalendarConnectionLumaKey", () => {
     );
     expect(result.luma_api_secret_ref).toBe("secret://luma-existing");
     expect(result.luma_webhook_secret_ref).toBeNull();
+    expect(result.luma_webhook_token_ref).toBeNull();
     expect(result.luma_webhook_id).toBeNull();
     expect(result.last_validated_at).toBeNull();
     expect(result.last_synced_at).toBe("2026-03-24T12:30:00.000Z");
@@ -262,6 +264,7 @@ describe("disableCalendarConnection", () => {
       status: "active",
       luma_api_secret_ref: "secret://luma-existing",
       luma_webhook_secret_ref: "secret://luma-webhook-existing",
+      luma_webhook_token_ref: "secret://luma-webhook-token-existing",
       luma_webhook_id: "whk_existing",
       last_sync_error: "old sync error",
     });
@@ -281,6 +284,7 @@ describe("disableCalendarConnection", () => {
     expect(result.status).toBe("disabled");
     expect(result.luma_webhook_id).toBeNull();
     expect(result.luma_webhook_secret_ref).toBeNull();
+    expect(result.luma_webhook_token_ref).toBeNull();
     expect(result.last_sync_error).toBeNull();
   });
 
@@ -289,6 +293,7 @@ describe("disableCalendarConnection", () => {
       luma_api_secret_ref: "secret://luma-existing",
       luma_webhook_id: "whk_missing",
       luma_webhook_secret_ref: "secret://luma-webhook-existing",
+      luma_webhook_token_ref: "secret://luma-webhook-token-existing",
     });
 
     mockGetCalendarConnection.mockResolvedValue(existingConnection);
@@ -302,6 +307,7 @@ describe("disableCalendarConnection", () => {
     expect(result.status).toBe("disabled");
     expect(result.luma_webhook_id).toBeNull();
     expect(result.luma_webhook_secret_ref).toBeNull();
+    expect(result.luma_webhook_token_ref).toBeNull();
   });
 });
 

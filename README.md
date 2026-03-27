@@ -175,7 +175,8 @@ Optional inbox for the Luma integration beta application:
 - `/api/luma-integration-interest` validates the application payload and sends an SES email to the configured inbox.
 - operators save the Luma API key only; managed Luma webhook ids and secrets are stored internally after `validate and sync`.
 - the tenant detail page shows both the live Luma feed and the mirrored events so operators can review what will be exposed publicly, along with the last successful validation time for the saved key.
-- `validate and sync` verifies the Luma API key, auto-registers the managed webhook for `event.created`, `event.updated`, and `event.canceled`, and refreshes mirrored events/tickets.
+- `validate and sync` verifies the Luma API key, auto-registers the managed webhook for `event.created`, `event.updated`, and `event.canceled`, stores a per-calendar callback token for fallback authentication, and refreshes mirrored events/tickets.
+- if an older calendar connection was registered before callback tokens were added, run `validate and sync` once to recreate the managed webhook URL with the new tokenized callback.
 - calendar connections can be disabled from the tenant detail page to turn off public checkout for that calendar and clear the managed Luma webhook state without deleting mirrored history.
 - the tenant events page separates mirrored events from upstream-only Luma events that are visible to the saved key but not yet in the mirrored checkout surface.
 - event-focused sync controls let ops sync one mirrored or upstream-only event at a time while still using the existing full-calendar refresh as the backend source of truth.
