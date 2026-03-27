@@ -176,7 +176,9 @@ Optional inbox for the Luma integration beta application:
 - operators save the Luma API key only; managed Luma webhook ids and secrets are stored internally after `validate and sync`.
 - the tenant detail page shows both the live Luma feed and the currently mirrored events so operators can review what will be exposed publicly, along with the last successful validation time for the saved key.
 - `validate and sync` verifies the Luma API key, auto-registers the managed webhook for `event.created`, `event.updated`, and `event.canceled`, and refreshes mirrored events/tickets.
-- the tenant events page now separates mirrored events from upstream-only Luma events that are visible to the saved key but not yet in the mirrored checkout surface; importing still refreshes the full calendar connection rather than one event at a time.
+- the tenant events page now separates mirrored events from upstream-only Luma events that are visible to the saved key but not yet in the mirrored checkout surface.
+- event-focused sync controls let ops sync one mirrored or upstream-only event at a time while still using the existing full-calendar refresh as the backend source of truth.
+- upstream-only events now have a surgical import path in the UI: syncing one selected upstream event imports it into mirrored inventory if it is still present in Luma, and the result is shown as an event-focused diff.
 - the tenant dashboard is the internal organizer-style view for connection health, upcoming mirrored inventory, recent sessions, and webhook visibility.
 - the public event form shows enabled ticket tiers first and explains when mirrored tiers are currently unavailable for managed Zcash checkout.
 - the checkout page now centers the attendee-facing payment/pass states: pay with Zcash, preparing your pass, pass ready, open on Luma, and save pass.

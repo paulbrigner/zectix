@@ -11,6 +11,7 @@ import {
   createTenant,
   setTenantStatus,
   setTicketOperatorAssertions,
+  syncCalendarEventForOps,
   updateCalendarConnectionLumaKey,
   validateAndSyncCalendar,
   validateCipherPayConnection,
@@ -19,6 +20,15 @@ import {
 function redirectTo(formData: FormData, fallback: string) {
   const next = asString(formData.get("redirect_to"));
   redirect(next || fallback);
+}
+
+function redirectToWithQuery(base: string, params: URLSearchParams) {
+  const query = params.toString();
+  if (!query) {
+    redirect(base);
+  }
+
+  redirect(`${base}${base.includes("?") ? "&" : "?"}${query}`);
 }
 
 function asTenantStatus(value: unknown, fallback: TenantStatus = "draft"): TenantStatus {
@@ -72,6 +82,47 @@ export async function validateAndSyncCalendarAction(formData: FormData) {
   const calendarConnectionId = String(formData.get("calendar_connection_id") || "");
   const connection = await validateAndSyncCalendar(calendarConnectionId);
   redirectTo(formData, `/ops/tenants/${encodeURIComponent(connection.connection.tenant_id)}`);
+}
+
+export async function syncCalendarEventAction(formData: FormData) {
+  await requireOpsPageAccess();
+  const tenantId = String(formData.get("tenant_id") || "");
+  const redirectBase =
+    asString(formData.get("redirect_to")) ||
+    `/ops/tenants/${encodeURIComponent(tenantId)}/events`;
+
+  try {
+    const result = await syncCalendarEventForOps({
+      calendar_connection_id: String(formData.get("calendar_connection_id") || ""),
+      event_api_id: String(formData.get("event_api_id") || ""),
+      event_name: String(formData.get("event_name") || ""),
+      focus: formData.get("focus") === "upstream" ? "upstream" : "mirrored",
+    });
+
+    const params = new URLSearchParams();
+    params.set("sync_event_id", result.review.event_api_id);
+    params.set("sync_event_name", result.review.event_name);
+    params.set("sync_focus", result.review.focus);
+    params.set("sync_outcome", result.review.outcome);
+    params.set("sync_status", result.review.sync_status);
+    params.set("sync_added", String(result.review.tickets_added));
+    params.set("sync_removed", String(result.review.tickets_removed));
+    params.set("sync_mirrored", String(result.review.mirrored_ticket_count));
+    params.set("sync_enabled", String(result.review.enabled_ticket_count));
+    params.set("sync_public", result.review.public_checkout_enabled ? "1" : "0");
+    params.set("sync_at", result.review.happened_at);
+    redirectToWithQuery(redirectBase, params);
+  } catch (error) {
+    const params = new URLSearchParams();
+    params.set(
+      "sync_error",
+      error instanceof Error ? error.message : "Could not refresh this Luma event.",
+    );
+    params.set("sync_event_id", String(formData.get("event_api_id") || ""));
+    params.set("sync_event_name", String(formData.get("event_name") || ""));
+    params.set("sync_focus", formData.get("focus") === "upstream" ? "upstream" : "mirrored");
+    redirectToWithQuery(redirectBase, params);
+  }
 }
 
 export async function updateCalendarConnectionLumaKeyAction(formData: FormData) {

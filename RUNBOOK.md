@@ -66,7 +66,8 @@ When something looks off, check these in order:
 
 - The ops console is the main recovery surface.
 - The tenant detail page is the quickest place to compare the current live Luma feed against mirrored inventory when something looks off.
-- The tenant events page now separates upstream-only future Luma events from mirrored events; importing there still refreshes the full calendar connection.
+- The tenant events page now separates upstream-only future Luma events from mirrored events and supports event-focused sync/import actions.
+- Event-focused sync still runs the existing full-calendar refresh in the backend, but the UI now returns a scoped diff for the selected event: imported, updated, removed from the current feed, and ticket-tier changes.
 - Keep production secrets in AWS Secrets Manager or your chosen secret manager.
 - Do not use mutable runtime config as the source of truth for production secrets.
 - Operators do not manually enter Luma webhook ids or secrets; those are managed internally during `validate and sync`.
