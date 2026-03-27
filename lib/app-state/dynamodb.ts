@@ -13,24 +13,17 @@ function dynamoConfig(): DynamoDBClientConfig {
     (process.env.NODE_ENV === "development"
       ? DEFAULT_LOCAL_DYNAMODB_ENDPOINT
       : undefined);
-  const accessKeyId = process.env.AWS_ACCESS_KEY_ID?.trim();
-  const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY?.trim();
-  const sessionToken = process.env.AWS_SESSION_TOKEN?.trim();
 
   return {
     region: process.env.AWS_REGION || "us-east-1",
     endpoint,
+    // Only pin credentials for local DynamoDB. In hosted environments we rely on
+    // the default AWS credential chain so the compute role can refresh tokens.
     credentials: endpoint
       ? {
-          accessKeyId: accessKeyId || "local",
-          secretAccessKey: secretAccessKey || "local",
+          accessKeyId: process.env.AWS_ACCESS_KEY_ID?.trim() || "local",
+          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY?.trim() || "local",
         }
-      : accessKeyId && secretAccessKey
-        ? {
-            accessKeyId,
-            secretAccessKey,
-            sessionToken,
-          }
       : undefined,
   };
 }
