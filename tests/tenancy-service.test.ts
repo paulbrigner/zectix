@@ -28,6 +28,7 @@ const mockPutTicketMirror = vi.fn();
 
 const mockSetSecret = vi.fn();
 const mockGetSecret = vi.fn();
+const mockListLumaEvents = vi.fn();
 
 vi.mock("@/lib/app-state/state", () => ({
   getCalendarConnection: mockGetCalendarConnection,
@@ -65,6 +66,10 @@ vi.mock("@/lib/sync/luma-sync", () => ({
   validateCalendarConnection: vi.fn(),
 }));
 
+vi.mock("@/lib/luma", () => ({
+  listLumaEvents: mockListLumaEvents,
+}));
+
 const {
   createCalendarConnection,
   createCipherPayConnection,
@@ -97,10 +102,12 @@ beforeEach(() => {
   mockPutTicketMirror.mockReset();
   mockSetSecret.mockReset();
   mockGetSecret.mockReset();
+  mockListLumaEvents.mockReset();
 
   mockPutCalendarConnection.mockImplementation(async (connection) => connection);
   mockPutCipherPayConnection.mockImplementation(async (connection) => connection);
   mockGetSecret.mockResolvedValue("resolved-secret");
+  mockListLumaEvents.mockResolvedValue([]);
   mockListSessionsByTenant.mockResolvedValue([]);
   mockListWebhookDeliveriesByTenant.mockResolvedValue([]);
   mockListRegistrationTasksByTenant.mockResolvedValue([]);
@@ -223,5 +230,13 @@ describe("getTenantOpsDetail", () => {
         calendar.calendar_connection_id,
       )?.cipherpay_connection_id,
     ).toBe("cp_current");
+    expect(
+      detail?.upstream_luma_events_by_calendar.get(
+        calendar.calendar_connection_id,
+      ),
+    ).toEqual({
+      events: [],
+      error: null,
+    });
   });
 });

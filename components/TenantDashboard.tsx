@@ -35,6 +35,24 @@ function isFutureEvent(startAt: string) {
   return Number.isFinite(startAtMs) && startAtMs >= Date.now();
 }
 
+function summarizeCalendar(detail: TenantOpsDetail, calendarConnectionId: string) {
+  const mirroredEvents =
+    detail.events.find(
+      (entry) => entry.calendar.calendar_connection_id === calendarConnectionId,
+    )?.events || [];
+  const tickets = mirroredEvents.flatMap(
+    (event) => detail.tickets_by_event.get(event.event_api_id) || [],
+  );
+
+  return {
+    mirroredEvents,
+    tickets,
+    futureMirroredEvents: mirroredEvents.filter((event) => isFutureEvent(event.start_at)),
+    enabledEvents: mirroredEvents.filter((event) => event.zcash_enabled),
+    enabledTickets: tickets.filter((ticket) => ticket.zcash_enabled),
+  };
+}
+
 export function TenantDashboard({
   detail,
   tenantBasePath,
@@ -125,7 +143,7 @@ export function TenantDashboard({
           <div>
             <h2>Setup</h2>
             <p className="subtle-text">
-              Public entry points and the payment callback this tenant should use.
+              Public entry points, connection health, and what the saved Luma key can currently see upstream.
             </p>
           </div>
         </div>
@@ -156,41 +174,142 @@ export function TenantDashboard({
           </article>
         </div>
 
-        <div className="console-card-grid">
+        <div className="console-luma-card-stack">
           {detail.calendars.map((calendar) => {
             const publicCalendarUrl = appUrl(`/c/${calendar.slug}`);
             const activeConnection =
               detail.active_cipherpay_connections_by_calendar.get(
                 calendar.calendar_connection_id,
               ) || null;
+            const calendarPreviews =
+              detail.calendar_secret_previews.get(calendar.calendar_connection_id) || null;
+            const livePreview =
+              detail.upstream_luma_events_by_calendar.get(
+                calendar.calendar_connection_id,
+              ) || null;
+            const {
+              futureMirroredEvents,
+              tickets,
+              enabledEvents,
+              enabledTickets,
+            } = summarizeCalendar(detail, calendar.calendar_connection_id);
+            const liveUpcomingEvents =
+              livePreview?.events.filter((event) => isFutureEvent(event.start_at)).slice(0, 3) ||
+              livePreview?.events.slice(0, 3) ||
+              [];
+            const webhookConfigured =
+              Boolean(calendar.luma_webhook_id) &&
+              Boolean(calendarPreviews?.lumaWebhook.has_value);
 
             return (
-              <article className="console-detail-card" key={calendar.calendar_connection_id}>
-                <p className="console-kpi-label">{calendar.status}</p>
-                <h3>{calendar.display_name}</h3>
-                <p className="subtle-text">
-                  Public URL:{" "}
-                  {publicCalendarUrl ? (
-                    <a href={publicCalendarUrl}>{publicCalendarUrl}</a>
-                  ) : (
-                    `/c/${calendar.slug}`
-                  )}
-                </p>
-                <p className="subtle-text">
-                  Luma sync {calendar.last_synced_at || "not yet"}{" "}
-                  {calendar.last_sync_error ? `· ${calendar.last_sync_error}` : ""}
-                </p>
-                <p className="subtle-text">
-                  CipherPay{" "}
-                  {activeConnection
-                    ? `${activeConnection.network} · ${activeConnection.status}`
-                    : "not connected"}
-                </p>
-                {publicCalendarUrl ? (
-                  <Link className="button button-secondary button-small" href={publicCalendarUrl}>
-                    Open public calendar
-                  </Link>
+              <article
+                className="console-detail-card console-luma-card"
+                key={calendar.calendar_connection_id}
+              >
+                <div className="console-luma-card-head">
+                  <div>
+                    <p className="console-kpi-label">{calendar.status}</p>
+                    <h3>{calendar.display_name}</h3>
+                    <p className="subtle-text">
+                      Public URL:{" "}
+                      {publicCalendarUrl ? (
+                        <a href={publicCalendarUrl}>{publicCalendarUrl}</a>
+                      ) : (
+                        `/c/${calendar.slug}`
+                      )}
+                    </p>
+                  </div>
+                  <div className="button-row">
+                    <Link
+                      className="button button-secondary button-small"
+                      href={tenantBasePath}
+                    >
+                      Settings
+                    </Link>
+                    <Link
+                      className="button button-secondary button-small"
+                      href={`${tenantBasePath}/events`}
+                    >
+                      Review tickets
+                    </Link>
+                  </div>
+                </div>
+
+                <div className="console-signal-grid">
+                  <div className="console-signal-card">
+                    <span className="console-kpi-label">Luma</span>
+                    <strong>
+                      {calendarPreviews?.luma.has_value ? "Key saved" : "Missing key"}
+                    </strong>
+                    <p className="subtle-text">
+                      {webhookConfigured ? "Webhook configured" : "Webhook pending"}
+                    </p>
+                  </div>
+                  <div className="console-signal-card">
+                    <span className="console-kpi-label">Mirrored events</span>
+                    <strong>{futureMirroredEvents.length} future</strong>
+                    <p className="subtle-text">
+                      {enabledEvents.length} public events enabled
+                    </p>
+                  </div>
+                  <div className="console-signal-card">
+                    <span className="console-kpi-label">Tickets</span>
+                    <strong>{tickets.length} mirrored tickets</strong>
+                    <p className="subtle-text">
+                      {enabledTickets.length} currently Zcash-enabled
+                    </p>
+                  </div>
+                  <div className="console-signal-card">
+                    <span className="console-kpi-label">CipherPay</span>
+                    <strong>
+                      {activeConnection
+                        ? `${activeConnection.network} ready`
+                        : "Not connected"}
+                    </strong>
+                    <p className="subtle-text">
+                      {activeConnection
+                        ? `Validation ${activeConnection.status}`
+                        : "Checkout is unavailable until a connection is added."}
+                    </p>
+                  </div>
+                </div>
+
+                {calendar.last_sync_error ? (
+                  <p className="console-error-text">{calendar.last_sync_error}</p>
                 ) : null}
+
+                <div className="console-preview-list console-preview-list-compact">
+                  {livePreview?.error ? (
+                    <div className="console-preview-empty">
+                      <strong>Could not load current Luma events</strong>
+                      <p className="subtle-text">{livePreview.error}</p>
+                    </div>
+                  ) : liveUpcomingEvents.length ? (
+                    liveUpcomingEvents.map((event) => (
+                      <article className="console-preview-card console-preview-card-compact" key={event.api_id}>
+                        <div className="console-preview-body">
+                          <div className="console-preview-body-head">
+                            <div>
+                              <p className="console-kpi-label">Live Luma feed</p>
+                              <h4>{event.name}</h4>
+                            </div>
+                          </div>
+                          <p className="subtle-text">
+                            <LocalDateTime iso={event.start_at} />
+                            {event.location_label ? ` · ${event.location_label}` : ""}
+                          </p>
+                        </div>
+                      </article>
+                    ))
+                  ) : (
+                    <div className="console-preview-empty">
+                      <strong>No Luma events available yet</strong>
+                      <p className="subtle-text">
+                        Save and validate the Luma key to start mirroring this calendar.
+                      </p>
+                    </div>
+                  )}
+                </div>
               </article>
             );
           })}
@@ -218,19 +337,40 @@ export function TenantDashboard({
               );
 
               return (
-                <article className="console-detail-card" key={event.event_api_id}>
-                  <p className="console-kpi-label">{calendar.display_name}</p>
-                  <h3>{event.name}</h3>
-                  <p className="subtle-text">
-                    <LocalDateTime iso={event.start_at} />
-                  </p>
-                  <p className="subtle-text">
-                    Public checkout {event.zcash_enabled ? "enabled" : "hidden"} ·{" "}
-                    {enabledTicketCount}/{tickets.length} tickets enabled
-                  </p>
-                  <p className="subtle-text">
-                    {event.zcash_enabled_reason || "No reason recorded"}
-                  </p>
+                <article className="console-detail-card console-preview-card" key={event.event_api_id}>
+                  {event.cover_url ? (
+                    <div className="console-preview-media">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img alt={event.name} src={event.cover_url} />
+                    </div>
+                  ) : (
+                    <div className="console-preview-media console-preview-media-fallback">
+                      <span>{event.name.slice(0, 2).toUpperCase()}</span>
+                    </div>
+                  )}
+                  <div className="console-preview-body">
+                    <div className="console-preview-body-head">
+                      <div>
+                        <p className="console-kpi-label">{calendar.display_name}</p>
+                        <h4>{event.name}</h4>
+                      </div>
+                      <div className="console-mini-pill-row">
+                        <span className="console-mini-pill">
+                          {event.zcash_enabled ? "Public checkout enabled" : "Hidden"}
+                        </span>
+                        <span className="console-mini-pill">
+                          {enabledTicketCount}/{tickets.length} tickets enabled
+                        </span>
+                      </div>
+                    </div>
+                    <p className="subtle-text">
+                      <LocalDateTime iso={event.start_at} />
+                      {event.location_label ? ` · ${event.location_label}` : ""}
+                    </p>
+                    <p className="subtle-text">
+                      {event.zcash_enabled_reason || "No reason recorded"}
+                    </p>
+                  </div>
                   <div className="button-row">
                     {publicEventUrl ? (
                       <Link className="button button-secondary button-small" href={publicEventUrl}>

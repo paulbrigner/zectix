@@ -1,5 +1,7 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { setTicketAssertionsAction } from "@/app/ops/actions";
+import { LocalDateTime } from "@/components/LocalDateTime";
 import { getTenantOpsDetail } from "@/lib/tenancy/service";
 
 export const runtime = "nodejs";
@@ -54,18 +56,108 @@ export default async function TenantEventsPage({
         <section className="console-content" key={calendar.calendar_connection_id}>
           <h3>{calendar.display_name}</h3>
           {events.map((event) => (
-            <article className="console-detail-card" key={event.event_api_id}>
-              <h3>{event.name}</h3>
-              <p className="subtle-text">
-                Event public status: {event.zcash_enabled ? "enabled" : "hidden"} · {event.zcash_enabled_reason || "No reason recorded"}
-              </p>
-              <div className="console-card-grid">
+            <article className="console-detail-card console-event-review-card" key={event.event_api_id}>
+              <div className="console-event-review-head">
+                {event.cover_url ? (
+                  <div className="console-preview-media console-preview-media-square">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img alt={event.name} src={event.cover_url} />
+                  </div>
+                ) : (
+                  <div className="console-preview-media console-preview-media-fallback console-preview-media-square">
+                    <span>{event.name.slice(0, 2).toUpperCase()}</span>
+                  </div>
+                )}
+                <div className="console-event-review-copy">
+                  <div className="console-preview-body-head">
+                    <div>
+                      <p className="console-kpi-label">{calendar.display_name}</p>
+                      <h3>{event.name}</h3>
+                    </div>
+                    <div className="console-mini-pill-row">
+                      <span className="console-mini-pill">
+                        {event.zcash_enabled ? "Public checkout enabled" : "Public checkout hidden"}
+                      </span>
+                      <span className="console-mini-pill">
+                        Sync {event.sync_status}
+                      </span>
+                    </div>
+                  </div>
+                  <p className="subtle-text">
+                    <LocalDateTime iso={event.start_at} />
+                    {event.location_label ? ` · ${event.location_label}` : ""}
+                  </p>
+                  <p className="subtle-text">
+                    {event.zcash_enabled_reason || "No reason recorded"}
+                  </p>
+                  <div className="button-row">
+                    {event.url ? (
+                      <a
+                        className="button button-secondary button-small"
+                        href={event.url}
+                        rel="noreferrer noopener"
+                        target="_blank"
+                      >
+                        Open on Luma
+                      </a>
+                    ) : null}
+                    <Link
+                      className="button button-secondary button-small"
+                      href={`/c/${calendar.slug}/events/${encodeURIComponent(event.event_api_id)}`}
+                    >
+                      Open public event
+                    </Link>
+                  </div>
+                </div>
+              </div>
+
+              <div className="console-signal-grid">
+                <div className="console-signal-card">
+                  <span className="console-kpi-label">Tickets</span>
+                  <strong>
+                    {(detail.tickets_by_event.get(event.event_api_id) || []).length} mirrored
+                  </strong>
+                  <p className="subtle-text">
+                    {(
+                      detail.tickets_by_event.get(event.event_api_id) || []
+                    ).filter((ticket) => ticket.zcash_enabled).length} enabled for public checkout
+                  </p>
+                </div>
+                <div className="console-signal-card">
+                  <span className="console-kpi-label">Last sync</span>
+                  <strong>{event.last_synced_at ? "Updated" : "Pending"}</strong>
+                  <p className="subtle-text">
+                    {event.last_synced_at ? (
+                      <LocalDateTime iso={event.last_synced_at} />
+                    ) : (
+                      "This event has not been refreshed yet."
+                    )}
+                  </p>
+                </div>
+              </div>
+
+              <div className="console-card-grid console-ticket-assertion-grid">
                 {(detail.tickets_by_event.get(event.event_api_id) || []).map((ticket) => (
-                  <form action={setTicketAssertionsAction} className="console-detail-card" key={ticket.ticket_type_api_id}>
+                  <form action={setTicketAssertionsAction} className="console-detail-card console-ticket-assertion-card" key={ticket.ticket_type_api_id}>
                     <input name="event_api_id" type="hidden" value={ticket.event_api_id} />
                     <input name="ticket_type_api_id" type="hidden" value={ticket.ticket_type_api_id} />
                     <input name="redirect_to" type="hidden" value={`/ops/tenants/${tenantId}/events`} />
-                    <h4>{ticket.name}</h4>
+                    <div className="console-preview-body-head">
+                      <div>
+                        <p className="console-kpi-label">
+                          {ticket.active ? "Active in Luma" : "Inactive in Luma"}
+                        </p>
+                        <h4>{ticket.name}</h4>
+                      </div>
+                      <div className="console-mini-pill-row">
+                        <span className="console-mini-pill">
+                          {ticket.zcash_enabled ? "Enabled" : "Hidden"}
+                        </span>
+                        <span className="console-mini-pill">
+                          {ticketSummaryLabel(ticket)}
+                        </span>
+                      </div>
+                    </div>
                     <p className="subtle-text">
                       Auto checks: {ticket.automatic_eligibility_status} · {ticket.automatic_eligibility_reasons.join(" ")}
                     </p>
@@ -102,4 +194,15 @@ export default async function TenantEventsPage({
       ))}
     </section>
   );
+}
+
+function ticketSummaryLabel(ticket: {
+  amount: number | null;
+  currency: string | null;
+}) {
+  if (ticket.amount == null || !ticket.currency) {
+    return "Price from Luma";
+  }
+
+  return `${ticket.currency.toUpperCase()} ${ticket.amount.toFixed(2)}`;
 }
