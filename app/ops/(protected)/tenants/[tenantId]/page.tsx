@@ -164,16 +164,17 @@ export default async function TenantDetailPage({
           <div>
             <h2>Calendar connection</h2>
             <p className="subtle-text">
-              Store the organizer’s Luma API key. The managed event webhook is
-              created internally during validation.
+              Connect a Luma calendar for this tenant, add another calendar if
+              needed, or update an existing connection below. The managed event
+              webhook is created internally during validation.
             </p>
           </div>
         </div>
 
         <ConsoleDisclosure
           defaultOpen={!detail.calendars.length}
-          description="Save the Luma API key first. Validate and sync will verify access, register the managed event webhook, and refresh mirrored inventory."
-          title="New calendar connection"
+          description="Save the Luma API key first. Validate and sync will verify access, register the managed event webhook, and refresh mirrored inventory for that calendar."
+          title="Add calendar connection"
         >
           <form action={createCalendarConnectionAction} className="console-content">
             <input name="tenant_id" type="hidden" value={detail.tenant.tenant_id} />
@@ -467,9 +468,9 @@ export default async function TenantDetailPage({
           <div>
             <h2>CipherPay connection</h2>
             <p className="subtle-text">
-              Each calendar needs one current CipherPay account for checkout.
-              Saving this form for a calendar updates that current connection in
-              place instead of creating a second live mapping.
+              Each calendar uses one live CipherPay account for checkout.
+              Saving this form for a calendar replaces that calendar’s current
+              live checkout connection instead of adding another active one.
             </p>
           </div>
         </div>
