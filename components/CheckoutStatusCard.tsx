@@ -137,6 +137,7 @@ export function CheckoutStatusCard({
   event,
   viewerToken,
 }: CheckoutStatusCardProps) {
+  const showCheckoutSessionPanel = false;
   const [session, setSession] = useState(initialSession);
   const [copyNotice, setCopyNotice] = useState<string | null>(null);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string | null>(null);
@@ -367,9 +368,9 @@ export function CheckoutStatusCard({
     }
   }
 
-  function openPrintView() {
+  function buildPassDocumentHtml(includePrintButton: boolean) {
     if (!registrationGuest || !entryQrDataUrl) {
-      return;
+      return null;
     }
 
     const approvalStatus =
@@ -378,12 +379,6 @@ export function CheckoutStatusCard({
         : "approved";
     const guestId =
       typeof registrationGuest.id === "string" ? registrationGuest.id : "pending";
-    const printWindow = window.open("", "_blank", "width=960,height=1100");
-
-    if (!printWindow) {
-      setCopyNotice("Could not open print view.");
-      return;
-    }
 
     const escapedEventName = escapeHtml(session.event_name);
     const escapedTicketName = escapeHtml(lumaTicketName);
@@ -415,7 +410,7 @@ export function CheckoutStatusCard({
       ? escapeHtml(event.location_note)
       : "";
 
-    printWindow.document.write(`<!DOCTYPE html>
+    return `<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -633,352 +628,66 @@ export function CheckoutStatusCard({
             <strong>${escapedRegisteredAt}</strong>
           </div>
         </div>
-        <div class="actions">
+        ${includePrintButton ? `<div class="actions">
           <button class="print-button" onclick="window.print()">Print / Save PDF</button>
-        </div>
+        </div>` : ""}
       </section>
     </main>
   </body>
-</html>`);
+</html>`;
+  }
+
+  function openPrintView() {
+    const html = buildPassDocumentHtml(true);
+    if (!html) {
+      return;
+    }
+
+    const printWindow = window.open("", "_blank", "width=960,height=1100");
+
+    if (!printWindow) {
+      setCopyNotice("Could not open print view.");
+      return;
+    }
+
+    printWindow.document.write(html);
     printWindow.document.close();
     printWindow.focus();
   }
 
+  function savePassFile() {
+    const html = buildPassDocumentHtml(false);
+    if (!html) {
+      return;
+    }
+
+    const safeEventName = session.event_name
+      .toLowerCase()
+      .replaceAll(/[^a-z0-9]+/g, "-")
+      .replaceAll(/^-+|-+$/g, "") || "zec-pass";
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${safeEventName}-pass.html`;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => {
+      URL.revokeObjectURL(url);
+    }, 0);
+    setCopyNotice("Pass saved.");
+  }
+
   return (
-    <div className="checkout-status-shell">
-      <section className="status-card checkout-overview-card">
-        <div className="checkout-overview-media">
-          {event?.cover_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img alt={session.event_name} src={event.cover_url} />
-          ) : (
-            <div className="checkout-overview-media-fallback">
-              {session.event_name.slice(0, 2).toUpperCase()}
-            </div>
-          )}
-        </div>
-        <div className="checkout-overview-copy">
-          <div className="checkout-overview-head">
-            <div>
-              <p className="eyebrow">
-                {!paymentAccepted
-                  ? "Checkout"
-                  : passReady
-                    ? "Luma pass"
-                    : session.registration_status === "failed"
-                      ? "Registration issue"
-                      : "Payment accepted"}
-              </p>
-              <h2>{session.event_name}</h2>
-              <p className="subtle-text">
-                Ticket for {attendeeName}
-                {attendeeEmail ? ` · ${attendeeEmail}` : ""}
-              </p>
-            </div>
-            <div className="payment-panel-meta">
-              <span className="public-status-chip">{paymentStateLabel(session)}</span>
-              {paymentExpiryLabel && !paymentAccepted && !invoiceExpired ? (
-                <span className="status-pill-lite">{paymentExpiryLabel}</span>
-              ) : null}
-            </div>
-          </div>
-
-          <p className="checkout-status-message">{statusMessage(session)}</p>
-
-          <div className="checkout-overview-grid">
-            <div className="checkout-key-value">
-              <span>Starts</span>
-              <strong>
-                {event?.start_at ? <LocalDateTime iso={event.start_at} /> : "Event time pending"}
-              </strong>
-              <p className="subtle-text">{event?.location_label || "Venue on Luma"}</p>
-            </div>
-            <div className="checkout-key-value">
-              <span>Ticket</span>
-              <strong>{passReady ? lumaTicketName : session.ticket_type_name || "Luma ticket"}</strong>
-              <p className="subtle-text">{formatFiatAmount(session.amount, session.currency)}</p>
-            </div>
-            <div className="checkout-key-value">
-              <span>Registration</span>
-              <strong>
-                {passReady
-                  ? "Pass ready"
-                  : session.registration_status === "failed"
-                    ? "Needs attention"
-                    : "In progress"}
-              </strong>
-              <p className="subtle-text">
-                {passReady
-                  ? "Luma pass attached"
-                  : session.registration_status === "failed"
-                    ? (session.registration_error || "Operator follow-up may be required.")
-                    : "This page refreshes automatically while registration finishes."}
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <div className="status-layout">
+    <div className={`status-layout${showCheckoutSessionPanel ? "" : " status-layout-single"}`}>
+      {showCheckoutSessionPanel ? (
         <div className="status-main">
-          {!paymentAccepted ? (
-            <section className="payment-panel">
-              <div className="payment-panel-head">
-                <div>
-                  <p className="eyebrow">Pay with Zcash</p>
-                  <h3>Complete your ticket purchase</h3>
-                </div>
-                <div className="payment-panel-meta">
-                  <span className="public-status-chip">{paymentStateLabel(session)}</span>
-                  {paymentExpiryLabel && !invoiceExpired ? (
-                    <span className="status-pill-lite">{paymentExpiryLabel}</span>
-                  ) : null}
-                </div>
-              </div>
-
-              <div className="payment-summary-row">
-                <div className="checkout-key-value">
-                  <span>Event</span>
-                  <strong>{session.event_name}</strong>
-                </div>
-                <div className="checkout-key-value">
-                  <span>Ticket</span>
-                  <strong>{session.ticket_type_name || "Luma ticket"}</strong>
-                </div>
-              </div>
-
-              <div className={`payment-qr-wrap${invoiceExpired ? " payment-qr-wrap-expired" : ""}`}>
-                {qrCodeDataUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    alt="Zcash payment QR code"
-                    className={`checkout-qr-image${invoiceExpired ? " checkout-qr-image-expired" : ""}`}
-                    src={qrCodeDataUrl}
-                  />
-                ) : (
-                  <div className="checkout-qr-fallback">
-                    QR code will appear once CipherPay returns the payment URI.
-                  </div>
-                )}
-                {invoiceExpired ? <div className="payment-qr-expired-overlay">Expired</div> : null}
-              </div>
-
-              <div className="payment-key-list">
-                <div className="payment-key-row">
-                  <div className="checkout-key-value">
-                    <span>Amount</span>
-                    <strong>{zecAmountLabel(session.cipherpay_price_zec)}</strong>
-                  </div>
-                </div>
-
-                <div className="payment-key-row">
-                  <div className="checkout-key-value">
-                    <span>Address</span>
-                    <strong
-                      className={`checkout-mono${invoiceExpired ? " checkout-mono-expired" : ""}`}
-                    >
-                      {session.cipherpay_payment_address || "Not returned yet"}
-                    </strong>
-                  </div>
-                  <button
-                    className="button button-secondary button-small"
-                    disabled={!session.cipherpay_payment_address || invoiceExpired}
-                    onClick={() =>
-                      void copyValue(session.cipherpay_payment_address, "Payment address")
-                    }
-                    type="button"
-                  >
-                    {invoiceExpired ? "Address expired" : "Copy address"}
-                  </button>
-                </div>
-
-                <div className="payment-key-row">
-                  <div className="checkout-key-value">
-                    <span>Reference code</span>
-                    <strong>{session.cipherpay_memo_code || "Not assigned yet"}</strong>
-                  </div>
-                  <button
-                    className="button button-secondary button-small"
-                    disabled={!session.cipherpay_memo_code}
-                    onClick={() => void copyValue(session.cipherpay_memo_code, "Reference code")}
-                    type="button"
-                  >
-                    Copy code
-                  </button>
-                </div>
-              </div>
-
-              <div className="payment-action-stack">
-                {session.cipherpay_zcash_uri ? (
-                  invoiceExpired ? (
-                    <button className="button" disabled type="button">
-                      Open wallet · Expired
-                    </button>
-                  ) : (
-                    <a className="button" href={session.cipherpay_zcash_uri}>
-                      Open wallet
-                    </a>
-                  )
-                ) : null}
-                <button
-                  className="button button-secondary"
-                  disabled={!session.cipherpay_zcash_uri || invoiceExpired}
-                  onClick={() => void copyValue(session.cipherpay_zcash_uri, "Zcash URI")}
-                  type="button"
-                >
-                  {invoiceExpired ? "Copy payment URI · Expired" : "Copy payment URI"}
-                </button>
-              </div>
-
-              {copyNotice ? <p className="console-valid-text">{copyNotice}</p> : null}
-            </section>
-          ) : (
-            <section className="pass-shell">
-              <div className="pass-head">
-                <div className="pass-head-top">
-                  <p className="eyebrow">{passReady ? "Attendee pass" : "Payment accepted"}</p>
-                  <div className="pass-actions">
-                    <button
-                      aria-label="Open printer-friendly pass"
-                      className="checkout-print-button"
-                      disabled={!passReady || !entryQrDataUrl}
-                      onClick={() => openPrintView()}
-                      type="button"
-                    >
-                      <svg
-                        aria-hidden="true"
-                        fill="none"
-                        height="18"
-                        viewBox="0 0 24 24"
-                        width="18"
-                      >
-                        <path
-                          d="M7 9V4h10v5M7 14H5a2 2 0 0 1-2-2v-1.5A2.5 2.5 0 0 1 5.5 8h13A2.5 2.5 0 0 1 21 10.5V12a2 2 0 0 1-2 2h-2M7 12h10v8H7v-8Z"
-                          stroke="currentColor"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="1.7"
-                        />
-                        <circle cx="17.5" cy="10.5" fill="currentColor" r="1" />
-                      </svg>
-                    </button>
-                    {event?.url ? (
-                      <a
-                        className="button button-secondary button-small"
-                        href={event.url}
-                        rel="noreferrer noopener"
-                        target="_blank"
-                      >
-                        Open on Luma
-                      </a>
-                    ) : null}
-                  </div>
-                </div>
-                <h3>
-                  {passReady
-                    ? "You're in"
-                    : session.registration_status === "failed"
-                      ? "Registration needs attention"
-                      : "Preparing your pass"}
-                </h3>
-              </div>
-
-              <div className="pass-banner">
-                {passReady
-                  ? "Your Luma attendee pass is ready. Luma will continue to handle ticket delivery and event updates."
-                  : session.registration_status === "failed"
-                    ? (session.registration_error ||
-                      "Payment accepted, but Luma did not create the attendee record yet.")
-                    : "Payment accepted. We're attaching your Luma attendee pass now. This page refreshes automatically."}
-              </div>
-
-              {passReady && registrationGuest ? (
-                <div className="pass-grid">
-                  <div className="pass-qr-card">
-                    {entryQrDataUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        alt="Luma entry QR code"
-                        className="checkout-qr-image"
-                        src={entryQrDataUrl}
-                      />
-                    ) : (
-                      <div className="checkout-qr-fallback">
-                        Luma check-in QR will appear here as soon as it is available.
-                      </div>
-                    )}
-                    <p className="subtle-text">Check-in QR</p>
-                  </div>
-
-                  <div className="pass-detail-list">
-                    <div className="pass-detail-row">
-                      <span>Event</span>
-                      <div>
-                        <strong>{session.event_name}</strong>
-                        <p>
-                          {event?.start_at ? (
-                            <LocalDateTime iso={event.start_at} />
-                          ) : (
-                            "Event time pending"
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="pass-detail-row">
-                      <span>Attendee</span>
-                      <div>
-                        <strong>{attendeeName}</strong>
-                        <p>{attendeeEmail}</p>
-                      </div>
-                    </div>
-                    <div className="pass-detail-row">
-                      <span>Ticket</span>
-                      <div>
-                        <strong>{lumaTicketName}</strong>
-                        <p>Paid with Zcash through CipherPay</p>
-                      </div>
-                    </div>
-                    <div className="pass-detail-row">
-                      <span>Entry status</span>
-                      <div>
-                        <strong>
-                          {typeof registrationGuest.approval_status === "string"
-                            ? registrationGuest.approval_status
-                            : "approved"}
-                        </strong>
-                        <p>
-                          Registered{" "}
-                          {lumaRegisteredAt ? (
-                            <LocalDateTime iso={lumaRegisteredAt} />
-                          ) : (
-                            "just now"
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="pass-loading-card">
-                  <strong>Preparing your pass</strong>
-                  <p className="subtle-text">
-                    {session.registration_status === "failed"
-                      ? (session.registration_error ||
-                        "Payment has been accepted, but the Luma attendee record still needs operator attention.")
-                      : "Payment has been accepted. The Luma guest record is still being attached and this page will keep polling."}
-                  </p>
-                </div>
-              )}
-            </section>
-          )}
-        </div>
-
-        <aside className="status-sidebar">
           <section className="status-card">
             <div className="status-card-head">
               <div>
                 <p className="eyebrow">Checkout status</p>
-                <h2>{paymentStateLabel(session)}</h2>
+                <h2>{session.event_name}</h2>
               </div>
               <div className="status-badge-wrap">
                 <span className="public-status-chip">{paymentStateLabel(session)}</span>
@@ -994,7 +703,7 @@ export function CheckoutStatusCard({
                 <p className="subtle-text">{attendeeEmail}</p>
               </div>
               <div className="checkout-key-value">
-                <span>Ticket</span>
+                <span>Ticket tier</span>
                 <strong>{passReady ? lumaTicketName : session.ticket_type_name || "Luma ticket"}</strong>
                 <p className="subtle-text">
                   {formatFiatAmount(session.amount, session.currency)}
@@ -1027,9 +736,7 @@ export function CheckoutStatusCard({
                 </p>
               </div>
             </div>
-          </section>
-          <section className="status-card">
-            <p className="eyebrow">Timeline</p>
+
             <div className="status-timeline">
               <div className="checkout-key-value">
                 <span>Created</span>
@@ -1049,20 +756,270 @@ export function CheckoutStatusCard({
                   {session.confirmed_at ? <LocalDateTime iso={session.confirmed_at} /> : "n/a"}
                 </strong>
               </div>
-              <div className="checkout-key-value">
-                <span>Invoice expires</span>
-                <strong>
-                  {session.cipherpay_expires_at ? (
-                    <LocalDateTime iso={session.cipherpay_expires_at} />
-                  ) : (
-                    "n/a"
-                  )}
-                </strong>
-              </div>
+              {!paymentAccepted ? (
+                <div className="checkout-key-value">
+                  <span>Invoice expires</span>
+                  <strong>
+                    {session.cipherpay_expires_at ? (
+                      <LocalDateTime iso={session.cipherpay_expires_at} />
+                    ) : (
+                      "n/a"
+                    )}
+                  </strong>
+                </div>
+              ) : null}
             </div>
           </section>
+        </div>
+      ) : null}
 
-          <section className="status-card">
+      <aside className="status-sidebar">
+        {!paymentAccepted ? (
+          <section className="payment-panel">
+            <div className="payment-panel-head">
+              <div>
+                <p className="eyebrow">Pay with Zcash</p>
+                <h3>Complete your ticket purchase</h3>
+              </div>
+              <div className="payment-panel-meta">
+                <span className="public-status-chip">{paymentStateLabel(session)}</span>
+                {paymentExpiryLabel && !invoiceExpired ? (
+                  <span className="status-pill-lite">{paymentExpiryLabel}</span>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="payment-summary-row">
+              <div className="checkout-key-value">
+                <span>Event</span>
+                <strong>{session.event_name}</strong>
+              </div>
+              <div className="checkout-key-value">
+                <span>Ticket tier</span>
+                <strong>{session.ticket_type_name || "Luma ticket"}</strong>
+              </div>
+            </div>
+
+            <div className={`payment-qr-wrap${invoiceExpired ? " payment-qr-wrap-expired" : ""}`}>
+              {qrCodeDataUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  alt="Zcash payment QR code"
+                  className={`checkout-qr-image${invoiceExpired ? " checkout-qr-image-expired" : ""}`}
+                  src={qrCodeDataUrl}
+                />
+              ) : (
+                <div className="checkout-qr-fallback">
+                  QR code will appear once CipherPay returns the payment URI.
+                </div>
+              )}
+              {invoiceExpired ? <div className="payment-qr-expired-overlay">Expired</div> : null}
+            </div>
+
+            <div className="payment-key-list">
+              <div className="payment-key-row">
+                <div className="checkout-key-value">
+                  <span>Amount</span>
+                  <strong>{zecAmountLabel(session.cipherpay_price_zec)}</strong>
+                </div>
+              </div>
+
+              <div className="payment-key-row">
+                <div className="checkout-key-value">
+                  <span>Address</span>
+                  <strong
+                    className={`checkout-mono${invoiceExpired ? " checkout-mono-expired" : ""}`}
+                  >
+                    {session.cipherpay_payment_address || "Not returned yet"}
+                  </strong>
+                </div>
+                <button
+                  className="button button-secondary button-small"
+                  disabled={!session.cipherpay_payment_address || invoiceExpired}
+                  onClick={() =>
+                    void copyValue(session.cipherpay_payment_address, "Payment address")
+                  }
+                  type="button"
+                >
+                  {invoiceExpired ? "Address expired" : "Copy address"}
+                </button>
+              </div>
+
+              <div className="payment-key-row">
+                <div className="checkout-key-value">
+                  <span>Reference code</span>
+                  <strong>{session.cipherpay_memo_code || "Not assigned yet"}</strong>
+                </div>
+                <button
+                  className="button button-secondary button-small"
+                  disabled={!session.cipherpay_memo_code}
+                  onClick={() => void copyValue(session.cipherpay_memo_code, "Reference code")}
+                  type="button"
+                >
+                  Copy code
+                </button>
+              </div>
+            </div>
+
+            <div className="payment-action-stack">
+              {session.cipherpay_zcash_uri ? (
+                invoiceExpired ? (
+                  <button className="button" disabled type="button">
+                    Open wallet · Expired
+                  </button>
+                ) : (
+                  <a className="button" href={session.cipherpay_zcash_uri}>
+                    Open wallet
+                  </a>
+                )
+              ) : null}
+              <button
+                className="button button-secondary"
+                disabled={!session.cipherpay_zcash_uri || invoiceExpired}
+                onClick={() => void copyValue(session.cipherpay_zcash_uri, "Zcash URI")}
+                type="button"
+              >
+                {invoiceExpired ? "Copy payment URI · Expired" : "Copy payment URI"}
+              </button>
+            </div>
+
+            {copyNotice ? <p className="console-valid-text">{copyNotice}</p> : null}
+          </section>
+        ) : (
+          <section className="pass-shell">
+            <div className="pass-head">
+              <div className="pass-head-top">
+                <p className="eyebrow">{passReady ? "Attendee pass" : "Payment accepted"}</p>
+                <div className="pass-actions">
+                  <button
+                    className="button button-secondary button-small"
+                    disabled={!passReady || !entryQrDataUrl}
+                    onClick={() => openPrintView()}
+                    type="button"
+                  >
+                    Print / PDF
+                  </button>
+                  <button
+                    className="button button-secondary button-small"
+                    disabled={!passReady || !entryQrDataUrl}
+                    onClick={() => savePassFile()}
+                    type="button"
+                  >
+                    Save pass
+                  </button>
+                  {event?.url ? (
+                    <a
+                      className="button button-secondary button-small"
+                      href={event.url}
+                      rel="noreferrer noopener"
+                      target="_blank"
+                    >
+                      Open on Luma
+                    </a>
+                  ) : null}
+                </div>
+              </div>
+              <h3>
+                {passReady
+                  ? "You're in"
+                  : session.registration_status === "failed"
+                    ? "Registration needs attention"
+                    : "Preparing your pass"}
+              </h3>
+            </div>
+
+            <div className="pass-banner">
+              {passReady
+                ? "Your ticket is ready. Luma will continue handling ticket delivery and event updates."
+                : session.registration_status === "failed"
+                  ? (session.registration_error ||
+                    "Payment accepted, but Luma did not create the attendee record yet.")
+                  : "Payment accepted. We're attaching your Luma attendee pass now. This page refreshes automatically."}
+            </div>
+
+            {copyNotice ? <p className="console-valid-text">{copyNotice}</p> : null}
+
+            {passReady && registrationGuest ? (
+              <div className="pass-grid">
+                <div className="pass-qr-card">
+                  {entryQrDataUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      alt="Luma entry QR code"
+                      className="checkout-qr-image"
+                      src={entryQrDataUrl}
+                    />
+                  ) : (
+                    <div className="checkout-qr-fallback">
+                      Luma check-in QR will appear here as soon as it is available.
+                    </div>
+                  )}
+                  <p className="subtle-text">Entry QR</p>
+                </div>
+
+                <div className="pass-detail-list">
+                  <div className="pass-detail-row">
+                    <span>Event</span>
+                    <div>
+                      <strong>{session.event_name}</strong>
+                      <p>
+                        {event?.start_at ? (
+                          <LocalDateTime iso={event.start_at} />
+                        ) : (
+                          "Event time pending"
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="pass-detail-row">
+                    <span>Attendee</span>
+                    <div>
+                      <strong>{attendeeName}</strong>
+                      <p>{attendeeEmail}</p>
+                    </div>
+                  </div>
+                  <div className="pass-detail-row">
+                    <span>Ticket tier</span>
+                    <div>
+                      <strong>{lumaTicketName}</strong>
+                      <p>Paid with Zcash</p>
+                    </div>
+                  </div>
+                  <div className="pass-detail-row">
+                    <span>Entry status</span>
+                    <div>
+                      <strong>
+                        {typeof registrationGuest.approval_status === "string"
+                          ? registrationGuest.approval_status
+                          : "approved"}
+                      </strong>
+                      <p>
+                        Guest ID{" "}
+                        {typeof registrationGuest.id === "string"
+                          ? registrationGuest.id
+                          : "pending"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="pass-loading-card">
+                <strong>Preparing your pass</strong>
+                <p className="subtle-text">
+                  {session.registration_status === "failed"
+                    ? (session.registration_error ||
+                      "Payment has been accepted, but the Luma attendee record still needs operator attention.")
+                    : "Payment has been accepted. The Luma guest record is still being attached."}
+                </p>
+              </div>
+            )}
+
+            {copyNotice ? <p className="console-valid-text">{copyNotice}</p> : null}
+          </section>
+        )}
+
+        <section className="status-card">
           <p className="eyebrow">Event details</p>
           <h2>Event details</h2>
           <div className="status-detail-grid">
@@ -1090,9 +1047,8 @@ export function CheckoutStatusCard({
           <p className="checkout-status-message">
             {event?.description || "Event logistics will remain available on the Luma event page."}
           </p>
-          </section>
-        </aside>
-      </div>
+        </section>
+      </aside>
     </div>
   );
 }

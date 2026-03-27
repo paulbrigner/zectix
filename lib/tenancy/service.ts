@@ -153,6 +153,33 @@ export async function createCalendarConnection(input: {
   return putCalendarConnection(connection);
 }
 
+export async function updateCalendarConnectionLumaKey(
+  calendarConnectionId: string,
+  lumaApiKey: string,
+) {
+  const connection = await getCalendarConnection(calendarConnectionId);
+  if (!connection) {
+    throw new Error(`Calendar connection ${calendarConnectionId} was not found.`);
+  }
+
+  const lumaApiSecretRef = await getSecretStore().setSecret(
+    connection.luma_api_secret_ref || null,
+    lumaApiKey,
+  );
+
+  const nextConnection: CalendarConnection = {
+    ...connection,
+    luma_api_secret_ref: lumaApiSecretRef,
+    luma_webhook_secret_ref: null,
+    luma_webhook_id: null,
+    last_validated_at: null,
+    last_sync_error: null,
+    updated_at: nowIso(),
+  };
+
+  return putCalendarConnection(nextConnection);
+}
+
 export async function createCipherPayConnection(input: {
   tenant_id: string;
   calendar_connection_id: string;

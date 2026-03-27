@@ -11,6 +11,7 @@ import {
   createTenant,
   setTenantStatus,
   setTicketOperatorAssertions,
+  updateCalendarConnectionLumaKey,
   validateAndSyncCalendar,
   validateCipherPayConnection,
 } from "@/lib/tenancy/service";
@@ -71,6 +72,16 @@ export async function validateAndSyncCalendarAction(formData: FormData) {
   const calendarConnectionId = String(formData.get("calendar_connection_id") || "");
   const connection = await validateAndSyncCalendar(calendarConnectionId);
   redirectTo(formData, `/ops/tenants/${encodeURIComponent(connection.connection.tenant_id)}`);
+}
+
+export async function updateCalendarConnectionLumaKeyAction(formData: FormData) {
+  await requireOpsPageAccess();
+  const calendarConnectionId = String(formData.get("calendar_connection_id") || "");
+  const connection = await updateCalendarConnectionLumaKey(
+    calendarConnectionId,
+    String(formData.get("luma_api_key") || ""),
+  );
+  redirectTo(formData, `/ops/tenants/${encodeURIComponent(connection.tenant_id)}`);
 }
 
 export async function createCipherPayConnectionAction(formData: FormData) {

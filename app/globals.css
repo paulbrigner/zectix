@@ -2458,12 +2458,42 @@ select {
   font-weight: 800;
 }
 
+.public-ticket-status {
+  margin: 0 0 0.35rem;
+  color: #9a3412;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.public-ticket-status-muted {
+  color: var(--color-gray-500);
+}
+
 .public-ticket-price {
   color: #111827;
   font-size: 1.35rem;
   font-weight: 800;
   letter-spacing: -0.04em;
   white-space: nowrap;
+}
+
+.public-ticket-card-disabled {
+  background: linear-gradient(180deg, rgba(249, 250, 251, 0.98), rgba(243, 244, 246, 0.98));
+  border-style: dashed;
+  opacity: 0.92;
+}
+
+.public-ticket-unavailable-section {
+  display: grid;
+  gap: 1rem;
+  padding-top: 0.25rem;
+  border-top: 1px solid rgba(17, 24, 39, 0.08);
+}
+
+.public-ticket-unavailable-note {
+  margin: 0.85rem 0 0;
 }
 
 .public-total-card {
