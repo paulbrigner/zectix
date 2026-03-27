@@ -24,6 +24,8 @@ import {
 import type {
   CalendarConnection,
   CipherPayConnection,
+  EventMirror,
+  EventMirrorStatus,
   SecretPreview,
   Tenant,
   TenantStatus,
@@ -73,6 +75,129 @@ async function getSecretPreview(ref: string | null): Promise<SecretPreview> {
     ref,
     preview: maskSecretPreview(value),
     has_value: Boolean(value),
+  };
+}
+
+export type EventSyncFocus = "mirrored" | "upstream";
+export type EventSyncOutcome =
+  | "imported"
+  | "updated"
+  | "unchanged"
+  | "hidden"
+  | "canceled"
+  | "missing";
+
+export type FocusedEventSyncReview = {
+  tenant_id: string;
+  calendar_connection_id: string;
+  event_api_id: string;
+  event_name: string;
+  focus: EventSyncFocus;
+  outcome: EventSyncOutcome;
+  sync_status: EventMirrorStatus | "missing";
+  tickets_added: number;
+  tickets_removed: number;
+  mirrored_ticket_count: number;
+  enabled_ticket_count: number;
+  public_checkout_enabled: boolean;
+  happened_at: string;
+};
+
+type EventSyncSnapshot = {
+  event: EventMirror | null;
+  tickets: TicketMirror[];
+};
+
+async function loadEventSyncSnapshot(
+  calendarConnectionId: string,
+  eventApiId: string,
+): Promise<EventSyncSnapshot> {
+  const event = await getEventMirror(calendarConnectionId, eventApiId);
+  return {
+    event,
+    tickets: event ? await listTicketMirrorsByEvent(eventApiId) : [],
+  };
+}
+
+function activeTicketTypeIds(tickets: TicketMirror[]) {
+  return new Set(
+    tickets.filter((ticket) => ticket.active).map((ticket) => ticket.ticket_type_api_id),
+  );
+}
+
+function didMirroredEventChange(before: EventMirror | null, after: EventMirror | null) {
+  if (!before || !after) {
+    return false;
+  }
+
+  return (
+    before.name !== after.name ||
+    before.start_at !== after.start_at ||
+    before.end_at !== after.end_at ||
+    before.timezone !== after.timezone ||
+    before.description !== after.description ||
+    before.cover_url !== after.cover_url ||
+    before.url !== after.url ||
+    before.location_label !== after.location_label ||
+    before.location_note !== after.location_note ||
+    before.sync_status !== after.sync_status ||
+    before.zcash_enabled !== after.zcash_enabled ||
+    before.zcash_enabled_reason !== after.zcash_enabled_reason
+  );
+}
+
+export function buildFocusedEventSyncReview(input: {
+  tenant_id: string;
+  calendar_connection_id: string;
+  event_api_id: string;
+  event_name: string;
+  focus: EventSyncFocus;
+  before: EventSyncSnapshot;
+  after: EventSyncSnapshot;
+  happened_at: string;
+}): FocusedEventSyncReview {
+  const beforeActiveTicketIds = activeTicketTypeIds(input.before.tickets);
+  const afterActiveTicketIds = activeTicketTypeIds(input.after.tickets);
+  const ticketsAdded = [...afterActiveTicketIds].filter(
+    (ticketTypeId) => !beforeActiveTicketIds.has(ticketTypeId),
+  ).length;
+  const ticketsRemoved = [...beforeActiveTicketIds].filter(
+    (ticketTypeId) => !afterActiveTicketIds.has(ticketTypeId),
+  ).length;
+
+  let outcome: EventSyncOutcome;
+  if (!input.after.event) {
+    outcome = "missing";
+  } else if (!input.before.event) {
+    outcome = "imported";
+  } else if (input.after.event.sync_status === "canceled") {
+    outcome = "canceled";
+  } else if (input.after.event.sync_status === "hidden") {
+    outcome = "hidden";
+  } else if (
+    didMirroredEventChange(input.before.event, input.after.event) ||
+    ticketsAdded > 0 ||
+    ticketsRemoved > 0
+  ) {
+    outcome = "updated";
+  } else {
+    outcome = "unchanged";
+  }
+
+  return {
+    tenant_id: input.tenant_id,
+    calendar_connection_id: input.calendar_connection_id,
+    event_api_id: input.event_api_id,
+    event_name: input.after.event?.name || input.before.event?.name || input.event_name,
+    focus: input.focus,
+    outcome,
+    sync_status: input.after.event?.sync_status || "missing",
+    tickets_added: ticketsAdded,
+    tickets_removed: ticketsRemoved,
+    mirrored_ticket_count: input.after.tickets.length,
+    enabled_ticket_count: input.after.tickets.filter((ticket) => ticket.zcash_enabled).length,
+    public_checkout_enabled: input.after.event?.zcash_enabled || false,
+    happened_at: input.happened_at,
   };
 }
 
@@ -275,6 +400,48 @@ export async function validateAndSyncCalendar(calendarConnectionId: string) {
   await validateCalendarConnection(calendarConnectionId);
   await ensureCalendarConnectionWebhookSubscription(calendarConnectionId);
   return syncCalendarConnection(calendarConnectionId);
+}
+
+export async function syncCalendarEventForOps(input: {
+  calendar_connection_id: string;
+  event_api_id: string;
+  event_name: string;
+  focus: EventSyncFocus;
+}) {
+  const connection = await getCalendarConnection(input.calendar_connection_id);
+  if (!connection) {
+    throw new Error(
+      `Calendar connection ${input.calendar_connection_id} was not found.`,
+    );
+  }
+
+  const before = await loadEventSyncSnapshot(
+    connection.calendar_connection_id,
+    input.event_api_id,
+  );
+  const syncResult = await syncCalendarConnection(connection.calendar_connection_id);
+  const syncedEvent =
+    syncResult.events.find((event) => event.event_api_id === input.event_api_id) || null;
+  const after = syncedEvent
+    ? {
+        event: syncedEvent,
+        tickets: await listTicketMirrorsByEvent(input.event_api_id),
+      }
+    : await loadEventSyncSnapshot(connection.calendar_connection_id, input.event_api_id);
+
+  return {
+    connection: syncResult.connection,
+    review: buildFocusedEventSyncReview({
+      tenant_id: connection.tenant_id,
+      calendar_connection_id: connection.calendar_connection_id,
+      event_api_id: input.event_api_id,
+      event_name: input.event_name,
+      focus: input.focus,
+      before,
+      after,
+      happened_at: syncResult.connection.last_synced_at || nowIso(),
+    }),
+  };
 }
 
 export async function resolveLumaApiKeyForCalendar(calendarConnectionId: string) {

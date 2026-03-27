@@ -2,7 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   makeCalendarConnection,
   makeCipherPayConnection,
+  makeEventMirror,
   makeTenant,
+  makeTicketMirror,
 } from "@/tests/test-helpers";
 
 const mockGetCalendarConnection = vi.fn();
@@ -29,6 +31,9 @@ const mockPutTicketMirror = vi.fn();
 const mockSetSecret = vi.fn();
 const mockGetSecret = vi.fn();
 const mockListLumaEvents = vi.fn();
+const mockEnsureCalendarConnectionWebhookSubscription = vi.fn();
+const mockSyncCalendarConnection = vi.fn();
+const mockValidateCalendarConnection = vi.fn();
 
 vi.mock("@/lib/app-state/state", () => ({
   getCalendarConnection: mockGetCalendarConnection,
@@ -61,9 +66,10 @@ vi.mock("@/lib/secrets", () => ({
 }));
 
 vi.mock("@/lib/sync/luma-sync", () => ({
-  ensureCalendarConnectionWebhookSubscription: vi.fn(),
-  syncCalendarConnection: vi.fn(),
-  validateCalendarConnection: vi.fn(),
+  ensureCalendarConnectionWebhookSubscription:
+    mockEnsureCalendarConnectionWebhookSubscription,
+  syncCalendarConnection: mockSyncCalendarConnection,
+  validateCalendarConnection: mockValidateCalendarConnection,
 }));
 
 vi.mock("@/lib/luma", () => ({
@@ -71,9 +77,11 @@ vi.mock("@/lib/luma", () => ({
 }));
 
 const {
+  buildFocusedEventSyncReview,
   createCalendarConnection,
   createCipherPayConnection,
   getTenantOpsDetail,
+  syncCalendarEventForOps,
   updateCalendarConnectionLumaKey,
   validateCipherPayConnection,
 } = await import(
@@ -104,6 +112,9 @@ beforeEach(() => {
   mockSetSecret.mockReset();
   mockGetSecret.mockReset();
   mockListLumaEvents.mockReset();
+  mockEnsureCalendarConnectionWebhookSubscription.mockReset();
+  mockSyncCalendarConnection.mockReset();
+  mockValidateCalendarConnection.mockReset();
 
   mockPutCalendarConnection.mockImplementation(async (connection) => connection);
   mockPutCipherPayConnection.mockImplementation(async (connection) => connection);
@@ -114,6 +125,71 @@ beforeEach(() => {
   mockListRegistrationTasksByTenant.mockResolvedValue([]);
   mockListEventMirrorsByCalendar.mockResolvedValue([]);
   mockListTicketMirrorsByEvent.mockResolvedValue([]);
+});
+
+describe("buildFocusedEventSyncReview", () => {
+  it("treats a new upstream event as an import with added ticket tiers", () => {
+    const afterEvent = makeEventMirror({
+      event_api_id: "event_imported",
+      name: "Imported Event",
+      zcash_enabled: false,
+    });
+    const afterTickets = [
+      makeTicketMirror({
+        event_api_id: "event_imported",
+        ticket_type_api_id: "ticket_new_1",
+      }),
+      makeTicketMirror({
+        event_api_id: "event_imported",
+        ticket_type_api_id: "ticket_new_2",
+      }),
+    ];
+
+    const review = buildFocusedEventSyncReview({
+      tenant_id: "tenant_123",
+      calendar_connection_id: "calendar_123",
+      event_api_id: "event_imported",
+      event_name: "Imported Event",
+      focus: "upstream",
+      before: { event: null, tickets: [] },
+      after: { event: afterEvent, tickets: afterTickets },
+      happened_at: "2026-03-27T12:00:00.000Z",
+    });
+
+    expect(review.outcome).toBe("imported");
+    expect(review.tickets_added).toBe(2);
+    expect(review.tickets_removed).toBe(0);
+    expect(review.mirrored_ticket_count).toBe(2);
+  });
+
+  it("treats an event hidden by the latest sync as removed from the current feed", () => {
+    const beforeEvent = makeEventMirror({
+      event_api_id: "event_hidden",
+      name: "Hidden Event",
+      sync_status: "active",
+    });
+    const afterEvent = makeEventMirror({
+      event_api_id: "event_hidden",
+      name: "Hidden Event",
+      sync_status: "hidden",
+      zcash_enabled: false,
+    });
+
+    const review = buildFocusedEventSyncReview({
+      tenant_id: "tenant_123",
+      calendar_connection_id: "calendar_123",
+      event_api_id: "event_hidden",
+      event_name: "Hidden Event",
+      focus: "mirrored",
+      before: { event: beforeEvent, tickets: [] },
+      after: { event: afterEvent, tickets: [] },
+      happened_at: "2026-03-27T12:00:00.000Z",
+    });
+
+    expect(review.outcome).toBe("hidden");
+    expect(review.sync_status).toBe("hidden");
+    expect(review.public_checkout_enabled).toBe(false);
+  });
 });
 
 describe("createCalendarConnection", () => {
@@ -280,5 +356,70 @@ describe("getTenantOpsDetail", () => {
       events: [],
       error: null,
     });
+  });
+});
+
+describe("syncCalendarEventForOps", () => {
+  it("runs the existing calendar refresh and returns a focused event diff", async () => {
+    const calendar = makeCalendarConnection();
+    const beforeEvent = makeEventMirror({
+      event_api_id: "event_focus",
+      name: "Event Before",
+      zcash_enabled: false,
+    });
+    const afterEvent = makeEventMirror({
+      event_api_id: "event_focus",
+      name: "Event After",
+      zcash_enabled: true,
+      last_synced_at: "2026-03-27T12:30:00.000Z",
+    });
+    const beforeTickets = [
+      makeTicketMirror({
+        event_api_id: "event_focus",
+        ticket_type_api_id: "ticket_old",
+        zcash_enabled: false,
+      }),
+    ];
+    const afterTickets = [
+      makeTicketMirror({
+        event_api_id: "event_focus",
+        ticket_type_api_id: "ticket_old",
+        zcash_enabled: false,
+      }),
+      makeTicketMirror({
+        event_api_id: "event_focus",
+        ticket_type_api_id: "ticket_new",
+        zcash_enabled: true,
+      }),
+    ];
+
+    mockGetCalendarConnection.mockResolvedValue(calendar);
+    mockGetEventMirror.mockResolvedValue(beforeEvent);
+    mockListTicketMirrorsByEvent
+      .mockResolvedValueOnce(beforeTickets)
+      .mockResolvedValueOnce(afterTickets);
+    mockSyncCalendarConnection.mockResolvedValue({
+      connection: {
+        ...calendar,
+        last_synced_at: "2026-03-27T12:30:00.000Z",
+      },
+      events: [afterEvent],
+    });
+
+    const result = await syncCalendarEventForOps({
+      calendar_connection_id: calendar.calendar_connection_id,
+      event_api_id: "event_focus",
+      event_name: "Event Before",
+      focus: "mirrored",
+    });
+
+    expect(mockSyncCalendarConnection).toHaveBeenCalledWith(
+      calendar.calendar_connection_id,
+    );
+    expect(result.review.outcome).toBe("updated");
+    expect(result.review.event_name).toBe("Event After");
+    expect(result.review.tickets_added).toBe(1);
+    expect(result.review.enabled_ticket_count).toBe(1);
+    expect(result.review.public_checkout_enabled).toBe(true);
   });
 });

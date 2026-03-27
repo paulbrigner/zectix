@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   setTicketAssertionsAction,
+  syncCalendarEventAction,
   validateAndSyncCalendarAction,
 } from "@/app/ops/actions";
 import { LocalDateTime } from "@/components/LocalDateTime";
@@ -10,22 +11,199 @@ import { getTenantOpsDetail } from "@/lib/tenancy/service";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+type SearchParamValue = string | string[] | undefined;
+type PillTone = "success" | "warning" | "danger" | "info" | "muted";
+type SyncNotice = {
+  error: string | null;
+  eventId: string | null;
+  eventName: string;
+  focus: "mirrored" | "upstream";
+  outcome:
+    | "imported"
+    | "updated"
+    | "unchanged"
+    | "hidden"
+    | "canceled"
+    | "missing"
+    | null;
+  syncStatus: string | null;
+  ticketsAdded: number;
+  ticketsRemoved: number;
+  mirroredTicketCount: number;
+  enabledTicketCount: number;
+  publicCheckoutEnabled: boolean;
+  syncedAt: string | null;
+};
+
 function isFutureEvent(startAt: string) {
   const startAtMs = new Date(startAt).getTime();
   return Number.isFinite(startAtMs) && startAtMs >= Date.now();
 }
 
+function readSearchValue(value: SearchParamValue) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function readIntSearchValue(value: SearchParamValue) {
+  const parsed = Number(readSearchValue(value));
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function readSyncNotice(searchParams: Record<string, SearchParamValue>): SyncNotice | null {
+  const error = readSearchValue(searchParams.sync_error) || null;
+  const eventId = readSearchValue(searchParams.sync_event_id) || null;
+  const eventName = readSearchValue(searchParams.sync_event_name) || "Selected event";
+  if (!error && !eventId) {
+    return null;
+  }
+
+  const outcome = readSearchValue(searchParams.sync_outcome);
+  return {
+    error,
+    eventId,
+    eventName,
+    focus: readSearchValue(searchParams.sync_focus) === "upstream" ? "upstream" : "mirrored",
+    outcome:
+      outcome === "imported" ||
+      outcome === "updated" ||
+      outcome === "unchanged" ||
+      outcome === "hidden" ||
+      outcome === "canceled" ||
+      outcome === "missing"
+        ? outcome
+        : null,
+    syncStatus: readSearchValue(searchParams.sync_status) || null,
+    ticketsAdded: readIntSearchValue(searchParams.sync_added),
+    ticketsRemoved: readIntSearchValue(searchParams.sync_removed),
+    mirroredTicketCount: readIntSearchValue(searchParams.sync_mirrored),
+    enabledTicketCount: readIntSearchValue(searchParams.sync_enabled),
+    publicCheckoutEnabled: readSearchValue(searchParams.sync_public) === "1",
+    syncedAt: readSearchValue(searchParams.sync_at) || null,
+  };
+}
+
+function pillClassName(tone: PillTone) {
+  return `console-mini-pill console-mini-pill-${tone}`;
+}
+
+function syncStatusTone(syncStatus: string | null): PillTone {
+  switch (syncStatus) {
+    case "active":
+      return "success";
+    case "canceled":
+      return "warning";
+    case "error":
+      return "danger";
+    case "hidden":
+      return "muted";
+    default:
+      return "info";
+  }
+}
+
+function syncStatusLabel(syncStatus: string | null) {
+  switch (syncStatus) {
+    case "active":
+      return "Sync active";
+    case "canceled":
+      return "Event canceled";
+    case "error":
+      return "Sync failed";
+    case "hidden":
+      return "No longer in Luma";
+    default:
+      return "Needs sync";
+  }
+}
+
+function focusLabel(focus: "mirrored" | "upstream") {
+  return focus === "upstream" ? "Upstream import path" : "Mirrored event";
+}
+
+function syncNoticeTitle(notice: SyncNotice) {
+  if (notice.error) {
+    return `Could not refresh ${notice.eventName}`;
+  }
+
+  switch (notice.outcome) {
+    case "imported":
+      return `${notice.eventName} was imported into mirrored inventory`;
+    case "updated":
+      return `${notice.eventName} was refreshed from Luma`;
+    case "hidden":
+      return `${notice.eventName} no longer appears in the current Luma feed`;
+    case "canceled":
+      return `${notice.eventName} is marked canceled`;
+    case "missing":
+      return `${notice.eventName} could not be mirrored`;
+    case "unchanged":
+    default:
+      return `No mirrored changes were needed for ${notice.eventName}`;
+  }
+}
+
+function syncNoticeCopy(notice: SyncNotice) {
+  if (notice.error) {
+    return notice.error;
+  }
+
+  switch (notice.outcome) {
+    case "imported":
+      return "The backend still refreshed the full calendar, but this result is focused on the selected event and its mirrored ticket tiers.";
+    case "updated":
+      return "This event-focused summary captures how the mirrored record changed after the latest full-calendar refresh.";
+    case "hidden":
+      return "The selected event is no longer visible in the latest Luma feed, so its mirrored inventory has been hidden from public checkout.";
+    case "canceled":
+      return "The selected event is still mirrored, but it is now marked canceled in the latest sync result.";
+    case "missing":
+      return "The selected event was not available for mirroring after the refresh. Check the upstream Luma feed and try again if needed.";
+    case "unchanged":
+    default:
+      return "The full-calendar refresh completed, but this selected event did not require any mirrored event or ticket changes.";
+  }
+}
+
+function mirroredEventBadges(event: {
+  sync_status: string;
+  zcash_enabled: boolean;
+}) {
+  return [
+    { label: "Mirrored", tone: "info" as const },
+    {
+      label: syncStatusLabel(event.sync_status),
+      tone: syncStatusTone(event.sync_status),
+    },
+    {
+      label: event.zcash_enabled ? "Public checkout enabled" : "Public checkout hidden",
+      tone: event.zcash_enabled ? ("success" as const) : ("muted" as const),
+    },
+  ];
+}
+
+function upstreamEventBadges() {
+  return [
+    { label: "Upstream only", tone: "warning" as const },
+    { label: "Not mirrored yet", tone: "muted" as const },
+    { label: "Event-focused import path", tone: "info" as const },
+  ];
+}
+
 export default async function TenantEventsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ tenantId: string }>;
+  searchParams: Promise<Record<string, SearchParamValue>>;
 }) {
   const { tenantId } = await params;
+  const resolvedSearchParams = await searchParams;
   const detail = await getTenantOpsDetail(tenantId);
   if (!detail) {
     notFound();
   }
 
+  const syncNotice = readSyncNotice(resolvedSearchParams);
   const eventsByCalendarId = new Map(
     detail.events.map(({ calendar, events }) => [calendar.calendar_connection_id, events] as const),
   );
@@ -59,25 +237,86 @@ export default async function TenantEventsPage({
     <section className="console-section">
       <div className="console-section-header">
         <div>
-          <h2>Ticket eligibility controls</h2>
+          <h2>Tenant events</h2>
           <p className="subtle-text">
-            Public checkout only exposes tickets that pass automatic checks and all operator assertions.
-            Only future mirrored events are shown here.
-          </p>
-          <p className="subtle-text">
-            Importing from Luma still refreshes the full calendar connection. New upstream
-            events appear below for review first, but tickets do not become public until they
-            pass the existing eligibility and assertion checks.
+            Use event-focused sync actions to review one event at a time without changing
+            the backend&apos;s full-calendar mirror model. Imported events still land behind
+            the existing automatic and operator ticket-eligibility controls before public
+            checkout exposure.
           </p>
         </div>
       </div>
+
+      {syncNotice ? (
+        <div
+          className={`console-detail-card console-sync-feedback${syncNotice.error ? " console-sync-feedback-error" : ""}`}
+        >
+          <div className="console-section-header">
+            <div>
+              <p className="console-kpi-label">{focusLabel(syncNotice.focus)}</p>
+              <h3>{syncNoticeTitle(syncNotice)}</h3>
+              <p className="subtle-text">{syncNoticeCopy(syncNotice)}</p>
+            </div>
+            <div className="console-mini-pill-row">
+              <span className={pillClassName(syncNotice.focus === "upstream" ? "warning" : "info")}>
+                {focusLabel(syncNotice.focus)}
+              </span>
+              {syncNotice.syncStatus ? (
+                <span className={pillClassName(syncStatusTone(syncNotice.syncStatus))}>
+                  {syncStatusLabel(syncNotice.syncStatus)}
+                </span>
+              ) : null}
+              <span
+                className={pillClassName(
+                  syncNotice.publicCheckoutEnabled ? "success" : "muted",
+                )}
+              >
+                {syncNotice.publicCheckoutEnabled
+                  ? "Public checkout enabled"
+                  : "Public checkout hidden"}
+              </span>
+            </div>
+          </div>
+
+          {!syncNotice.error ? (
+            <div className="console-signal-grid">
+              <div className="console-signal-card">
+                <span className="console-kpi-label">Ticket tiers added</span>
+                <strong>{syncNotice.ticketsAdded}</strong>
+                <p className="subtle-text">Active tiers newly mirrored after refresh</p>
+              </div>
+              <div className="console-signal-card">
+                <span className="console-kpi-label">Ticket tiers removed</span>
+                <strong>{syncNotice.ticketsRemoved}</strong>
+                <p className="subtle-text">Previously active tiers no longer in the current feed</p>
+              </div>
+              <div className="console-signal-card">
+                <span className="console-kpi-label">Mirrored tiers now</span>
+                <strong>{syncNotice.mirroredTicketCount}</strong>
+                <p className="subtle-text">
+                  {syncNotice.enabledTicketCount} currently eligible for public checkout
+                </p>
+              </div>
+              <div className="console-signal-card">
+                <span className="console-kpi-label">Synced at</span>
+                <strong>
+                  {syncNotice.syncedAt ? <LocalDateTime iso={syncNotice.syncedAt} /> : "n/a"}
+                </strong>
+                <p className="subtle-text">
+                  Full-calendar refresh, event-focused summary
+                </p>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       {eventGroups.length === 0 ? (
         <div className="console-detail-card">
           <h3>No future events</h3>
           <p className="subtle-text">
-            Ticket assertions only appear for mirrored events whose start time is still in
-            the future.
+            Event-focused sync and ticket assertions only appear for events whose start time
+            is still in the future.
           </p>
         </div>
       ) : null}
@@ -88,8 +327,9 @@ export default async function TenantEventsPage({
             <div>
               <h3>{calendar.display_name}</h3>
               <p className="subtle-text">
-                Use the import action to refresh the full calendar and bring newly visible
-                upstream events into the mirrored inventory.
+                Use the per-event controls below for targeted review. The backend still runs
+                the existing full-calendar refresh, but each result is summarized as an
+                event-focused diff.
               </p>
             </div>
             <form action={validateAndSyncCalendarAction}>
@@ -98,9 +338,13 @@ export default async function TenantEventsPage({
                 type="hidden"
                 value={calendar.calendar_connection_id}
               />
-              <input name="redirect_to" type="hidden" value={`/ops/tenants/${tenantId}/events`} />
+              <input
+                name="redirect_to"
+                type="hidden"
+                value={`/ops/tenants/${tenantId}/events`}
+              />
               <button className="button button-secondary button-small" type="submit">
-                {upstreamEvents.length ? "Import from Luma" : "Refresh from Luma"}
+                Refresh whole calendar
               </button>
             </form>
           </div>
@@ -118,8 +362,9 @@ export default async function TenantEventsPage({
                 <div>
                   <h4>Available from Luma but not yet mirrored</h4>
                   <p className="subtle-text">
-                    These future events are visible to the saved Luma key, but they are not yet
-                    part of the mirrored checkout surface.
+                    Use the event-focused sync control here to import one selected event into
+                    mirrored inventory without relying on the whole-calendar action as the
+                    primary operator workflow.
                   </p>
                 </div>
               </div>
@@ -144,8 +389,11 @@ export default async function TenantEventsPage({
                           <h4>{event.name}</h4>
                         </div>
                         <div className="console-mini-pill-row">
-                          <span className="console-mini-pill">Upstream only</span>
-                          <span className="console-mini-pill">Not mirrored yet</span>
+                          {upstreamEventBadges().map((badge) => (
+                            <span className={pillClassName(badge.tone)} key={badge.label}>
+                              {badge.label}
+                            </span>
+                          ))}
                         </div>
                       </div>
                       <p className="subtle-text">
@@ -153,11 +401,30 @@ export default async function TenantEventsPage({
                         {event.location_label ? ` · ${event.location_label}` : ""}
                       </p>
                       <p className="subtle-text">
-                        Importing refreshes the full calendar. Ticket eligibility and operator
-                        assertions still apply before public checkout is enabled.
+                        Syncing this event still refreshes the current calendar connection in
+                        the backend, but the operator feedback is scoped to this event only.
                       </p>
-                      {event.url ? (
-                        <div className="button-row">
+                      <div className="button-row">
+                        <form action={syncCalendarEventAction}>
+                          <input name="tenant_id" type="hidden" value={tenantId} />
+                          <input
+                            name="calendar_connection_id"
+                            type="hidden"
+                            value={calendar.calendar_connection_id}
+                          />
+                          <input name="event_api_id" type="hidden" value={event.api_id} />
+                          <input name="event_name" type="hidden" value={event.name} />
+                          <input name="focus" type="hidden" value="upstream" />
+                          <input
+                            name="redirect_to"
+                            type="hidden"
+                            value={`/ops/tenants/${tenantId}/events`}
+                          />
+                          <button className="button button-small" type="submit">
+                            Sync this event
+                          </button>
+                        </form>
+                        {event.url ? (
                           <a
                             className="button button-secondary button-small"
                             href={event.url}
@@ -166,8 +433,8 @@ export default async function TenantEventsPage({
                           >
                             Open on Luma
                           </a>
-                        </div>
-                      ) : null}
+                        ) : null}
+                      </div>
                     </div>
                   </article>
                 ))}
@@ -175,141 +442,209 @@ export default async function TenantEventsPage({
             </div>
           ) : null}
 
-          {events.map((event) => (
-            <article className="console-detail-card console-event-review-card" key={event.event_api_id}>
-              <div className="console-event-review-head">
-                {event.cover_url ? (
-                  <div className="console-preview-media console-preview-media-square">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img alt={event.name} src={event.cover_url} />
-                  </div>
-                ) : (
-                  <div className="console-preview-media console-preview-media-fallback console-preview-media-square">
-                    <span>{event.name.slice(0, 2).toUpperCase()}</span>
-                  </div>
-                )}
-                <div className="console-event-review-copy">
-                  <div className="console-preview-body-head">
-                    <div>
-                      <p className="console-kpi-label">{calendar.display_name}</p>
-                      <h3>{event.name}</h3>
-                    </div>
-                    <div className="console-mini-pill-row">
-                      <span className="console-mini-pill">
-                        {event.zcash_enabled ? "Public checkout enabled" : "Public checkout hidden"}
-                      </span>
-                      <span className="console-mini-pill">
-                        Sync {event.sync_status}
-                      </span>
-                    </div>
-                  </div>
-                  <p className="subtle-text">
-                    <LocalDateTime iso={event.start_at} />
-                    {event.location_label ? ` · ${event.location_label}` : ""}
-                  </p>
-                  <p className="subtle-text">
-                    {event.zcash_enabled_reason || "No reason recorded"}
-                  </p>
-                  <div className="button-row">
-                    {event.url ? (
-                      <a
-                        className="button button-secondary button-small"
-                        href={event.url}
-                        rel="noreferrer noopener"
-                        target="_blank"
-                      >
-                        Open on Luma
-                      </a>
-                    ) : null}
-                    <Link
-                      className="button button-secondary button-small"
-                      href={`/c/${calendar.slug}/events/${encodeURIComponent(event.event_api_id)}`}
-                    >
-                      Open public event
-                    </Link>
-                  </div>
-                </div>
-              </div>
+          {events.map((event) => {
+            const mirroredTickets = detail.tickets_by_event.get(event.event_api_id) || [];
+            const enabledTickets = mirroredTickets.filter((ticket) => ticket.zcash_enabled);
+            const publicEventHref =
+              event.sync_status === "active"
+                ? `/c/${calendar.slug}/events/${encodeURIComponent(event.event_api_id)}`
+                : null;
 
-              <div className="console-signal-grid">
-                <div className="console-signal-card">
-                  <span className="console-kpi-label">Tickets</span>
-                  <strong>
-                    {(detail.tickets_by_event.get(event.event_api_id) || []).length} mirrored
-                  </strong>
-                  <p className="subtle-text">
-                    {(
-                      detail.tickets_by_event.get(event.event_api_id) || []
-                    ).filter((ticket) => ticket.zcash_enabled).length} enabled for public checkout
-                  </p>
-                </div>
-                <div className="console-signal-card">
-                  <span className="console-kpi-label">Last sync</span>
-                  <strong>{event.last_synced_at ? "Updated" : "Pending"}</strong>
-                  <p className="subtle-text">
-                    {event.last_synced_at ? (
-                      <LocalDateTime iso={event.last_synced_at} />
-                    ) : (
-                      "This event has not been refreshed yet."
-                    )}
-                  </p>
-                </div>
-              </div>
-
-              <div className="console-card-grid console-ticket-assertion-grid">
-                {(detail.tickets_by_event.get(event.event_api_id) || []).map((ticket) => (
-                  <form action={setTicketAssertionsAction} className="console-detail-card console-ticket-assertion-card" key={ticket.ticket_type_api_id}>
-                    <input name="event_api_id" type="hidden" value={ticket.event_api_id} />
-                    <input name="ticket_type_api_id" type="hidden" value={ticket.ticket_type_api_id} />
-                    <input name="redirect_to" type="hidden" value={`/ops/tenants/${tenantId}/events`} />
+            return (
+              <article
+                className="console-detail-card console-event-review-card"
+                key={event.event_api_id}
+              >
+                <div className="console-event-review-head">
+                  {event.cover_url ? (
+                    <div className="console-preview-media console-preview-media-square">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img alt={event.name} src={event.cover_url} />
+                    </div>
+                  ) : (
+                    <div className="console-preview-media console-preview-media-fallback console-preview-media-square">
+                      <span>{event.name.slice(0, 2).toUpperCase()}</span>
+                    </div>
+                  )}
+                  <div className="console-event-review-copy">
                     <div className="console-preview-body-head">
                       <div>
-                        <p className="console-kpi-label">
-                          {ticket.active ? "Active in Luma" : "Inactive in Luma"}
-                        </p>
-                        <h4>{ticket.name}</h4>
+                        <p className="console-kpi-label">{calendar.display_name}</p>
+                        <h3>{event.name}</h3>
                       </div>
                       <div className="console-mini-pill-row">
-                        <span className="console-mini-pill">
-                          {ticket.zcash_enabled ? "Enabled" : "Hidden"}
-                        </span>
-                        <span className="console-mini-pill">
-                          {ticketSummaryLabel(ticket)}
-                        </span>
+                        {mirroredEventBadges(event).map((badge) => (
+                          <span className={pillClassName(badge.tone)} key={badge.label}>
+                            {badge.label}
+                          </span>
+                        ))}
                       </div>
                     </div>
                     <p className="subtle-text">
-                      Auto checks: {ticket.automatic_eligibility_status} · {ticket.automatic_eligibility_reasons.join(" ")}
+                      <LocalDateTime iso={event.start_at} />
+                      {event.location_label ? ` · ${event.location_label}` : ""}
                     </p>
-                    <label className="console-field">
-                      <span>
-                        <input defaultChecked={ticket.confirmed_fixed_price} name="confirmed_fixed_price" type="checkbox" />
-                        {" "}Confirm fixed price
-                      </span>
-                    </label>
-                    <label className="console-field">
-                      <span>
-                        <input defaultChecked={ticket.confirmed_no_approval_required} name="confirmed_no_approval_required" type="checkbox" />
-                        {" "}No approval required
-                      </span>
-                    </label>
-                    <label className="console-field">
-                      <span>
-                        <input defaultChecked={ticket.confirmed_no_extra_required_questions} name="confirmed_no_extra_required_questions" type="checkbox" />
-                        {" "}No extra required questions
-                      </span>
-                    </label>
                     <p className="subtle-text">
-                      Public status: {ticket.zcash_enabled ? "enabled" : "disabled"} · {ticket.zcash_enabled_reason}
+                      {event.zcash_enabled_reason || "No reason recorded"}
                     </p>
-                    <button className="button button-secondary button-small" type="submit">
-                      Save assertions
-                    </button>
-                  </form>
-                ))}
-              </div>
-            </article>
-          ))}
+                    <div className="button-row">
+                      <form action={syncCalendarEventAction}>
+                        <input name="tenant_id" type="hidden" value={tenantId} />
+                        <input
+                          name="calendar_connection_id"
+                          type="hidden"
+                          value={calendar.calendar_connection_id}
+                        />
+                        <input name="event_api_id" type="hidden" value={event.event_api_id} />
+                        <input name="event_name" type="hidden" value={event.name} />
+                        <input name="focus" type="hidden" value="mirrored" />
+                        <input
+                          name="redirect_to"
+                          type="hidden"
+                          value={`/ops/tenants/${tenantId}/events`}
+                        />
+                        <button className="button button-small" type="submit">
+                          Sync this event
+                        </button>
+                      </form>
+                      {event.url ? (
+                        <a
+                          className="button button-secondary button-small"
+                          href={event.url}
+                          rel="noreferrer noopener"
+                          target="_blank"
+                        >
+                          Open on Luma
+                        </a>
+                      ) : null}
+                      {publicEventHref ? (
+                        <Link className="button button-secondary button-small" href={publicEventHref}>
+                          Open public event
+                        </Link>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="console-signal-grid">
+                  <div className="console-signal-card">
+                    <span className="console-kpi-label">Mirror state</span>
+                    <strong>{syncStatusLabel(event.sync_status)}</strong>
+                    <p className="subtle-text">
+                      {event.sync_status === "active"
+                        ? "Mirrored and available for ticket assertions."
+                        : event.sync_status === "hidden"
+                          ? "No longer visible in the current Luma feed."
+                          : event.sync_status === "canceled"
+                            ? "Marked canceled in the mirrored state."
+                            : "Needs operator review after the latest sync."}
+                    </p>
+                  </div>
+                  <div className="console-signal-card">
+                    <span className="console-kpi-label">Ticket tiers</span>
+                    <strong>{mirroredTickets.length} mirrored</strong>
+                    <p className="subtle-text">
+                      {enabledTickets.length} enabled for public checkout
+                    </p>
+                  </div>
+                  <div className="console-signal-card">
+                    <span className="console-kpi-label">Last sync</span>
+                    <strong>{event.last_synced_at ? "Updated" : "Pending"}</strong>
+                    <p className="subtle-text">
+                      {event.last_synced_at ? (
+                        <LocalDateTime iso={event.last_synced_at} />
+                      ) : (
+                        "This event has not been refreshed yet."
+                      )}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="console-card-grid console-ticket-assertion-grid">
+                  {mirroredTickets.map((ticket) => (
+                    <form
+                      action={setTicketAssertionsAction}
+                      className="console-detail-card console-ticket-assertion-card"
+                      key={ticket.ticket_type_api_id}
+                    >
+                      <input name="event_api_id" type="hidden" value={ticket.event_api_id} />
+                      <input
+                        name="ticket_type_api_id"
+                        type="hidden"
+                        value={ticket.ticket_type_api_id}
+                      />
+                      <input
+                        name="redirect_to"
+                        type="hidden"
+                        value={`/ops/tenants/${tenantId}/events`}
+                      />
+                      <div className="console-preview-body-head">
+                        <div>
+                          <p className="console-kpi-label">
+                            {ticket.active ? "Active in Luma" : "Inactive in Luma"}
+                          </p>
+                          <h4>{ticket.name}</h4>
+                        </div>
+                        <div className="console-mini-pill-row">
+                          <span
+                            className={pillClassName(
+                              ticket.zcash_enabled ? "success" : "muted",
+                            )}
+                          >
+                            {ticket.zcash_enabled ? "Enabled" : "Hidden"}
+                          </span>
+                          <span className={pillClassName("info")}>
+                            {ticketSummaryLabel(ticket)}
+                          </span>
+                        </div>
+                      </div>
+                      <p className="subtle-text">
+                        Auto checks: {ticket.automatic_eligibility_status} ·{" "}
+                        {ticket.automatic_eligibility_reasons.join(" ")}
+                      </p>
+                      <label className="console-field">
+                        <span>
+                          <input
+                            defaultChecked={ticket.confirmed_fixed_price}
+                            name="confirmed_fixed_price"
+                            type="checkbox"
+                          />{" "}
+                          Confirm fixed price
+                        </span>
+                      </label>
+                      <label className="console-field">
+                        <span>
+                          <input
+                            defaultChecked={ticket.confirmed_no_approval_required}
+                            name="confirmed_no_approval_required"
+                            type="checkbox"
+                          />{" "}
+                          No approval required
+                        </span>
+                      </label>
+                      <label className="console-field">
+                        <span>
+                          <input
+                            defaultChecked={ticket.confirmed_no_extra_required_questions}
+                            name="confirmed_no_extra_required_questions"
+                            type="checkbox"
+                          />{" "}
+                          No extra required questions
+                        </span>
+                      </label>
+                      <p className="subtle-text">
+                        Public status: {ticket.zcash_enabled ? "enabled" : "disabled"} ·{" "}
+                        {ticket.zcash_enabled_reason}
+                      </p>
+                      <button className="button button-secondary button-small" type="submit">
+                        Save assertions
+                      </button>
+                    </form>
+                  ))}
+                </div>
+              </article>
+            );
+          })}
         </section>
       ))}
     </section>
