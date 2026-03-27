@@ -66,6 +66,7 @@ When something looks off, check these in order:
 
 - The ops console is the main recovery surface.
 - The tenant detail page is the quickest place to compare the current live Luma feed against mirrored inventory when something looks off.
+- Calendar connections can be disabled from the tenant detail page. Disabling turns off the public calendar route for that connection and clears the managed Luma webhook state, but keeps mirrored inventory available for review.
 - The tenant events page separates upstream-only future Luma events from mirrored events and supports event-focused sync/import actions.
 - Event-focused sync still runs the existing full-calendar refresh in the backend, but the UI returns a scoped diff for the selected event: imported, updated, removed from the current feed, and ticket-tier changes.
 - Keep production secrets in AWS Secrets Manager or your chosen secret manager.

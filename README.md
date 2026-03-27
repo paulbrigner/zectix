@@ -176,6 +176,7 @@ Optional inbox for the Luma integration beta application:
 - operators save the Luma API key only; managed Luma webhook ids and secrets are stored internally after `validate and sync`.
 - the tenant detail page shows both the live Luma feed and the mirrored events so operators can review what will be exposed publicly, along with the last successful validation time for the saved key.
 - `validate and sync` verifies the Luma API key, auto-registers the managed webhook for `event.created`, `event.updated`, and `event.canceled`, and refreshes mirrored events/tickets.
+- calendar connections can be disabled from the tenant detail page to turn off public checkout for that calendar and clear the managed Luma webhook state without deleting mirrored history.
 - the tenant events page separates mirrored events from upstream-only Luma events that are visible to the saved key but not yet in the mirrored checkout surface.
 - event-focused sync controls let ops sync one mirrored or upstream-only event at a time while still using the existing full-calendar refresh as the backend source of truth.
 - upstream-only events have a surgical import path in the UI: syncing one selected upstream event imports it into mirrored inventory if it is still present in Luma, and the result is shown as an event-focused diff.
@@ -199,4 +200,3 @@ npm run typecheck
 ## Related Docs
 
 - [`RUNBOOK.md`](./RUNBOOK.md)
-- [`MIGRATION_FROM_DIY.md`](./MIGRATION_FROM_DIY.md)

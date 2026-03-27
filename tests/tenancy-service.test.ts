@@ -30,6 +30,7 @@ const mockPutTicketMirror = vi.fn();
 
 const mockSetSecret = vi.fn();
 const mockGetSecret = vi.fn();
+const mockDeleteLumaWebhook = vi.fn();
 const mockListLumaEvents = vi.fn();
 const mockEnsureCalendarConnectionWebhookSubscription = vi.fn();
 const mockSyncCalendarConnection = vi.fn();
@@ -73,6 +74,7 @@ vi.mock("@/lib/sync/luma-sync", () => ({
 }));
 
 vi.mock("@/lib/luma", () => ({
+  deleteLumaWebhook: mockDeleteLumaWebhook,
   listLumaEvents: mockListLumaEvents,
 }));
 
@@ -80,6 +82,7 @@ const {
   buildFocusedEventSyncReview,
   createCalendarConnection,
   createCipherPayConnection,
+  disableCalendarConnection,
   getTenantOpsDetail,
   syncCalendarEventForOps,
   updateCalendarConnectionLumaKey,
@@ -111,6 +114,7 @@ beforeEach(() => {
   mockPutTicketMirror.mockReset();
   mockSetSecret.mockReset();
   mockGetSecret.mockReset();
+  mockDeleteLumaWebhook.mockReset();
   mockListLumaEvents.mockReset();
   mockEnsureCalendarConnectionWebhookSubscription.mockReset();
   mockSyncCalendarConnection.mockReset();
@@ -249,6 +253,55 @@ describe("updateCalendarConnectionLumaKey", () => {
     await expect(
       updateCalendarConnectionLumaKey("missing_calendar", "new_luma_api_key"),
     ).rejects.toThrow("Calendar connection missing_calendar was not found.");
+  });
+});
+
+describe("disableCalendarConnection", () => {
+  it("marks the connection disabled and clears managed webhook state", async () => {
+    const existingConnection = makeCalendarConnection({
+      status: "active",
+      luma_api_secret_ref: "secret://luma-existing",
+      luma_webhook_secret_ref: "secret://luma-webhook-existing",
+      luma_webhook_id: "whk_existing",
+      last_sync_error: "old sync error",
+    });
+
+    mockGetCalendarConnection.mockResolvedValue(existingConnection);
+    mockGetSecret.mockResolvedValue("resolved-luma-api-key");
+    mockDeleteLumaWebhook.mockResolvedValue(undefined);
+
+    const result = await disableCalendarConnection(
+      existingConnection.calendar_connection_id,
+    );
+
+    expect(mockDeleteLumaWebhook).toHaveBeenCalledWith({
+      apiKey: "resolved-luma-api-key",
+      id: "whk_existing",
+    });
+    expect(result.status).toBe("disabled");
+    expect(result.luma_webhook_id).toBeNull();
+    expect(result.luma_webhook_secret_ref).toBeNull();
+    expect(result.last_sync_error).toBeNull();
+  });
+
+  it("still disables locally if the upstream webhook is already gone", async () => {
+    const existingConnection = makeCalendarConnection({
+      luma_api_secret_ref: "secret://luma-existing",
+      luma_webhook_id: "whk_missing",
+      luma_webhook_secret_ref: "secret://luma-webhook-existing",
+    });
+
+    mockGetCalendarConnection.mockResolvedValue(existingConnection);
+    mockGetSecret.mockResolvedValue("resolved-luma-api-key");
+    mockDeleteLumaWebhook.mockRejectedValue(new Error("Webhook not found"));
+
+    const result = await disableCalendarConnection(
+      existingConnection.calendar_connection_id,
+    );
+
+    expect(result.status).toBe("disabled");
+    expect(result.luma_webhook_id).toBeNull();
+    expect(result.luma_webhook_secret_ref).toBeNull();
   });
 });
 
