@@ -74,6 +74,7 @@ const {
   createCalendarConnection,
   createCipherPayConnection,
   getTenantOpsDetail,
+  updateCalendarConnectionLumaKey,
   validateCipherPayConnection,
 } = await import(
   "@/lib/tenancy/service"
@@ -131,6 +132,47 @@ describe("createCalendarConnection", () => {
     expect(result.luma_api_secret_ref).toBe("secret://luma-api");
     expect(result.luma_webhook_id).toBeNull();
     expect(result.luma_webhook_secret_ref).toBeNull();
+  });
+});
+
+describe("updateCalendarConnectionLumaKey", () => {
+  it("reuses the stored secret ref and clears managed validation state", async () => {
+    const existingConnection = makeCalendarConnection({
+      luma_api_secret_ref: "secret://luma-existing",
+      luma_webhook_secret_ref: "secret://luma-webhook-existing",
+      luma_webhook_id: "whk_existing",
+      last_validated_at: "2026-03-24T12:00:00.000Z",
+      last_synced_at: "2026-03-24T12:30:00.000Z",
+      last_sync_error: "old sync error",
+    });
+
+    mockGetCalendarConnection.mockResolvedValue(existingConnection);
+    mockSetSecret.mockResolvedValue("secret://luma-existing");
+
+    const result = await updateCalendarConnectionLumaKey(
+      existingConnection.calendar_connection_id,
+      "new_luma_api_key",
+    );
+
+    expect(mockSetSecret).toHaveBeenCalledTimes(1);
+    expect(mockSetSecret).toHaveBeenCalledWith(
+      "secret://luma-existing",
+      "new_luma_api_key",
+    );
+    expect(result.luma_api_secret_ref).toBe("secret://luma-existing");
+    expect(result.luma_webhook_secret_ref).toBeNull();
+    expect(result.luma_webhook_id).toBeNull();
+    expect(result.last_validated_at).toBeNull();
+    expect(result.last_synced_at).toBe("2026-03-24T12:30:00.000Z");
+    expect(result.last_sync_error).toBeNull();
+  });
+
+  it("throws when the calendar connection cannot be found", async () => {
+    mockGetCalendarConnection.mockResolvedValue(null);
+
+    await expect(
+      updateCalendarConnectionLumaKey("missing_calendar", "new_luma_api_key"),
+    ).rejects.toThrow("Calendar connection missing_calendar was not found.");
   });
 });
 

@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { setTicketAssertionsAction } from "@/app/ops/actions";
+import {
+  setTicketAssertionsAction,
+  validateAndSyncCalendarAction,
+} from "@/app/ops/actions";
 import { LocalDateTime } from "@/components/LocalDateTime";
 import { getTenantOpsDetail } from "@/lib/tenancy/service";
 
@@ -23,12 +26,34 @@ export default async function TenantEventsPage({
     notFound();
   }
 
-  const eventGroups = detail.events
-    .map(({ calendar, events }) => ({
-      calendar,
-      events: events.filter((event) => isFutureEvent(event.start_at)),
-    }))
-    .filter(({ events }) => events.length > 0);
+  const eventsByCalendarId = new Map(
+    detail.events.map(({ calendar, events }) => [calendar.calendar_connection_id, events] as const),
+  );
+
+  const eventGroups = detail.calendars
+    .map((calendar) => {
+      const events = (eventsByCalendarId.get(calendar.calendar_connection_id) || []).filter(
+        (event) => isFutureEvent(event.start_at),
+      );
+      const mirroredEventIds = new Set(events.map((event) => event.event_api_id));
+      const upstreamPreview =
+        detail.upstream_luma_events_by_calendar.get(calendar.calendar_connection_id) || null;
+      const upstreamEvents =
+        upstreamPreview?.events.filter(
+          (event) => isFutureEvent(event.start_at) && !mirroredEventIds.has(event.api_id),
+        ) || [];
+
+      return {
+        calendar,
+        events,
+        upstreamEvents,
+        upstreamError: upstreamPreview?.error || null,
+      };
+    })
+    .filter(
+      ({ events, upstreamEvents, upstreamError }) =>
+        events.length > 0 || upstreamEvents.length > 0 || Boolean(upstreamError),
+    );
 
   return (
     <section className="console-section">
@@ -38,6 +63,11 @@ export default async function TenantEventsPage({
           <p className="subtle-text">
             Public checkout only exposes tickets that pass automatic checks and all operator assertions.
             Only future mirrored events are shown here.
+          </p>
+          <p className="subtle-text">
+            Importing from Luma still refreshes the full calendar connection. New upstream
+            events appear below for review first, but tickets do not become public until they
+            pass the existing eligibility and assertion checks.
           </p>
         </div>
       </div>
@@ -52,9 +82,99 @@ export default async function TenantEventsPage({
         </div>
       ) : null}
 
-      {eventGroups.map(({ calendar, events }) => (
+      {eventGroups.map(({ calendar, events, upstreamEvents, upstreamError }) => (
         <section className="console-content" key={calendar.calendar_connection_id}>
-          <h3>{calendar.display_name}</h3>
+          <div className="console-section-header">
+            <div>
+              <h3>{calendar.display_name}</h3>
+              <p className="subtle-text">
+                Use the import action to refresh the full calendar and bring newly visible
+                upstream events into the mirrored inventory.
+              </p>
+            </div>
+            <form action={validateAndSyncCalendarAction}>
+              <input
+                name="calendar_connection_id"
+                type="hidden"
+                value={calendar.calendar_connection_id}
+              />
+              <input name="redirect_to" type="hidden" value={`/ops/tenants/${tenantId}/events`} />
+              <button className="button button-secondary button-small" type="submit">
+                {upstreamEvents.length ? "Import from Luma" : "Refresh from Luma"}
+              </button>
+            </form>
+          </div>
+
+          {upstreamError ? (
+            <div className="console-preview-empty">
+              <strong>Could not load the current upstream Luma feed</strong>
+              <p className="subtle-text">{upstreamError}</p>
+            </div>
+          ) : null}
+
+          {upstreamEvents.length ? (
+            <div className="console-detail-card">
+              <div className="console-section-header">
+                <div>
+                  <h4>Available from Luma but not yet mirrored</h4>
+                  <p className="subtle-text">
+                    These future events are visible to the saved Luma key, but they are not yet
+                    part of the mirrored checkout surface.
+                  </p>
+                </div>
+              </div>
+
+              <div className="console-preview-list">
+                {upstreamEvents.map((event) => (
+                  <article className="console-preview-card" key={event.api_id}>
+                    {event.cover_url ? (
+                      <div className="console-preview-media">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img alt={event.name} src={event.cover_url} />
+                      </div>
+                    ) : (
+                      <div className="console-preview-media console-preview-media-fallback">
+                        <span>{event.name.slice(0, 2).toUpperCase()}</span>
+                      </div>
+                    )}
+                    <div className="console-preview-body">
+                      <div className="console-preview-body-head">
+                        <div>
+                          <p className="console-kpi-label">{calendar.display_name}</p>
+                          <h4>{event.name}</h4>
+                        </div>
+                        <div className="console-mini-pill-row">
+                          <span className="console-mini-pill">Upstream only</span>
+                          <span className="console-mini-pill">Not mirrored yet</span>
+                        </div>
+                      </div>
+                      <p className="subtle-text">
+                        <LocalDateTime iso={event.start_at} />
+                        {event.location_label ? ` · ${event.location_label}` : ""}
+                      </p>
+                      <p className="subtle-text">
+                        Importing refreshes the full calendar. Ticket eligibility and operator
+                        assertions still apply before public checkout is enabled.
+                      </p>
+                      {event.url ? (
+                        <div className="button-row">
+                          <a
+                            className="button button-secondary button-small"
+                            href={event.url}
+                            rel="noreferrer noopener"
+                            target="_blank"
+                          >
+                            Open on Luma
+                          </a>
+                        </div>
+                      ) : null}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
           {events.map((event) => (
             <article className="console-detail-card console-event-review-card" key={event.event_api_id}>
               <div className="console-event-review-head">

@@ -278,4 +278,5 @@ export type PublicEventPageData = {
   calendar: CalendarConnection;
   event: EventMirror;
   tickets: TicketMirror[];
+  unavailable_tickets: TicketMirror[];
 };

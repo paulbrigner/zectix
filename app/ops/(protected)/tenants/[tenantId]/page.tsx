@@ -50,6 +50,21 @@ function summarizeCalendarInventory(
   };
 }
 
+function calendarConnectionHealthLabel(
+  calendar: CalendarConnection,
+  hasSavedKey: boolean,
+) {
+  if (!hasSavedKey) {
+    return "Not configured";
+  }
+
+  if (calendar.last_validated_at) {
+    return "Connected";
+  }
+
+  return "Needs validation";
+}
+
 export default async function TenantDetailPage({
   params,
 }: {
@@ -218,6 +233,17 @@ export default async function TenantDetailPage({
             const ticketCount = tickets.length;
             const webhookConfigured =
               Boolean(calendar.luma_webhook_id) && Boolean(previews?.lumaWebhook.has_value);
+            const publicCalendarHref = `/c/${calendar.slug}`;
+            const connectionHealth = calendarConnectionHealthLabel(
+              calendar,
+              Boolean(previews?.luma.has_value),
+            );
+            const validateLabel = calendar.last_validated_at
+              ? "Re-sync now"
+              : "Validate and sync";
+            const liveOnlyCount = nextLiveEvents.filter(
+              (event) => !mirroredByEventId.has(event.api_id),
+            ).length;
 
             return (
               <article
@@ -228,7 +254,9 @@ export default async function TenantDetailPage({
                   <div>
                     <p className="console-kpi-label">{calendar.status}</p>
                     <h3>{calendar.display_name}</h3>
-                    <p className="subtle-text">Public URL: /c/{calendar.slug}</p>
+                    <p className="subtle-text">
+                      Public URL: <Link href={publicCalendarHref}>/c/{calendar.slug}</Link>
+                    </p>
                   </div>
                   <div className="button-row">
                     <form action={validateAndSyncCalendarAction}>
@@ -243,24 +271,49 @@ export default async function TenantDetailPage({
                         value={`/ops/tenants/${detail.tenant.tenant_id}`}
                       />
                       <button className="button button-secondary button-small" type="submit">
-                        Validate and sync
+                        {validateLabel}
                       </button>
                     </form>
                     <Link
                       className="button button-secondary button-small"
+                      href={publicCalendarHref}
+                    >
+                      Open public calendar
+                    </Link>
+                    <Link
+                      className="button button-secondary button-small"
                       href={`/ops/tenants/${encodeURIComponent(detail.tenant.tenant_id)}/events`}
                     >
-                      Ticket controls
+                      View mirrored events
+                    </Link>
+                    <Link
+                      className="button button-secondary button-small"
+                      href={`/ops/tenants/${encodeURIComponent(detail.tenant.tenant_id)}/recovery`}
+                    >
+                      Recovery
                     </Link>
                   </div>
                 </div>
 
                 <div className="console-signal-grid">
                   <div className="console-signal-card">
-                    <span className="console-kpi-label">Luma key</span>
-                    <strong>{previews?.luma.has_value ? "Saved" : "Missing"}</strong>
+                    <span className="console-kpi-label">Luma connection</span>
+                    <strong>{connectionHealth}</strong>
                     <p className="subtle-text">
                       {previews?.luma.preview || "No secret saved yet"}
+                    </p>
+                  </div>
+                  <div className="console-signal-card">
+                    <span className="console-kpi-label">Last validated</span>
+                    <strong>
+                      {calendar.last_validated_at ? "Confirmed" : "Not yet validated"}
+                    </strong>
+                    <p className="subtle-text">
+                      {calendar.last_validated_at ? (
+                        <LocalDateTime iso={calendar.last_validated_at} />
+                      ) : (
+                        "Validate and sync to confirm the saved key can read this calendar."
+                      )}
                     </p>
                   </div>
                   <div className="console-signal-card">
@@ -277,7 +330,7 @@ export default async function TenantDetailPage({
                     </strong>
                     <p className="subtle-text">
                       {enabledEvents.length} events and {enabledTickets.length} tickets are
-                      currently Zcash-enabled
+                      currently Zcash-enabled · {liveOnlyCount} still only visible in Luma
                     </p>
                   </div>
                   <div className="console-signal-card">

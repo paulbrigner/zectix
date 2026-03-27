@@ -63,9 +63,8 @@ export async function getPublicEventPageData(
     return null;
   }
 
-  const tickets = (await listTicketMirrorsByEvent(eventApiId)).filter(
-    (ticket) => ticket.active && ticket.zcash_enabled,
-  );
+  const mirroredTickets = await listTicketMirrorsByEvent(eventApiId);
+  const tickets = mirroredTickets.filter((ticket) => ticket.active && ticket.zcash_enabled);
   if (tickets.length === 0) {
     return null;
   }
@@ -75,6 +74,9 @@ export async function getPublicEventPageData(
     calendar: calendarData.calendar,
     event,
     tickets,
+    unavailable_tickets: mirroredTickets.filter(
+      (ticket) => !ticket.active || !ticket.zcash_enabled,
+    ),
   };
 }
 
