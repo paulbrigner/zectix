@@ -13,6 +13,7 @@ import {
   listEventMirrorsByCalendar,
   listRegistrationTasksByTenant,
   listSessionsByTenant,
+  listTenantsByContactEmail,
   listTicketMirrorsByEvent,
   listWebhookDeliveriesByTenant,
   putCalendarConnection,
@@ -34,6 +35,7 @@ import type {
 import {
   cipherPayDefaultsForNetwork,
   maskSecretPreview,
+  normalizeEmailAddress,
   nowIso,
   slugify,
 } from "@/lib/app-state/utils";
@@ -701,3 +703,27 @@ export async function getTenantOpsDetail(tenantId: string) {
 }
 
 export type TenantOpsDetail = NonNullable<Awaited<ReturnType<typeof getTenantOpsDetail>>>;
+
+export async function listSelfServeTenantsForEmail(email: string) {
+  const normalizedEmail = normalizeEmailAddress(email);
+  if (!normalizedEmail) {
+    return [] as Tenant[];
+  }
+
+  return (await listTenantsByContactEmail(normalizedEmail)).filter(
+    (tenant) => tenant.status !== "archived",
+  );
+}
+
+export async function getTenantSelfServeDetailBySlug(tenantSlug: string, email: string) {
+  const tenant = await getTenantBySlug(tenantSlug);
+  if (!tenant) {
+    return null;
+  }
+
+  if (normalizeEmailAddress(tenant.contact_email) !== normalizeEmailAddress(email)) {
+    return null;
+  }
+
+  return getTenantOpsDetail(tenant.tenant_id);
+}

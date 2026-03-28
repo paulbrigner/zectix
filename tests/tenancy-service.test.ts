@@ -20,6 +20,7 @@ const mockListCipherPayConnectionsByTenant = vi.fn();
 const mockListEventMirrorsByCalendar = vi.fn();
 const mockListRegistrationTasksByTenant = vi.fn();
 const mockListSessionsByTenant = vi.fn();
+const mockListTenantsByContactEmail = vi.fn();
 const mockListTicketMirrorsByEvent = vi.fn();
 const mockListWebhookDeliveriesByTenant = vi.fn();
 const mockPutCalendarConnection = vi.fn();
@@ -50,6 +51,7 @@ vi.mock("@/lib/app-state/state", () => ({
   listEventMirrorsByCalendar: mockListEventMirrorsByCalendar,
   listRegistrationTasksByTenant: mockListRegistrationTasksByTenant,
   listSessionsByTenant: mockListSessionsByTenant,
+  listTenantsByContactEmail: mockListTenantsByContactEmail,
   listTicketMirrorsByEvent: mockListTicketMirrorsByEvent,
   listWebhookDeliveriesByTenant: mockListWebhookDeliveriesByTenant,
   putCalendarConnection: mockPutCalendarConnection,
@@ -84,6 +86,8 @@ const {
   createCipherPayConnection,
   disableCalendarConnection,
   getTenantOpsDetail,
+  getTenantSelfServeDetailBySlug,
+  listSelfServeTenantsForEmail,
   syncCalendarEventForOps,
   updateCalendarConnectionLumaKey,
   validateCipherPayConnection,
@@ -105,6 +109,7 @@ beforeEach(() => {
   mockListEventMirrorsByCalendar.mockReset();
   mockListRegistrationTasksByTenant.mockReset();
   mockListSessionsByTenant.mockReset();
+  mockListTenantsByContactEmail.mockReset();
   mockListTicketMirrorsByEvent.mockReset();
   mockListWebhookDeliveriesByTenant.mockReset();
   mockPutCalendarConnection.mockReset();
@@ -125,6 +130,7 @@ beforeEach(() => {
   mockGetSecret.mockResolvedValue("resolved-secret");
   mockListLumaEvents.mockResolvedValue([]);
   mockListSessionsByTenant.mockResolvedValue([]);
+  mockListTenantsByContactEmail.mockResolvedValue([]);
   mockListWebhookDeliveriesByTenant.mockResolvedValue([]);
   mockListRegistrationTasksByTenant.mockResolvedValue([]);
   mockListEventMirrorsByCalendar.mockResolvedValue([]);
@@ -415,6 +421,39 @@ describe("getTenantOpsDetail", () => {
       events: [],
       error: null,
     });
+  });
+});
+
+describe("listSelfServeTenantsForEmail", () => {
+  it("filters archived tenants out of the self-serve list", async () => {
+    mockListTenantsByContactEmail.mockResolvedValue([
+      makeTenant({ tenant_id: "tenant_active", status: "active" }),
+      makeTenant({ tenant_id: "tenant_archived", status: "archived" }),
+    ]);
+
+    const result = await listSelfServeTenantsForEmail("contact@example.com");
+
+    expect(mockListTenantsByContactEmail).toHaveBeenCalledWith("contact@example.com");
+    expect(result.map((tenant) => tenant.tenant_id)).toEqual(["tenant_active"]);
+  });
+});
+
+describe("getTenantSelfServeDetailBySlug", () => {
+  it("returns null when the signed-in email does not match the tenant contact", async () => {
+    mockGetTenantBySlug.mockResolvedValue(
+      makeTenant({
+        tenant_id: "tenant_123",
+        slug: "demo-tenant",
+        contact_email: "owner@example.com",
+      }),
+    );
+
+    const result = await getTenantSelfServeDetailBySlug(
+      "demo-tenant",
+      "other@example.com",
+    );
+
+    expect(result).toBeNull();
   });
 });
 

@@ -63,10 +63,13 @@ function summarizeCalendar(detail: TenantOpsDetail, calendarConnectionId: string
 export function TenantDashboard({
   detail,
   tenantBasePath,
+  audience = "ops",
 }: {
   detail: TenantOpsDetail;
   tenantBasePath: string;
+  audience?: "ops" | "tenant";
 }) {
+  const isTenantAudience = audience === "tenant";
   const webhookUrl = appUrl("/api/cipherpay/webhook");
   const trackedSessions = detail.sessions.length;
   const pendingSessions = detail.sessions.filter(
@@ -94,29 +97,33 @@ export function TenantDashboard({
   const activeCalendars = detail.calendars.filter(
     (calendar) => calendar.status === "active",
   ).length;
+  const settingsHref = isTenantAudience ? `${tenantBasePath}/settings` : tenantBasePath;
+  const eventsHref = `${tenantBasePath}/events`;
 
   return (
     <div className="console-page-body">
       <section className="console-section">
         <div className="console-section-header">
           <div>
-            <p className="eyebrow">Internal dashboard</p>
+            <p className="eyebrow">
+              {isTenantAudience ? "Organizer dashboard" : "Internal dashboard"}
+            </p>
             <h2>{detail.tenant.name}</h2>
             <p className="subtle-text">
-              Service-manager view of tenant setup, upcoming mirrored inventory, recent
-              checkout activity, and webhook health. This page is designed so we can reuse
-              it later for organizer auth.
+              {isTenantAudience
+                ? "Review setup, upcoming mirrored inventory, recent checkouts, and webhook health for your managed Zcash checkout."
+                : "Service-manager view of tenant setup, upcoming mirrored inventory, recent checkout activity, and webhook health. This page is designed so we can reuse it later for organizer auth."}
             </p>
           </div>
           <div className="button-row">
-            <Link className="button button-secondary button-small" href={tenantBasePath}>
-              Tenant settings
+            <Link className="button button-secondary button-small" href={settingsHref}>
+              {isTenantAudience ? "Settings" : "Tenant settings"}
             </Link>
             <Link
               className="button button-secondary button-small"
-              href={`${tenantBasePath}/events`}
+              href={eventsHref}
             >
-              Ticket controls
+              {isTenantAudience ? "Events and tickets" : "Ticket controls"}
             </Link>
           </div>
         </div>
@@ -150,7 +157,9 @@ export function TenantDashboard({
           <div>
             <h2>Setup</h2>
             <p className="subtle-text">
-              Public entry points, connection health, and what the saved Luma key can currently see upstream.
+              {isTenantAudience
+                ? "Public entry points, connection health, and what the saved Luma key can currently see upstream."
+                : "Public entry points, connection health, and what the saved Luma key can currently see upstream."}
             </p>
           </div>
         </div>
@@ -167,18 +176,29 @@ export function TenantDashboard({
             </p>
           </article>
 
-          <article className="console-detail-card">
-            <h3>Commercial terms</h3>
-            <p className="subtle-text">
-              Service fee {detail.tenant.service_fee_bps} bps
-            </p>
-            <p className="subtle-text">
-              Monthly minimum {detail.tenant.monthly_minimum_usd_cents} cents
-            </p>
-            <p className="subtle-text">
-              Contact {detail.tenant.contact_email}
-            </p>
-          </article>
+          {isTenantAudience ? (
+            <article className="console-detail-card">
+              <h3>Primary contact</h3>
+              <p className="subtle-text">{detail.tenant.contact_email}</p>
+              <p className="subtle-text">
+                Use the settings page to connect Luma, refresh mirrored events, and keep
+                your CipherPay account aligned with checkout.
+              </p>
+            </article>
+          ) : (
+            <article className="console-detail-card">
+              <h3>Commercial terms</h3>
+              <p className="subtle-text">
+                Service fee {detail.tenant.service_fee_bps} bps
+              </p>
+              <p className="subtle-text">
+                Monthly minimum {detail.tenant.monthly_minimum_usd_cents} cents
+              </p>
+              <p className="subtle-text">
+                Contact {detail.tenant.contact_email}
+              </p>
+            </article>
+          )}
         </div>
 
         <div className="console-luma-card-stack">
@@ -229,15 +249,15 @@ export function TenantDashboard({
                   <div className="button-row">
                     <Link
                       className="button button-secondary button-small"
-                      href={tenantBasePath}
+                      href={settingsHref}
                     >
-                      Settings
+                      {isTenantAudience ? "Settings" : "Settings"}
                     </Link>
                     <Link
                       className="button button-secondary button-small"
-                      href={`${tenantBasePath}/events`}
+                      href={eventsHref}
                     >
-                      Review tickets
+                      {isTenantAudience ? "Events and tickets" : "Review tickets"}
                     </Link>
                   </div>
                 </div>
@@ -389,9 +409,9 @@ export function TenantDashboard({
                     ) : null}
                     <Link
                       className="button button-secondary button-small"
-                      href={`${tenantBasePath}/events`}
+                      href={eventsHref}
                     >
-                      Ticket controls
+                      {isTenantAudience ? "Events and tickets" : "Ticket controls"}
                     </Link>
                   </div>
                 </article>
@@ -499,7 +519,9 @@ export function TenantDashboard({
           <div>
             <h2>Webhook log</h2>
             <p className="subtle-text">
-              Latest tenant-scoped deliveries from CipherPay and Luma, including request authentication results.
+              {isTenantAudience
+                ? "Latest tenant-scoped deliveries from CipherPay and Luma, including authentication results."
+                : "Latest tenant-scoped deliveries from CipherPay and Luma, including request authentication results."}
             </p>
           </div>
         </div>
