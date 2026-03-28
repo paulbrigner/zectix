@@ -145,7 +145,7 @@ export default async function TenantSettingsPage({
           <div>
             <h2>Luma calendar setup</h2>
             <p className="subtle-text">
-              Connect one or more Luma calendars for this tenant. Validation registers the
+              Connect one or more Luma calendars for your organization. Validation registers the
               managed event webhook and refreshes mirrored inventory for that calendar.
             </p>
           </div>
@@ -403,7 +403,7 @@ export default async function TenantSettingsPage({
 
         <ConsoleDisclosure
           defaultOpen={detail.calendars.length > 0 && !detail.cipherpay_connections.length}
-          description="Leave the base URLs blank unless this tenant uses custom CipherPay endpoints."
+          description="Leave the base URLs blank unless your organization uses custom CipherPay endpoints."
           title="CipherPay setup"
         >
           <form action={createCipherPayConnectionAction} className="console-content">

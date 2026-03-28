@@ -18,19 +18,19 @@ export default async function TenantHomePage() {
     <section className="console-section">
       <div className="console-section-header">
         <div>
-          <h2>Your tenants</h2>
+          <h2>Your organizations</h2>
           <p className="subtle-text">
-            Choose which tenant dashboard you want to open.
+            Choose which dashboard you want to open.
           </p>
         </div>
       </div>
 
       {!tenants.length ? (
         <div className="console-detail-card">
-          <h3>No tenant access is configured for this email yet</h3>
+          <h3>No dashboard access is configured for this email yet</h3>
           <p className="subtle-text">
-            Sign in with the contact email configured on a tenant or ask the service manager
-            to update the tenant contact email.
+            Sign in with the contact email configured on your organization or ask the service
+            manager to update that contact email.
           </p>
         </div>
       ) : (

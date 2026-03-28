@@ -28,10 +28,10 @@ export default async function TenantScopedLayout({
       <header className="console-section">
         <div className="console-section-header">
           <div>
-            <p className="eyebrow">Tenant</p>
+            <p className="eyebrow">Organization</p>
             <h2>{tenant.name}</h2>
             <p className="subtle-text">
-              Manage calendar setup, mirrored events, and checkout readiness for this tenant.
+              Manage calendar setup, mirrored events, and checkout readiness for your organization.
             </p>
           </div>
         </div>
