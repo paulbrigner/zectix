@@ -5,6 +5,7 @@ import {
   syncCalendarEventAction,
   validateAndSyncCalendarAction,
 } from "@/app/dashboard/actions";
+import { ConsoleDisclosure } from "@/components/ConsoleDisclosure";
 import { LocalDateTime } from "@/components/LocalDateTime";
 import { requireTenantPageAccess } from "@/lib/tenant-auth-server";
 import { getTenantSelfServeDetailBySlug } from "@/lib/tenancy/service";
@@ -39,6 +40,10 @@ type SyncNotice = {
 function isFutureEvent(startAt: string) {
   const startAtMs = new Date(startAt).getTime();
   return Number.isFinite(startAtMs) && startAtMs >= Date.now();
+}
+
+function compareByStartAt<T extends { start_at: string }>(left: T, right: T) {
+  return new Date(left.start_at).getTime() - new Date(right.start_at).getTime();
 }
 
 function readSearchValue(value: SearchParamValue) {
@@ -150,9 +155,9 @@ function syncNoticeCopy(notice: SyncNotice) {
 
   switch (notice.outcome) {
     case "imported":
-      return "The backend still refreshed the full calendar, but this result is focused on the selected event and its mirrored ticket tiers.";
+      return "The backend still refreshed the full calendar, but this summary is focused on the selected event and its ticket tiers.";
     case "updated":
-      return "This event-focused summary captures how the mirrored record changed after the latest full-calendar refresh.";
+      return "This event-focused summary shows how the mirrored record changed after the latest refresh.";
     case "hidden":
       return "The selected event is no longer visible in the latest Luma feed, so its mirrored inventory has been hidden from public checkout.";
     case "canceled":
@@ -186,8 +191,51 @@ function upstreamEventBadges() {
   return [
     { label: "Upstream only", tone: "warning" as const },
     { label: "Not mirrored yet", tone: "muted" as const },
-    { label: "Event-focused import path", tone: "info" as const },
+    { label: "Ready to import", tone: "info" as const },
   ];
+}
+
+function countEnabledTickets(tickets: Array<{ zcash_enabled: boolean }>) {
+  return tickets.filter((ticket) => ticket.zcash_enabled).length;
+}
+
+function ticketReviewTone(ticket: {
+  automatic_eligibility_reasons: string[];
+  zcash_enabled: boolean;
+}) {
+  if (ticket.zcash_enabled) {
+    return "success" as const;
+  }
+  if (ticket.automatic_eligibility_reasons.length) {
+    return "warning" as const;
+  }
+  return "muted" as const;
+}
+
+function ticketReviewLabel(ticket: {
+  automatic_eligibility_reasons: string[];
+  zcash_enabled: boolean;
+}) {
+  if (ticket.zcash_enabled) {
+    return "Ready for checkout";
+  }
+  if (ticket.automatic_eligibility_reasons.length) {
+    return "Needs attention";
+  }
+  return "Needs confirmation";
+}
+
+function ticketReviewCopy(ticket: {
+  automatic_eligibility_reasons: string[];
+  zcash_enabled: boolean;
+}) {
+  if (ticket.automatic_eligibility_reasons.length) {
+    return `Automatic review: ${ticket.automatic_eligibility_reasons.join(" · ")}`;
+  }
+  if (ticket.zcash_enabled) {
+    return "This ticket is already available for managed public checkout.";
+  }
+  return "Automatic review passed. Confirm the organizer-side requirements below to enable checkout.";
 }
 
 export default async function TenantEventsPage({
@@ -212,16 +260,15 @@ export default async function TenantEventsPage({
 
   const eventGroups = detail.calendars
     .map((calendar) => {
-      const events = (eventsByCalendarId.get(calendar.calendar_connection_id) || []).filter(
-        (event) => isFutureEvent(event.start_at),
-      );
+      const events = (eventsByCalendarId.get(calendar.calendar_connection_id) || [])
+        .filter((event) => isFutureEvent(event.start_at))
+        .sort(compareByStartAt);
       const mirroredEventIds = new Set(events.map((event) => event.event_api_id));
       const upstreamPreview =
         detail.upstream_luma_events_by_calendar.get(calendar.calendar_connection_id) || null;
-      const upstreamEvents =
-        upstreamPreview?.events.filter(
-          (event) => isFutureEvent(event.start_at) && !mirroredEventIds.has(event.api_id),
-        ) || [];
+      const upstreamEvents = (upstreamPreview?.events || [])
+        .filter((event) => isFutureEvent(event.start_at) && !mirroredEventIds.has(event.api_id))
+        .sort(compareByStartAt);
 
       return {
         calendar,
@@ -243,9 +290,8 @@ export default async function TenantEventsPage({
         <div>
           <h2>Events and tickets</h2>
           <p className="subtle-text">
-            Use event-focused sync actions to review one event at a time without changing the
-            backend&apos;s full-calendar mirror model. Imported events still land behind the
-            existing ticket-eligibility checks before public checkout exposure.
+            Review upcoming events, refresh one event when something changes, and open ticket
+            settings only when you want to make a checkout decision.
           </p>
         </div>
       </div>
@@ -314,7 +360,8 @@ export default async function TenantEventsPage({
         <div className="console-detail-card">
           <h3>No future events</h3>
           <p className="subtle-text">
-            Event-focused sync and ticket settings only appear for events whose start time is still in the future.
+            Event-focused sync and ticket settings only appear for events whose start time is still
+            in the future.
           </p>
         </div>
       ) : null}
@@ -324,10 +371,10 @@ export default async function TenantEventsPage({
           <div className="console-section-header">
             <div>
               <h3>{calendar.display_name}</h3>
-              <p className="subtle-text">
-                Use the per-event controls below for targeted review. The backend still runs
-                the existing full-calendar refresh, but each result is summarized as an
-                event-focused diff.
+              <p className="subtle-text tenant-event-section-summary">
+                {events.length} mirrored event{events.length === 1 ? "" : "s"} ·{" "}
+                {events.filter((event) => event.zcash_enabled).length} with public checkout live ·{" "}
+                {upstreamEvents.length} available to import
               </p>
             </div>
             <form action={validateAndSyncCalendarAction}>
@@ -356,72 +403,88 @@ export default async function TenantEventsPage({
               <div className="console-section-header">
                 <div>
                   <p className="console-kpi-label">Available from Luma but not yet mirrored</p>
-                  <h3>Upstream-only events</h3>
+                  <h3>Available to import</h3>
                   <p className="subtle-text">
-                    Import one event at a time into mirrored inventory. Imported tickets still
-                    need to satisfy the existing eligibility checks before public checkout can go live.
+                    Bring in one event when you are ready to start reviewing its tickets. Public
+                    checkout stays hidden until eligibility review is complete.
                   </p>
                 </div>
               </div>
 
-              <div className="console-preview-list">
+              <div className="tenant-event-list">
                 {upstreamEvents.map((event) => (
-                  <article className="console-preview-card" key={event.api_id}>
-                    {event.cover_url ? (
-                      <div className="console-preview-media">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img alt={event.name} src={event.cover_url} />
-                      </div>
-                    ) : (
-                      <div className="console-preview-media console-preview-media-fallback">
-                        <span>{event.name.slice(0, 2).toUpperCase()}</span>
-                      </div>
-                    )}
-                    <div className="console-preview-body">
-                      <div className="console-preview-body-head">
-                        <div>
-                          <p className="console-kpi-label">{calendar.display_name}</p>
+                  <article className="console-detail-card tenant-event-card" key={event.api_id}>
+                    <div className="tenant-event-head">
+                      <div className="tenant-event-hero">
+                        {event.cover_url ? (
+                          <div className="tenant-event-media">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img alt={event.name} src={event.cover_url} />
+                          </div>
+                        ) : (
+                          <div className="tenant-event-media tenant-event-media-fallback">
+                            <span>{event.name.slice(0, 2).toUpperCase()}</span>
+                          </div>
+                        )}
+                        <div className="tenant-event-copy">
+                          <p className="console-kpi-label">Import candidate</p>
                           <h4>{event.name}</h4>
-                        </div>
-                        <div className="console-mini-pill-row">
-                          {upstreamEventBadges().map((badge) => (
-                            <span className={pillClassName(badge.tone)} key={badge.label}>
-                              {badge.label}
-                            </span>
-                          ))}
+                          <p className="subtle-text">
+                            <LocalDateTime iso={event.start_at} />
+                            {event.location_label ? ` · ${event.location_label}` : ""}
+                          </p>
                         </div>
                       </div>
-                      <p className="subtle-text">
-                        <LocalDateTime iso={event.start_at} />
-                        {event.location_label ? ` · ${event.location_label}` : ""}
-                      </p>
-                      <div className="button-row">
-                        {event.url ? (
-                          <a
-                            className="button button-secondary button-small"
-                            href={event.url}
-                            rel="noreferrer noopener"
-                            target="_blank"
-                          >
-                            Open on Luma
-                          </a>
-                        ) : null}
-                        <form action={syncCalendarEventAction}>
-                          <input
-                            name="calendar_connection_id"
-                            type="hidden"
-                            value={calendar.calendar_connection_id}
-                          />
-                          <input name="tenant_slug" type="hidden" value={detail.tenant.slug} />
-                          <input name="event_api_id" type="hidden" value={event.api_id} />
-                          <input name="event_name" type="hidden" value={event.name} />
-                          <input name="focus" type="hidden" value="upstream" />
-                          <input name="redirect_to" type="hidden" value={`${basePath}/events`} />
-                          <button className="button button-secondary button-small" type="submit">
-                            Sync this event
-                          </button>
-                        </form>
+                      <div className="console-mini-pill-row tenant-event-pills">
+                        {upstreamEventBadges().map((badge) => (
+                          <span className={pillClassName(badge.tone)} key={badge.label}>
+                            {badge.label}
+                          </span>
+                        ))}
                       </div>
+                    </div>
+
+                    <div className="tenant-event-summary-grid">
+                      <div className="tenant-event-summary-card">
+                        <span className="console-kpi-label">Status</span>
+                        <strong>Not mirrored yet</strong>
+                        <p className="subtle-text">This event is still outside your managed workspace.</p>
+                      </div>
+                      <div className="tenant-event-summary-card">
+                        <span className="console-kpi-label">Public checkout</span>
+                        <strong>Still hidden</strong>
+                        <p className="subtle-text">
+                          Nothing appears on the public calendar until ticket review is complete.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="button-row tenant-event-actions">
+                      {event.url ? (
+                        <a
+                          className="button button-secondary button-small"
+                          href={event.url}
+                          rel="noreferrer noopener"
+                          target="_blank"
+                        >
+                          Open on Luma
+                        </a>
+                      ) : null}
+                      <form action={syncCalendarEventAction}>
+                        <input
+                          name="calendar_connection_id"
+                          type="hidden"
+                          value={calendar.calendar_connection_id}
+                        />
+                        <input name="tenant_slug" type="hidden" value={detail.tenant.slug} />
+                        <input name="event_api_id" type="hidden" value={event.api_id} />
+                        <input name="event_name" type="hidden" value={event.name} />
+                        <input name="focus" type="hidden" value="upstream" />
+                        <input name="redirect_to" type="hidden" value={`${basePath}/events`} />
+                        <button className="button button-secondary button-small" type="submit">
+                          Import and refresh event
+                        </button>
+                      </form>
                     </div>
                   </article>
                 ))}
@@ -429,25 +492,38 @@ export default async function TenantEventsPage({
             </div>
           ) : null}
 
-          <div className="console-card-grid">
+          <div className="tenant-event-list">
             {events.map((event) => {
               const mirroredTickets = detail.tickets_by_event.get(event.event_api_id) || [];
+              const enabledTicketCount = countEnabledTickets(mirroredTickets);
               const publicEventHref = event.zcash_enabled
                 ? `/c/${calendar.slug}/events/${encodeURIComponent(event.event_api_id)}`
                 : null;
 
               return (
-                <article className="console-detail-card" key={event.event_api_id}>
-                  <div className="console-section-header">
-                    <div>
-                      <p className="console-kpi-label">{calendar.display_name}</p>
-                      <h3>{event.name}</h3>
-                      <p className="subtle-text">
-                        <LocalDateTime iso={event.start_at} />
-                        {event.location_label ? ` · ${event.location_label}` : ""}
-                      </p>
+                <article className="console-detail-card tenant-event-card" key={event.event_api_id}>
+                  <div className="tenant-event-head">
+                    <div className="tenant-event-hero">
+                      {event.cover_url ? (
+                        <div className="tenant-event-media">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img alt={event.name} src={event.cover_url} />
+                        </div>
+                      ) : (
+                        <div className="tenant-event-media tenant-event-media-fallback">
+                          <span>{event.name.slice(0, 2).toUpperCase()}</span>
+                        </div>
+                      )}
+                      <div className="tenant-event-copy">
+                        <p className="console-kpi-label">Mirrored event</p>
+                        <h4>{event.name}</h4>
+                        <p className="subtle-text">
+                          <LocalDateTime iso={event.start_at} />
+                          {event.location_label ? ` · ${event.location_label}` : ""}
+                        </p>
+                      </div>
                     </div>
-                    <div className="console-mini-pill-row">
+                    <div className="console-mini-pill-row tenant-event-pills">
                       {mirroredEventBadges(event).map((badge) => (
                         <span className={pillClassName(badge.tone)} key={badge.label}>
                           {badge.label}
@@ -456,15 +532,35 @@ export default async function TenantEventsPage({
                     </div>
                   </div>
 
-                  <p className="subtle-text">
-                    {mirroredTickets.length} mirrored ticket{mirroredTickets.length === 1 ? "" : "s"} ·{" "}
-                    {mirroredTickets.filter((ticket) => ticket.zcash_enabled).length} enabled for public checkout
-                  </p>
-                  <p className="subtle-text">
-                    {event.zcash_enabled_reason || "No public checkout reason recorded yet."}
-                  </p>
+                  <div className="tenant-event-summary-grid">
+                    <div className="tenant-event-summary-card">
+                      <span className="console-kpi-label">Ticket tiers</span>
+                      <strong>
+                        {mirroredTickets.length} mirrored · {enabledTicketCount} ready
+                      </strong>
+                      <p className="subtle-text">
+                        {enabledTicketCount > 0
+                          ? "At least one ticket can already be used for public checkout."
+                          : "Open ticket settings when you are ready to review requirements."}
+                      </p>
+                    </div>
+                    <div className="tenant-event-summary-card">
+                      <span className="console-kpi-label">Public page</span>
+                      <strong>{publicEventHref ? "Live" : "Hidden"}</strong>
+                      <p className="subtle-text">
+                        {event.zcash_enabled_reason || "No public checkout reason recorded yet."}
+                      </p>
+                    </div>
+                    <div className="tenant-event-summary-card">
+                      <span className="console-kpi-label">Sync state</span>
+                      <strong>{syncStatusLabel(event.sync_status)}</strong>
+                      <p className="subtle-text">
+                        Refresh this event if you made changes in Luma and want a fresh summary.
+                      </p>
+                    </div>
+                  </div>
 
-                  <div className="button-row">
+                  <div className="button-row tenant-event-actions">
                     {event.url ? (
                       <a
                         className="button button-secondary button-small"
@@ -497,87 +593,93 @@ export default async function TenantEventsPage({
                     </form>
                   </div>
 
-                  <div className="console-content">
-                    {mirroredTickets.map((ticket) => (
-                      <form
-                        action={setTicketAssertionsAction}
-                        className="console-detail-card"
-                        key={ticket.ticket_type_api_id}
-                      >
-                        <input name="tenant_slug" type="hidden" value={detail.tenant.slug} />
-                        <input
-                          name="calendar_connection_id"
-                          type="hidden"
-                          value={calendar.calendar_connection_id}
-                        />
-                        <input name="event_api_id" type="hidden" value={ticket.event_api_id} />
-                        <input
-                          name="ticket_type_api_id"
-                          type="hidden"
-                          value={ticket.ticket_type_api_id}
-                        />
-                        <input name="redirect_to" type="hidden" value={`${basePath}/events`} />
+                  <ConsoleDisclosure
+                    description={`${enabledTicketCount} of ${mirroredTickets.length} ticket tier${mirroredTickets.length === 1 ? "" : "s"} ready for public checkout.`}
+                    title="Review ticket settings"
+                  >
+                    {mirroredTickets.length ? (
+                      <div className="tenant-ticket-grid">
+                        {mirroredTickets.map((ticket) => (
+                          <form
+                            action={setTicketAssertionsAction}
+                            className="tenant-ticket-card"
+                            key={ticket.ticket_type_api_id}
+                          >
+                            <input name="tenant_slug" type="hidden" value={detail.tenant.slug} />
+                            <input
+                              name="calendar_connection_id"
+                              type="hidden"
+                              value={calendar.calendar_connection_id}
+                            />
+                            <input name="event_api_id" type="hidden" value={ticket.event_api_id} />
+                            <input
+                              name="ticket_type_api_id"
+                              type="hidden"
+                              value={ticket.ticket_type_api_id}
+                            />
+                            <input name="redirect_to" type="hidden" value={`${basePath}/events`} />
 
-                        <div className="console-section-header">
-                          <div>
-                            <p className="console-kpi-label">
-                              {ticket.zcash_enabled ? "Public checkout enabled" : "Needs review"}
-                            </p>
-                            <h4>{ticket.name}</h4>
-                            <p className="subtle-text">
-                              {ticket.amount != null && ticket.currency
-                                ? `${ticket.currency} ${ticket.amount.toFixed(2)}`
-                                : "Pricing unavailable"}
-                            </p>
+                            <div className="tenant-ticket-head">
+                              <div>
+                                <div className="console-inline-action">
+                                  <span className={pillClassName(ticketReviewTone(ticket))}>
+                                    {ticketReviewLabel(ticket)}
+                                  </span>
+                                </div>
+                                <h4>{ticket.name}</h4>
+                                <p className="subtle-text tenant-ticket-price">
+                                  {ticket.amount != null && ticket.currency
+                                    ? `${ticket.currency} ${ticket.amount.toFixed(2)}`
+                                    : "Pricing unavailable"}
+                                </p>
+                              </div>
+                            </div>
+
                             {ticket.description ? (
                               <p className="subtle-text">{ticket.description}</p>
                             ) : null}
-                          </div>
-                        </div>
 
-                        <div className="public-field-grid">
-                          <label className="console-checkbox">
-                            <input
-                              defaultChecked={ticket.confirmed_fixed_price}
-                              name="confirmed_fixed_price"
-                              type="checkbox"
-                            />
-                            <span>Fixed price confirmed</span>
-                          </label>
-                          <label className="console-checkbox">
-                            <input
-                              defaultChecked={ticket.confirmed_no_approval_required}
-                              name="confirmed_no_approval_required"
-                              type="checkbox"
-                            />
-                            <span>No approval required</span>
-                          </label>
-                          <label className="console-checkbox">
-                            <input
-                              defaultChecked={ticket.confirmed_no_extra_required_questions}
-                              name="confirmed_no_extra_required_questions"
-                              type="checkbox"
-                            />
-                            <span>No extra required questions</span>
-                          </label>
-                        </div>
+                            <div className="tenant-ticket-checks">
+                              <label className="console-checkbox">
+                                <input
+                                  defaultChecked={ticket.confirmed_fixed_price}
+                                  name="confirmed_fixed_price"
+                                  type="checkbox"
+                                />
+                                <span>Fixed price confirmed</span>
+                              </label>
+                              <label className="console-checkbox">
+                                <input
+                                  defaultChecked={ticket.confirmed_no_approval_required}
+                                  name="confirmed_no_approval_required"
+                                  type="checkbox"
+                                />
+                                <span>No approval required</span>
+                              </label>
+                              <label className="console-checkbox">
+                                <input
+                                  defaultChecked={ticket.confirmed_no_extra_required_questions}
+                                  name="confirmed_no_extra_required_questions"
+                                  type="checkbox"
+                                />
+                                <span>No extra required questions</span>
+                              </label>
+                            </div>
 
-                        {ticket.automatic_eligibility_reasons.length ? (
-                          <p className="subtle-text">
-                            Automatic review: {ticket.automatic_eligibility_reasons.join(" · ")}
-                          </p>
-                        ) : (
-                          <p className="subtle-text">
-                            Automatic review passed for the standard managed checkout checks.
-                          </p>
-                        )}
+                            <p className="subtle-text">{ticketReviewCopy(ticket)}</p>
 
-                        <button className="button button-secondary button-small" type="submit">
-                          Save ticket settings
-                        </button>
-                      </form>
-                    ))}
-                  </div>
+                            <button className="button button-secondary button-small" type="submit">
+                              Save ticket settings
+                            </button>
+                          </form>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="subtle-text">
+                        No mirrored ticket tiers are available for this event yet.
+                      </p>
+                    )}
+                  </ConsoleDisclosure>
                 </article>
               );
             })}

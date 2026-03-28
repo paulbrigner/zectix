@@ -112,7 +112,7 @@ export function TenantDashboard({
             <p className="subtle-text">
               {isTenantAudience
                 ? "Review setup, upcoming mirrored inventory, recent checkouts, and webhook health for your managed Zcash checkout."
-                : "Service-manager view of tenant setup, upcoming mirrored inventory, recent checkout activity, and webhook health. This page is designed so we can reuse it later for organizer auth."}
+                : "Service-manager view of organization setup, upcoming mirrored inventory, recent checkout activity, and webhook health. This page is designed so we can reuse it later for organizer auth."}
             </p>
           </div>
           <div className="button-row">
@@ -132,7 +132,7 @@ export function TenantDashboard({
           <StatCard
             label="Calendars"
             value={String(activeCalendars)}
-            detail={`${detail.calendars.length} total, ${detail.tenant.status} tenant`}
+            detail={`${detail.calendars.length} total, organization status ${detail.tenant.status}`}
           />
           <StatCard
             label="Upcoming events"
@@ -171,8 +171,8 @@ export function TenantDashboard({
               {webhookUrl || "/api/cipherpay/webhook"}
             </p>
             <p className="subtle-text">
-              All tenant accounts post to the same callback URL. The app resolves the
-              correct tenant secret from the invoice id.
+              All organizer accounts post to the same callback URL. The app resolves the
+              correct secret from the invoice id.
             </p>
           </article>
 
@@ -426,13 +426,13 @@ export function TenantDashboard({
           <div>
             <h2>Recent checkouts</h2>
             <p className="subtle-text">
-              Latest tenant-scoped checkout sessions created through public event pages.
+              Latest checkout sessions created through public event pages for this organization.
             </p>
           </div>
         </div>
 
         {!detail.sessions.length ? (
-          <p className="subtle-text">No tenant checkout sessions yet.</p>
+          <p className="subtle-text">No checkout sessions yet.</p>
         ) : (
           <div className="console-table-wrap">
             <table className="console-table">
@@ -520,8 +520,8 @@ export function TenantDashboard({
             <h2>Webhook log</h2>
             <p className="subtle-text">
               {isTenantAudience
-                ? "Latest tenant-scoped deliveries from CipherPay and Luma, including authentication results."
-                : "Latest tenant-scoped deliveries from CipherPay and Luma, including request authentication results."}
+                ? "Latest deliveries from CipherPay and Luma for this organization, including authentication results."
+                : "Latest deliveries from CipherPay and Luma for this organization, including request authentication results."}
             </p>
           </div>
         </div>
