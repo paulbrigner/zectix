@@ -14,6 +14,9 @@ frontend:
         - env | grep -e APP_BASE_PATH >> .env.production || true
         - env | grep -e APP_PUBLIC_ORIGIN >> .env.production || true
         - env | grep -e ADMIN_PASSWORD_HASH >> .env.production || true
+        - env | grep -e ADMIN_LOGIN_EMAIL >> .env.production || true
+        - env | grep -e ADMIN_AUTH_FROM_EMAIL >> .env.production || true
+        - env | grep -e ADMIN_MAGIC_LINK_SECRET >> .env.production || true
         - env | grep -e ADMIN_SESSION_SECRET >> .env.production || true
         - env | grep -e SESSION_VIEWER_SECRET >> .env.production || true
         - env | grep -e DYNAMODB_TABLE_NAME >> .env.production || true
