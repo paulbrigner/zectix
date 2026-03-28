@@ -143,10 +143,13 @@ Common local variables:
 - `AWS_SECRET_ACCESS_KEY=local`
 - `SECRET_STORE_BACKEND=local`
 
-Optional shared auth:
+Optional operator auth:
 
 - `ADMIN_PASSWORD_HASH`
 - `ADMIN_SESSION_SECRET`
+- `ADMIN_LOGIN_EMAIL`
+- `ADMIN_AUTH_FROM_EMAIL`
+- `ADMIN_MAGIC_LINK_SECRET`
 
 Optional session viewer protection:
 
@@ -171,6 +174,7 @@ Optional inbox for the Luma integration beta application:
 ## Operator Notes
 
 - `/ops` is the primary console for onboarding, monitoring, retries, and reporting.
+- operator auth can run in password mode or emailed one-time-link mode. Email mode uses the configured admin email, stores one-time verification tokens in DynamoDB, and sends the link through SES.
 - `/luma-integration` is the public-facing beta application page for the managed Luma integration.
 - `/api/luma-integration-interest` validates the application payload and sends an SES email to the configured inbox.
 - operators save the Luma API key only; managed Luma webhook ids and secrets are stored internally after `validate and sync`.

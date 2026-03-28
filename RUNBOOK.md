@@ -59,9 +59,11 @@ When something looks off, check these in order:
 
 ### Operator sign-in fails
 
-1. Confirm `ADMIN_PASSWORD_HASH` and `ADMIN_SESSION_SECRET` are set.
-2. Confirm the browser session cookie has not expired.
-3. Re-run `npm run auth:hash -- "your-password"` locally if the hash needs to be regenerated.
+1. Confirm `ADMIN_SESSION_SECRET` is set.
+2. If using password mode, confirm `ADMIN_PASSWORD_HASH` is set and re-run `npm run auth:hash -- "your-password"` locally if the hash needs to be regenerated.
+3. If using email mode, confirm `ADMIN_LOGIN_EMAIL`, `ADMIN_AUTH_FROM_EMAIL`, `ADMIN_MAGIC_LINK_SECRET`, and `APP_PUBLIC_ORIGIN` are set.
+4. Confirm the `from` address or domain is verified in SES and the Amplify compute role can send from it.
+5. Confirm the browser session cookie has not expired and that one-time email links are being used only once.
 
 ## Recovery Notes
 
@@ -97,6 +99,12 @@ Required production values:
 - `ADMIN_SESSION_SECRET`
 - `LUMA_INTEREST_FROM_EMAIL`
 - `LUMA_INTEREST_INBOX_EMAIL`
+
+Additional production values for emailed operator sign-in:
+
+- `ADMIN_LOGIN_EMAIL`
+- `ADMIN_AUTH_FROM_EMAIL`
+- `ADMIN_MAGIC_LINK_SECRET`
 
 ## Probes
 
