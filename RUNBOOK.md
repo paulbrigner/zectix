@@ -12,6 +12,7 @@ When something looks off, check these in order:
 4. `/api/health` and `/api/ready` for quick liveness/readiness confirmation.
 5. The affected checkout session for `status`, `registration_status`, `registration_error`, and `cipherpay_expires_at`.
 6. Environment variables and secret-store entries for the affected tenant connection.
+7. `/dashboard` if the issue is tenant-facing rather than service-manager-facing.
 
 ## Common Issues
 
@@ -65,9 +66,18 @@ When something looks off, check these in order:
 4. Confirm the `from` address or domain is verified in SES and the Amplify compute role can send from it.
 5. Confirm the browser session cookie has not expired and that one-time email links are being used only once.
 
+### Tenant sign-in fails
+
+1. Confirm `APP_PUBLIC_ORIGIN` is set to the deployed origin.
+2. Confirm `TENANT_SESSION_SECRET`, `TENANT_MAGIC_LINK_SECRET`, and `TENANT_AUTH_FROM_EMAIL` are set, or that the corresponding admin auth values are available for fallback.
+3. Confirm the tenant `contact_email` matches the email address being used for sign-in.
+4. Confirm the `from` address or domain is verified in SES and the Amplify compute role can send from it.
+5. Confirm the browser session cookie has not expired and that one-time email links are being used only once.
+
 ## Recovery Notes
 
 - The ops console is the main recovery surface.
+- The tenant dashboard is the main self-serve surface for calendar setup, event review, and checkout visibility.
 - The tenant detail page is the quickest place to compare the current live Luma feed against mirrored inventory when something looks off.
 - Calendar connections can be disabled from the tenant detail page. Disabling turns off the public calendar route for that connection and clears the managed Luma webhook state, but keeps mirrored inventory available for review.
 - The tenant events page separates upstream-only future Luma events from mirrored events and supports event-focused sync/import actions.
@@ -105,6 +115,14 @@ Additional production values for emailed operator sign-in:
 - `ADMIN_LOGIN_EMAIL`
 - `ADMIN_AUTH_FROM_EMAIL`
 - `ADMIN_MAGIC_LINK_SECRET`
+
+Optional production values for emailed tenant sign-in:
+
+- `TENANT_SESSION_SECRET`
+- `TENANT_AUTH_FROM_EMAIL`
+- `TENANT_MAGIC_LINK_SECRET`
+
+If the tenant-specific values are unset, tenant sign-in reuses the admin sender and signing secrets.
 
 ## Probes
 

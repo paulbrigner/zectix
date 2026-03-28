@@ -2,7 +2,7 @@
 
 ZecTix is a Next.js 15 managed-service fork for Luma event hosts who want to accept Zcash through CipherPay without custody.
 
-This fork is multi-tenant and operator-led:
+This fork is multi-tenant and operator-led, with a tenant self-serve dashboard layered on top of the same mirrored inventory and checkout services:
 
 - each organizer gets a `Tenant`
 - each connected Luma calendar is a billable `CalendarConnection`
@@ -28,14 +28,15 @@ The repository is designed to run in two environments:
 
 ## Main Flows
 
-1. Ops creates a tenant, connects a Luma calendar, and stores the Luma API key in the secret store.
-2. The tenant detail page shows both the live Luma event preview and the mirrored inventory for review.
-3. Ops syncs mirrored events and tickets from Luma.
-4. Ops connects CipherPay for that calendar and validates the tenant-scoped payment configuration.
-5. Public checkout happens under `/c/[calendarSlug]` and `/c/[calendarSlug]/events/[eventId]`.
-6. CipherPay webhooks update payment state and immediately attempt registration once payment is detected in the mempool.
-7. The registration worker processes any follow-up retries through `/api/ops/process-registration-tasks` or the ops recovery UI.
-8. Successful registrations are attached back to the checkout session and recorded in the usage ledger.
+1. Ops creates a tenant and sets the tenant contact email.
+2. The tenant signs in through `/dashboard/login` with a one-time email link.
+3. The tenant or ops connects a Luma calendar and stores the Luma API key in the secret store.
+4. The tenant settings page shows connection health, live Luma preview metadata, and mirrored inventory status for review.
+5. The tenant or ops syncs mirrored events and tickets from Luma and connects CipherPay for checkout.
+6. Public checkout happens under `/c/[calendarSlug]` and `/c/[calendarSlug]/events/[eventId]`.
+7. CipherPay webhooks update payment state and immediately attempt registration once payment is detected in the mempool.
+8. The registration worker processes any follow-up retries through `/api/ops/process-registration-tasks` or the ops recovery UI.
+9. Successful registrations are attached back to the checkout session and recorded in the usage ledger.
 
 ## Main Routes
 
@@ -43,6 +44,11 @@ The repository is designed to run in two environments:
 - `/c/[calendarSlug]` public event list for one organizer/calendar
 - `/c/[calendarSlug]/events/[eventId]` public checkout entry page
 - `/checkout/[sessionId]` payment and registration status page
+- `/dashboard/login` tenant sign-in
+- `/dashboard` tenant dashboard landing page
+- `/dashboard/[tenantSlug]` tenant overview
+- `/dashboard/[tenantSlug]/events` tenant event review and ticket settings
+- `/dashboard/[tenantSlug]/settings` tenant connection and checkout setup
 - `/ops/login` operator sign-in
 - `/ops` operator overview
 - `/ops/tenants` tenant onboarding and inventory
@@ -57,6 +63,8 @@ API routes:
 - `/api/checkout`
 - `/api/sessions/[sessionId]`
 - `/api/cipherpay/webhook`
+- `/api/dashboard/login`
+- `/api/dashboard/logout`
 - `/api/luma/webhook`
 - `/api/ops/login`
 - `/api/ops/logout`
@@ -126,6 +134,7 @@ npm run dev
 The local base path is usually `/zectix`, so the most useful URLs are:
 
 - `http://localhost:3000/zectix`
+- `http://localhost:3000/zectix/dashboard/login`
 - `http://localhost:3000/zectix/ops/login`
 - `http://localhost:3000/zectix/ops`
 - `http://localhost:3000/zectix/c/[calendarSlug]`
@@ -151,6 +160,14 @@ Optional operator auth:
 - `ADMIN_AUTH_FROM_EMAIL`
 - `ADMIN_MAGIC_LINK_SECRET`
 
+Optional tenant auth:
+
+- `TENANT_SESSION_SECRET`
+- `TENANT_AUTH_FROM_EMAIL`
+- `TENANT_MAGIC_LINK_SECRET`
+
+Tenant auth falls back to the admin email sender and secrets when the tenant-specific values are unset, so staging and production can share the same SES path if desired.
+
 Optional session viewer protection:
 
 - `SESSION_VIEWER_SECRET`
@@ -175,6 +192,7 @@ Optional inbox for the Luma integration beta application:
 
 - `/ops` is the primary console for onboarding, monitoring, retries, and reporting.
 - operator auth can run in password mode or emailed one-time-link mode. Email mode uses the configured admin email, stores one-time verification tokens in DynamoDB, and sends the link through SES.
+- `/dashboard` is the tenant self-serve surface. The first version uses the tenant `contact_email` as the organizer sign-in identity and sends one-time login links through SES.
 - `/luma-integration` is the public-facing beta application page for the managed Luma integration.
 - `/api/luma-integration-interest` validates the application payload and sends an SES email to the configured inbox.
 - operators save the Luma API key only; managed Luma webhook ids and secrets are stored internally after `validate and sync`.

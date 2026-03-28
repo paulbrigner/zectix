@@ -97,6 +97,13 @@ function tenantSlugKey(slug: string) {
   return { pk: "TENANT_SLUG", sk: slug };
 }
 
+function tenantContactEmailKey(email: string, tenantId: string) {
+  return {
+    pk: `TENANT_CONTACT_EMAIL#${normalizeEmailAddress(email)}`,
+    sk: tenantId,
+  };
+}
+
 function calendarConnectionKey(calendarConnectionId: string) {
   return { pk: "CALENDAR_CONNECTION", sk: calendarConnectionId };
 }
@@ -192,6 +199,10 @@ function adminAuditKey(createdAt: string, eventId: string) {
 
 function adminMagicLinkKey(tokenHash: string) {
   return { pk: "ADMIN_MAGIC_LINK", sk: tokenHash };
+}
+
+function tenantMagicLinkKey(tokenHash: string) {
+  return { pk: "TENANT_MAGIC_LINK", sk: tokenHash };
 }
 
 function checkoutRateLimitKey(scope: string, identifier: string, windowStart: string) {
@@ -724,6 +735,25 @@ function normalizeAdminMagicLinkRecord(value: unknown) {
   };
 }
 
+function normalizeTenantMagicLinkRecord(value: unknown) {
+  const item = asRecord(value);
+  const tokenHash = asString(item?.token_hash) || asString(item?.sk);
+  const email = normalizeEmailAddress(asString(item?.email) || "");
+  const expiresAt = asIsoTimestamp(item?.expires_at);
+  const createdAt = asIsoTimestamp(item?.created_at);
+
+  if (!tokenHash || !email || !expiresAt || !createdAt) {
+    return null;
+  }
+
+  return {
+    token_hash: tokenHash,
+    email,
+    expires_at: expiresAt,
+    created_at: createdAt,
+  };
+}
+
 export async function putTenant(tenant: Tenant) {
   await Promise.all([
     getDynamoDocumentClient().send(
@@ -742,6 +772,16 @@ export async function putTenant(tenant: Tenant) {
           ...tenantSlugKey(tenant.slug),
           tenant_id: tenant.tenant_id,
           slug: tenant.slug,
+        },
+      }),
+    ),
+    getDynamoDocumentClient().send(
+      new PutCommand({
+        TableName: appStateTableName(),
+        Item: {
+          ...tenantContactEmailKey(tenant.contact_email, tenant.tenant_id),
+          tenant_id: tenant.tenant_id,
+          contact_email: normalizeEmailAddress(tenant.contact_email),
         },
       }),
     ),
@@ -766,6 +806,39 @@ export async function listTenants() {
     return sortByIsoDateDesc(
       items.map(normalizeTenant).filter(Boolean) as Tenant[],
       (item) => item.updated_at,
+    );
+  } catch (error) {
+    if (isMissingLocalStateError(error)) {
+      return [] as Tenant[];
+    }
+
+    throw error;
+  }
+}
+
+export async function listTenantsByContactEmail(email: string) {
+  const normalizedEmail = normalizeEmailAddress(email);
+  if (!normalizedEmail) {
+    return [] as Tenant[];
+  }
+
+  try {
+    const items = await queryPartition(`TENANT_CONTACT_EMAIL#${normalizedEmail}`);
+    const tenants = (
+      await Promise.all(
+        items
+          .map((item) => asString(item.tenant_id))
+          .filter(Boolean)
+          .map((tenantId) => getTenant(tenantId as string)),
+      )
+    ).filter(Boolean) as Tenant[];
+
+    if (tenants.length > 0) {
+      return sortByIsoDateDesc(tenants, (item) => item.updated_at);
+    }
+
+    return (await listTenants()).filter(
+      (tenant) => normalizeEmailAddress(tenant.contact_email) === normalizedEmail,
     );
   } catch (error) {
     if (isMissingLocalStateError(error)) {
@@ -1546,6 +1619,56 @@ export async function deleteAdminMagicLinkToken(tokenHash: string) {
     new DeleteCommand({
       TableName: appStateTableName(),
       Key: adminMagicLinkKey(tokenHash),
+    }),
+  );
+}
+
+export async function putTenantMagicLinkToken({
+  tokenHash,
+  email,
+  expiresAt,
+}: {
+  tokenHash: string;
+  email: string;
+  expiresAt: string;
+}) {
+  const record = {
+    token_hash: tokenHash,
+    email: normalizeEmailAddress(email),
+    expires_at: expiresAt,
+    created_at: nowIso(),
+  };
+
+  await getDynamoDocumentClient().send(
+    new PutCommand({
+      TableName: appStateTableName(),
+      Item: {
+        ...tenantMagicLinkKey(record.token_hash),
+        ...record,
+      },
+    }),
+  );
+
+  return record;
+}
+
+export async function consumeTenantMagicLinkToken(tokenHash: string) {
+  const response = await getDynamoDocumentClient().send(
+    new DeleteCommand({
+      TableName: appStateTableName(),
+      Key: tenantMagicLinkKey(tokenHash),
+      ReturnValues: "ALL_OLD",
+    }),
+  );
+
+  return normalizeTenantMagicLinkRecord(response.Attributes);
+}
+
+export async function deleteTenantMagicLinkToken(tokenHash: string) {
+  await getDynamoDocumentClient().send(
+    new DeleteCommand({
+      TableName: appStateTableName(),
+      Key: tenantMagicLinkKey(tokenHash),
     }),
   );
 }
