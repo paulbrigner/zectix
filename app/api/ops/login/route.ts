@@ -1,12 +1,23 @@
 import { cookies } from "next/headers";
 import {
+  ADMIN_MAGIC_LINK_TTL_SECONDS,
   ADMIN_SESSION_COOKIE,
+  createAdminMagicLinkTokenHash,
+  createAdminMagicLinkTokenValue,
   createAdminSessionToken,
+  getAdminAuthMode,
   isAdminAuthEnabled,
+  isAllowedAdminLoginEmail,
   verifyAdminPassword,
 } from "@/lib/admin-auth";
+import { sendAdminMagicLinkEmail } from "@/lib/admin-auth-email";
 import { adminSessionCookieOptions } from "@/lib/admin-auth-server";
-import { consumeOpsLoginRateLimit, putAdminAuditEvent } from "@/lib/app-state/state";
+import {
+  consumeOpsLoginRateLimit,
+  deleteAdminMagicLinkToken,
+  putAdminAuditEvent,
+  putAdminMagicLinkToken,
+} from "@/lib/app-state/state";
 import { appPath } from "@/lib/app-paths";
 import { redirectToPath } from "@/lib/http";
 import { createRequestId, logEvent } from "@/lib/observability";
@@ -14,10 +25,13 @@ import { ensureSameOriginMutation, getTrustedIpAddress } from "@/lib/request-sec
 
 export const runtime = "nodejs";
 
-function loginRedirectPath(error?: string) {
+function loginRedirectPath(error?: string, emailSent = false) {
   const loginUrl = new URL(appPath("/ops/login"), "https://service.invalid");
   if (error) {
     loginUrl.searchParams.set("error", error);
+  }
+  if (emailSent) {
+    loginUrl.searchParams.set("email_sent", "1");
   }
 
   return `${loginUrl.pathname}${loginUrl.search}`;
@@ -50,12 +64,111 @@ export async function POST(request: Request) {
     return redirectToPath(loginRedirectPath("auth_disabled"));
   }
 
+  const authMode = getAdminAuthMode();
+
   const rateLimit = await consumeOpsLoginRateLimit({ ipAddress: actorIp });
   if (!rateLimit.ok) {
     return redirectToPath(loginRedirectPath("rate_limited"));
   }
 
   const formData = await request.formData();
+  if (authMode === "email") {
+    const email = String(formData.get("email") || "").trim().toLowerCase();
+
+    if (!email.includes("@")) {
+      return redirectToPath(loginRedirectPath("invalid_email"));
+    }
+
+    if (isAllowedAdminLoginEmail(email)) {
+      const token = createAdminMagicLinkTokenValue();
+      const tokenHash = createAdminMagicLinkTokenHash(token);
+      const expiresAt = new Date(
+        Date.now() + ADMIN_MAGIC_LINK_TTL_SECONDS * 1000,
+      ).toISOString();
+
+      try {
+        await putAdminMagicLinkToken({
+          tokenHash,
+          email,
+          expiresAt,
+        });
+        await sendAdminMagicLinkEmail(email, token);
+      } catch (error) {
+        try {
+          await deleteAdminMagicLinkToken(tokenHash);
+        } catch {
+          // Ignore cleanup failures so the operator still sees the delivery error.
+        }
+
+        await putAdminAuditEvent({
+          event_type: "ops.login.link_failed",
+          actor_ip: actorIp,
+          actor_origin: actorOrigin,
+          request_headers_json: {
+            origin: request.headers.get("origin"),
+            referer: request.headers.get("referer"),
+            "user-agent": request.headers.get("user-agent"),
+          },
+          metadata_json: {
+            request_id: requestId,
+            email,
+            expires_at: expiresAt,
+            reason: error instanceof Error ? error.message : "send_failed",
+          },
+        });
+        logEvent("error", "ops.login.link_failed", {
+          request_id: requestId,
+          actor_ip: actorIp,
+          email,
+        });
+        return redirectToPath(loginRedirectPath("email_delivery_failed"));
+      }
+
+      await putAdminAuditEvent({
+        event_type: "ops.login.link_sent",
+        actor_ip: actorIp,
+        actor_origin: actorOrigin,
+        request_headers_json: {
+          origin: request.headers.get("origin"),
+          referer: request.headers.get("referer"),
+          "user-agent": request.headers.get("user-agent"),
+        },
+        metadata_json: {
+          request_id: requestId,
+          email,
+          expires_at: expiresAt,
+        },
+      });
+      logEvent("info", "ops.login.link_sent", {
+        request_id: requestId,
+        actor_ip: actorIp,
+        email,
+      });
+    } else {
+      await putAdminAuditEvent({
+        event_type: "ops.login.link_ignored",
+        actor_ip: actorIp,
+        actor_origin: actorOrigin,
+        request_headers_json: {
+          origin: request.headers.get("origin"),
+          referer: request.headers.get("referer"),
+          "user-agent": request.headers.get("user-agent"),
+        },
+        metadata_json: {
+          request_id: requestId,
+          email,
+        },
+      });
+      logEvent("warn", "ops.login.link_ignored", {
+        request_id: requestId,
+        actor_ip: actorIp,
+        email,
+      });
+    }
+
+    return redirectToPath(loginRedirectPath(undefined, true));
+  }
+
   const password = String(formData.get("password") || "");
 
   if (!verifyAdminPassword(password)) {

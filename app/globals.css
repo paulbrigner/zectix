@@ -779,6 +779,10 @@ select {
   color: #166534;
 }
 
+.console-success-text {
+  color: #166534;
+}
+
 .console-error-text {
   color: #b91c1c;
 }

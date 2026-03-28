@@ -190,6 +190,10 @@ function adminAuditKey(createdAt: string, eventId: string) {
   return { pk: "ADMIN_AUDIT", sk: `${createdAt}#${eventId}` };
 }
 
+function adminMagicLinkKey(tokenHash: string) {
+  return { pk: "ADMIN_MAGIC_LINK", sk: tokenHash };
+}
+
 function checkoutRateLimitKey(scope: string, identifier: string, windowStart: string) {
   return { pk: `RATE_LIMIT#${scope}#${identifier}`, sk: windowStart };
 }
@@ -697,6 +701,25 @@ function normalizeAdminAuditEvent(value: unknown): AdminAuditEvent | null {
     actor_origin: asString(item?.actor_origin),
     request_headers_json: asRecord(item?.request_headers_json),
     metadata_json: asRecord(item?.metadata_json),
+    created_at: createdAt,
+  };
+}
+
+function normalizeAdminMagicLinkRecord(value: unknown) {
+  const item = asRecord(value);
+  const tokenHash = asString(item?.token_hash) || asString(item?.sk);
+  const email = normalizeEmailAddress(asString(item?.email) || "");
+  const expiresAt = asIsoTimestamp(item?.expires_at);
+  const createdAt = asIsoTimestamp(item?.created_at);
+
+  if (!tokenHash || !email || !expiresAt || !createdAt) {
+    return null;
+  }
+
+  return {
+    token_hash: tokenHash,
+    email,
+    expires_at: expiresAt,
     created_at: createdAt,
   };
 }
@@ -1475,6 +1498,56 @@ export async function listAdminAuditEvents(limit = 20) {
 
     throw error;
   }
+}
+
+export async function putAdminMagicLinkToken({
+  tokenHash,
+  email,
+  expiresAt,
+}: {
+  tokenHash: string;
+  email: string;
+  expiresAt: string;
+}) {
+  const record = {
+    token_hash: tokenHash,
+    email: normalizeEmailAddress(email),
+    expires_at: expiresAt,
+    created_at: nowIso(),
+  };
+
+  await getDynamoDocumentClient().send(
+    new PutCommand({
+      TableName: appStateTableName(),
+      Item: {
+        ...adminMagicLinkKey(record.token_hash),
+        ...record,
+      },
+    }),
+  );
+
+  return record;
+}
+
+export async function consumeAdminMagicLinkToken(tokenHash: string) {
+  const response = await getDynamoDocumentClient().send(
+    new DeleteCommand({
+      TableName: appStateTableName(),
+      Key: adminMagicLinkKey(tokenHash),
+      ReturnValues: "ALL_OLD",
+    }),
+  );
+
+  return normalizeAdminMagicLinkRecord(response.Attributes);
+}
+
+export async function deleteAdminMagicLinkToken(tokenHash: string) {
+  await getDynamoDocumentClient().send(
+    new DeleteCommand({
+      TableName: appStateTableName(),
+      Key: adminMagicLinkKey(tokenHash),
+    }),
+  );
 }
 
 export async function consumeCheckoutRateLimit({

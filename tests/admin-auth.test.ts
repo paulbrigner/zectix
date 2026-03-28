@@ -1,9 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   ADMIN_SESSION_TTL_SECONDS,
+  createAdminMagicLinkTokenHash,
+  createAdminMagicLinkTokenValue,
   createAdminPasswordHash,
   createAdminSessionToken,
+  getAdminAuthMode,
   isAdminAuthEnabled,
+  isAllowedAdminLoginEmail,
   isAdminSessionTokenValid,
   verifyAdminPassword,
 } from "@/lib/admin-auth";
@@ -48,5 +52,30 @@ describe("admin auth helpers", () => {
     vi.stubEnv("ADMIN_PASSWORD_HASH", "");
     vi.stubEnv("ADMIN_SESSION_SECRET", "");
     expect(isAdminAuthEnabled()).toBe(false);
+  });
+
+  it("uses email auth mode when the admin email flow is configured", () => {
+    vi.stubEnv("ADMIN_PASSWORD_HASH", "");
+    vi.stubEnv("ADMIN_SESSION_SECRET", "session-secret");
+    vi.stubEnv("ADMIN_LOGIN_EMAIL", "ops@zectix.com");
+    vi.stubEnv("ADMIN_AUTH_FROM_EMAIL", "hello@zectix.com");
+    vi.stubEnv("ADMIN_MAGIC_LINK_SECRET", "magic-secret");
+
+    expect(getAdminAuthMode()).toBe("email");
+    expect(isAdminAuthEnabled()).toBe(true);
+    expect(isAllowedAdminLoginEmail(" OPS@ZECTIX.COM ")).toBe(true);
+    expect(isAllowedAdminLoginEmail("other@example.com")).toBe(false);
+  });
+
+  it("creates stable magic-link token hashes from one-time values", () => {
+    vi.stubEnv("ADMIN_MAGIC_LINK_SECRET", "magic-secret");
+
+    const token = createAdminMagicLinkTokenValue();
+    const firstHash = createAdminMagicLinkTokenHash(token);
+    const secondHash = createAdminMagicLinkTokenHash(token);
+
+    expect(token).not.toHaveLength(0);
+    expect(firstHash).toBe(secondHash);
+    expect(createAdminMagicLinkTokenHash("another-token")).not.toBe(firstHash);
   });
 });
