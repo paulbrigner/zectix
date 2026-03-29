@@ -20,7 +20,7 @@ export default async function TenantLayout({
             <p className="eyebrow">Organizer dashboard</p>
             <h1>ZecTix self-serve</h1>
             <p className="subtle-text">
-              Connect Luma and CipherPay, review mirrored events, and monitor managed Zcash checkout activity.
+              Connect Luma and CipherPay, review mirrored events, and monitor managed checkout plus ZEC billing activity.
             </p>
           </div>
           <div className="button-row">

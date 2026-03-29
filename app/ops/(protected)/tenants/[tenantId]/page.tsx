@@ -5,6 +5,7 @@ import {
   createCipherPayConnectionAction,
   disableCalendarConnectionAction,
   setTenantStatusAction,
+  updateTenantBillingSettingsAction,
   validateAndSyncCalendarAction,
   validateCipherPayConnectionAction,
 } from "@/app/ops/actions";
@@ -13,6 +14,7 @@ import { ConsoleFieldLabel } from "@/components/ConsoleFieldLabel";
 import { ConsoleInfoTip } from "@/components/ConsoleInfoTip";
 import { LocalDateTime } from "@/components/LocalDateTime";
 import type { CalendarConnection } from "@/lib/app-state/types";
+import { formatZecAmount } from "@/lib/app-state/utils";
 import { getTenantOpsDetail } from "@/lib/tenancy/service";
 
 export const runtime = "nodejs";
@@ -118,7 +120,7 @@ export default async function TenantDetailPage({
             <p className="eyebrow">{detail.tenant.status}</p>
             <h2>{detail.tenant.name}</h2>
             <p className="subtle-text">
-              {detail.tenant.contact_email} · {detail.tenant.service_fee_bps} bps service fee · minimum {detail.tenant.monthly_minimum_usd_cents} cents
+              {detail.tenant.contact_email} · {detail.tenant.service_fee_bps} bps service fee · billing {detail.tenant.billing_status}
             </p>
           </div>
           <div className="button-row">
@@ -160,6 +162,87 @@ export default async function TenantDetailPage({
           </p>
           <button className="button button-secondary button-small" type="submit">
             Save tenant status
+          </button>
+        </form>
+      </section>
+
+      <section className="console-section">
+        <div className="console-section-header">
+          <div>
+            <h2>Billing settings</h2>
+            <p className="subtle-text">
+              Platform fees are tracked natively in ZEC. These controls manage delinquency, grace handling, and when a cycle is large enough to settle.
+            </p>
+          </div>
+          {detail.billing?.current_cycle ? (
+            <article className="console-detail-card">
+              <p className="console-kpi-label">Current cycle</p>
+              <h3>{detail.billing.current_cycle.billing_period}</h3>
+              <p className="subtle-text">
+                Outstanding {formatZecAmount(detail.billing.current_cycle.outstanding_zatoshis)}
+              </p>
+            </article>
+          ) : null}
+        </div>
+
+        <form action={updateTenantBillingSettingsAction} className="console-content">
+          <input name="tenant_id" type="hidden" value={detail.tenant.tenant_id} />
+          <input name="redirect_to" type="hidden" value={`/ops/tenants/${detail.tenant.tenant_id}`} />
+          <div className="public-field-grid">
+            <label className="console-field">
+              <ConsoleFieldLabel
+                info="Applied to new checkout sessions when their CipherPay invoice is created."
+                label="Service fee (bps)"
+              />
+              <input
+                className="console-input"
+                defaultValue={detail.tenant.service_fee_bps}
+                name="service_fee_bps"
+                type="number"
+              />
+            </label>
+            <label className="console-field">
+              <ConsoleFieldLabel
+                info="How many days after a monthly cycle closes before unpaid balances are treated as overdue."
+                label="Billing grace days"
+              />
+              <input
+                className="console-input"
+                defaultValue={detail.tenant.billing_grace_days}
+                name="billing_grace_days"
+                type="number"
+              />
+            </label>
+            <label className="console-field">
+              <ConsoleFieldLabel
+                info="Outstanding balances below this threshold can be carried manually instead of settled immediately."
+                label="Settlement threshold (zatoshis)"
+              />
+              <input
+                className="console-input"
+                defaultValue={detail.tenant.settlement_threshold_zatoshis}
+                name="settlement_threshold_zatoshis"
+                type="number"
+              />
+            </label>
+            <label className="console-field">
+              <ConsoleFieldLabel
+                info="Separates billing delinquency from public-checkout availability."
+                label="Billing status"
+              />
+              <select
+                className="console-input"
+                defaultValue={detail.tenant.billing_status}
+                name="billing_status"
+              >
+                <option value="active">active</option>
+                <option value="past_due">past_due</option>
+                <option value="suspended">suspended</option>
+              </select>
+            </label>
+          </div>
+          <button className="button button-secondary button-small" type="submit">
+            Save billing settings
           </button>
         </form>
       </section>

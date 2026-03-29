@@ -40,6 +40,9 @@ export default async function TenantScopedLayout({
           <Link className="console-nav-link" href={basePath}>
             Overview
           </Link>
+          <Link className="console-nav-link" href={`${basePath}/billing`}>
+            Billing
+          </Link>
           <Link className="console-nav-link" href={`${basePath}/events`}>
             Events
           </Link>

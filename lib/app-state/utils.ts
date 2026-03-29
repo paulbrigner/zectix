@@ -22,6 +22,8 @@ const LOCALLY_EXPIRABLE_SESSION_STATUSES = new Set<CipherPaySessionStatus>([
   "unknown",
 ]);
 
+export const ZATOSHIS_PER_ZEC = 100_000_000;
+
 export function nowIso() {
   return new Date().toISOString();
 }
@@ -169,8 +171,40 @@ export function billingPeriodForTimestamp(value: string | null | undefined) {
   return `${parsed.getUTCFullYear()}-${String(parsed.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
-export function calculateServiceFeeAmount(amount: number, serviceFeeBps: number) {
-  return Number(((amount * serviceFeeBps) / 10_000).toFixed(2));
+export function zecToZatoshis(amount: number | null | undefined) {
+  if (amount == null || !Number.isFinite(amount)) {
+    return null;
+  }
+
+  return Math.max(0, Math.round(amount * ZATOSHIS_PER_ZEC));
+}
+
+export function zatoshisToZec(amount: number | null | undefined) {
+  if (amount == null || !Number.isFinite(amount)) {
+    return null;
+  }
+
+  return amount / ZATOSHIS_PER_ZEC;
+}
+
+export function formatZecAmount(amountZatoshis: number | null | undefined) {
+  const amountZec = zatoshisToZec(amountZatoshis);
+  if (amountZec == null) {
+    return "n/a";
+  }
+
+  return `${amountZec.toFixed(8).replace(/0+$/, "").replace(/\.$/, "")} ZEC`;
+}
+
+export function calculateServiceFeeZatoshis(
+  grossZatoshis: number | null | undefined,
+  serviceFeeBps: number,
+) {
+  if (grossZatoshis == null || !Number.isFinite(grossZatoshis)) {
+    return 0;
+  }
+
+  return Math.max(0, Math.round((grossZatoshis * Math.max(0, serviceFeeBps)) / 10_000));
 }
 
 export function cipherPayStatusFromEvent(

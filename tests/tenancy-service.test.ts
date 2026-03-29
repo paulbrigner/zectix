@@ -36,6 +36,7 @@ const mockListLumaEvents = vi.fn();
 const mockEnsureCalendarConnectionWebhookSubscription = vi.fn();
 const mockSyncCalendarConnection = vi.fn();
 const mockValidateCalendarConnection = vi.fn();
+const mockGetTenantBillingSnapshot = vi.fn();
 
 vi.mock("@/lib/app-state/state", () => ({
   getCalendarConnection: mockGetCalendarConnection,
@@ -78,6 +79,10 @@ vi.mock("@/lib/sync/luma-sync", () => ({
 vi.mock("@/lib/luma", () => ({
   deleteLumaWebhook: mockDeleteLumaWebhook,
   listLumaEvents: mockListLumaEvents,
+}));
+
+vi.mock("@/lib/billing/usage-ledger", () => ({
+  getTenantBillingSnapshot: mockGetTenantBillingSnapshot,
 }));
 
 const {
@@ -126,6 +131,7 @@ beforeEach(() => {
   mockEnsureCalendarConnectionWebhookSubscription.mockReset();
   mockSyncCalendarConnection.mockReset();
   mockValidateCalendarConnection.mockReset();
+  mockGetTenantBillingSnapshot.mockReset();
 
   mockPutCalendarConnection.mockImplementation(async (connection) => connection);
   mockPutCipherPayConnection.mockImplementation(async (connection) => connection);
@@ -140,6 +146,12 @@ beforeEach(() => {
   mockListRegistrationTasksByTenant.mockResolvedValue([]);
   mockListEventMirrorsByCalendar.mockResolvedValue([]);
   mockListTicketMirrorsByEvent.mockResolvedValue([]);
+  mockGetTenantBillingSnapshot.mockResolvedValue({
+    tenant: makeTenant(),
+    current_cycle: null,
+    cycles: [],
+    adjustments_by_cycle: new Map(),
+  });
 });
 
 describe("buildFocusedEventSyncReview", () => {

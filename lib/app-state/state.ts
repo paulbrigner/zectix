@@ -12,6 +12,8 @@ import {
 } from "@/lib/app-state/dynamodb";
 import type {
   AdminAuditEvent,
+  BillingAdjustment,
+  BillingCycle,
   BillingReportRow,
   CalendarConnection,
   CheckoutSession,
@@ -37,7 +39,14 @@ import {
   normalizeEmailAddress,
   nowIso,
   sortByIsoDateDesc,
+  zecToZatoshis,
+  calculateServiceFeeZatoshis,
 } from "@/lib/app-state/utils";
+import {
+  buildBillingCycleId,
+  calculateOutstandingZatoshis,
+  deriveBillingCycleStatus,
+} from "@/lib/billing/cycles";
 import {
   DEFAULT_EMBED_HEIGHT_PX,
   normalizeCalendarEmbedTheme,
@@ -199,6 +208,32 @@ function sessionUsageLookupKey(sessionId: string) {
   return { pk: "USAGE_BY_SESSION", sk: sessionId };
 }
 
+function billingCycleKey(billingCycleId: string) {
+  return { pk: "BILLING_CYCLE", sk: billingCycleId };
+}
+
+function tenantBillingCycleKey(tenantId: string, periodStart: string, billingCycleId: string) {
+  return {
+    pk: `TENANT_BILLING_CYCLES#${tenantId}`,
+    sk: `${periodStart}#${billingCycleId}`,
+  };
+}
+
+function billingAdjustmentKey(adjustmentId: string) {
+  return { pk: "BILLING_ADJUSTMENT", sk: adjustmentId };
+}
+
+function cycleBillingAdjustmentKey(
+  billingCycleId: string,
+  createdAt: string,
+  adjustmentId: string,
+) {
+  return {
+    pk: `BILLING_ADJUSTMENTS#${billingCycleId}`,
+    sk: `${createdAt}#${adjustmentId}`,
+  };
+}
+
 function adminAuditKey(createdAt: string, eventId: string) {
   return { pk: "ADMIN_AUDIT", sk: `${createdAt}#${eventId}` };
 }
@@ -296,10 +331,18 @@ function normalizeTenant(value: unknown): Tenant | null {
         : item?.status === "active"
           ? "completed"
           : "not_started",
+    billing_status:
+      item?.billing_status === "past_due" || item?.billing_status === "suspended"
+        ? item.billing_status
+        : "active",
     onboarding_started_at: asIsoTimestamp(item?.onboarding_started_at),
     onboarding_completed_at: asIsoTimestamp(item?.onboarding_completed_at),
-    monthly_minimum_usd_cents: asNonNegativeInteger(item?.monthly_minimum_usd_cents, 0),
     service_fee_bps: asNonNegativeInteger(item?.service_fee_bps, 0),
+    billing_grace_days: asNonNegativeInteger(item?.billing_grace_days, 7),
+    settlement_threshold_zatoshis: asNonNegativeInteger(
+      item?.settlement_threshold_zatoshis,
+      0,
+    ),
     pilot_notes: asString(item?.pilot_notes),
     created_at: createdAt,
     updated_at: updatedAt,
@@ -551,13 +594,23 @@ function normalizeCheckoutSession(value: unknown): CheckoutSession | null {
     pricing_source: "mirror",
     pricing_snapshot_json: asRecord(item?.pricing_snapshot_json) || {},
     service_fee_bps_snapshot: asNonNegativeInteger(item?.service_fee_bps_snapshot, 0),
-    service_fee_amount_snapshot: asFiniteNumber(item?.service_fee_amount_snapshot) || 0,
+    service_fee_zatoshis_snapshot:
+      asNonNegativeInteger(item?.service_fee_zatoshis_snapshot, -1) >= 0
+        ? asNonNegativeInteger(item?.service_fee_zatoshis_snapshot, 0)
+        : calculateServiceFeeZatoshis(
+            zecToZatoshis(asFiniteNumber(item?.cipherpay_price_zec)) || 0,
+            asNonNegativeInteger(item?.service_fee_bps_snapshot, 0),
+          ),
     checkout_url: asString(item?.checkout_url),
     cipherpay_invoice_id: invoiceId,
     cipherpay_memo_code: asString(item?.cipherpay_memo_code),
     cipherpay_payment_address: asString(item?.cipherpay_payment_address),
     cipherpay_zcash_uri: asString(item?.cipherpay_zcash_uri),
     cipherpay_price_zec: asFiniteNumber(item?.cipherpay_price_zec),
+    cipherpay_price_zatoshis:
+      asNonNegativeInteger(item?.cipherpay_price_zatoshis, -1) >= 0
+        ? asNonNegativeInteger(item?.cipherpay_price_zatoshis, 0)
+        : zecToZatoshis(asFiniteNumber(item?.cipherpay_price_zec)),
     cipherpay_expires_at: asIsoTimestamp(item?.cipherpay_expires_at),
     status:
       item?.status === "draft" ||
@@ -686,7 +739,6 @@ function normalizeUsageLedgerEntry(value: unknown): UsageLedgerEntry | null {
   const eventApiId = asString(item?.event_api_id);
   const recognizedAt = asIsoTimestamp(item?.recognized_at);
   const billingPeriod = asString(item?.billing_period);
-  const currency = asString(item?.currency);
 
   if (
     !usageEntryId ||
@@ -696,12 +748,12 @@ function normalizeUsageLedgerEntry(value: unknown): UsageLedgerEntry | null {
     !invoiceId ||
     !eventApiId ||
     !recognizedAt ||
-    !billingPeriod ||
-    !currency
+    !billingPeriod
   ) {
     return null;
   }
 
+  const legacyCurrency = asString(item?.currency);
   return {
     usage_entry_id: usageEntryId,
     tenant_id: tenantId,
@@ -709,14 +761,117 @@ function normalizeUsageLedgerEntry(value: unknown): UsageLedgerEntry | null {
     session_id: sessionId,
     cipherpay_invoice_id: invoiceId,
     event_api_id: eventApiId,
-    gross_amount: asFiniteNumber(item?.gross_amount) || 0,
-    currency,
+    gross_zatoshis:
+      asNonNegativeInteger(item?.gross_zatoshis, -1) >= 0
+        ? asNonNegativeInteger(item?.gross_zatoshis, 0)
+        : legacyCurrency === "ZEC"
+          ? zecToZatoshis(asFiniteNumber(item?.gross_amount)) || 0
+          : 0,
     service_fee_bps: asNonNegativeInteger(item?.service_fee_bps, 0),
-    service_fee_amount: asFiniteNumber(item?.service_fee_amount) || 0,
+    service_fee_zatoshis:
+      asNonNegativeInteger(item?.service_fee_zatoshis, -1) >= 0
+        ? asNonNegativeInteger(item?.service_fee_zatoshis, 0)
+        : legacyCurrency === "ZEC"
+          ? zecToZatoshis(asFiniteNumber(item?.service_fee_amount)) || 0
+          : 0,
     recognized_at: recognizedAt,
     billing_period: billingPeriod,
+    billing_cycle_id:
+      asString(item?.billing_cycle_id) || buildBillingCycleId(tenantId, billingPeriod),
     status:
       item?.status === "waived" || item?.status === "credited" ? item.status : "billable",
+  };
+}
+
+function normalizeBillingCycle(value: unknown): BillingCycle | null {
+  const item = asRecord(value);
+  const billingCycleId = asString(item?.billing_cycle_id) || asString(item?.sk);
+  const tenantId = asString(item?.tenant_id);
+  const billingPeriod = asString(item?.billing_period);
+  const periodStart = asIsoTimestamp(item?.period_start);
+  const periodEnd = asIsoTimestamp(item?.period_end);
+  const graceUntil = asIsoTimestamp(item?.grace_until);
+  const createdAt = asIsoTimestamp(item?.created_at);
+  const updatedAt = asIsoTimestamp(item?.updated_at);
+
+  if (
+    !billingCycleId ||
+    !tenantId ||
+    !billingPeriod ||
+    !periodStart ||
+    !periodEnd ||
+    !graceUntil ||
+    !createdAt ||
+    !updatedAt
+  ) {
+    return null;
+  }
+
+  const recognizedSessionCount = asNonNegativeInteger(item?.recognized_session_count, 0);
+  const grossZatoshis = asNonNegativeInteger(item?.gross_zatoshis, 0);
+  const serviceFeeZatoshis = asNonNegativeInteger(item?.service_fee_zatoshis, 0);
+  const creditedZatoshis = asNonNegativeInteger(item?.credited_zatoshis, 0);
+  const waivedZatoshis = asNonNegativeInteger(item?.waived_zatoshis, 0);
+  const outstandingZatoshis =
+    asNonNegativeInteger(item?.outstanding_zatoshis, -1) >= 0
+      ? asNonNegativeInteger(item?.outstanding_zatoshis, 0)
+      : calculateOutstandingZatoshis({
+          service_fee_zatoshis: serviceFeeZatoshis,
+          credited_zatoshis: creditedZatoshis,
+          waived_zatoshis: waivedZatoshis,
+        });
+
+  return {
+    billing_cycle_id: billingCycleId,
+    tenant_id: tenantId,
+    billing_period: billingPeriod,
+    period_start: periodStart,
+    period_end: periodEnd,
+    grace_until: graceUntil,
+    status:
+      item?.status === "invoiced" ||
+      item?.status === "paid" ||
+      item?.status === "past_due" ||
+      item?.status === "suspended" ||
+      item?.status === "carried_over"
+        ? item.status
+        : "open",
+    recognized_session_count: recognizedSessionCount,
+    gross_zatoshis: grossZatoshis,
+    service_fee_zatoshis: serviceFeeZatoshis,
+    credited_zatoshis: creditedZatoshis,
+    waived_zatoshis: waivedZatoshis,
+    outstanding_zatoshis: outstandingZatoshis,
+    invoice_reference: asString(item?.invoice_reference),
+    settlement_txid: asString(item?.settlement_txid),
+    invoiced_at: asIsoTimestamp(item?.invoiced_at),
+    paid_at: asIsoTimestamp(item?.paid_at),
+    last_reconciled_at: asIsoTimestamp(item?.last_reconciled_at),
+    created_at: createdAt,
+    updated_at: updatedAt,
+  };
+}
+
+function normalizeBillingAdjustment(value: unknown): BillingAdjustment | null {
+  const item = asRecord(value);
+  const adjustmentId = asString(item?.adjustment_id) || asString(item?.sk);
+  const billingCycleId = asString(item?.billing_cycle_id);
+  const tenantId = asString(item?.tenant_id);
+  const reason = asString(item?.reason);
+  const createdAt = asIsoTimestamp(item?.created_at);
+
+  if (!adjustmentId || !billingCycleId || !tenantId || !reason || !createdAt) {
+    return null;
+  }
+
+  return {
+    adjustment_id: adjustmentId,
+    billing_cycle_id: billingCycleId,
+    tenant_id: tenantId,
+    type: item?.type === "waiver" ? "waiver" : "credit",
+    amount_zatoshis: asNonNegativeInteger(item?.amount_zatoshis, 0),
+    reason,
+    created_at: createdAt,
   };
 }
 
@@ -1508,6 +1663,7 @@ export async function putUsageLedgerEntry(entry: UsageLedgerEntry) {
           usage_entry_id: entry.usage_entry_id,
           tenant_id: entry.tenant_id,
           billing_period: entry.billing_period,
+          billing_cycle_id: entry.billing_cycle_id,
         },
       }),
     ),
@@ -1520,7 +1676,10 @@ export async function getUsageLedgerEntryBySession(sessionId: string) {
   const lookup = await getItem(sessionUsageLookupKey(sessionId));
   const usageEntryId = asString(lookup?.usage_entry_id);
   const tenantId = asString(lookup?.tenant_id);
-  const billingPeriod = asString(lookup?.billing_period);
+  const billingPeriod =
+    asString(lookup?.billing_period) ||
+    asString(lookup?.billing_cycle_id)?.split(":").slice(1).join(":") ||
+    null;
 
   if (!usageEntryId || !tenantId || !billingPeriod) {
     return null;
@@ -1531,16 +1690,133 @@ export async function getUsageLedgerEntryBySession(sessionId: string) {
   );
 }
 
-export async function listUsageLedgerEntriesByTenantPeriod(
+export async function listUsageLedgerEntriesByTenantCycle(
   tenantId: string,
-  billingPeriod: string,
+  billingCycleId: string,
 ) {
   try {
+    const billingPeriod = billingCycleId.split(":").slice(1).join(":");
     const items = await queryPartition(`USAGE#${tenantId}#${billingPeriod}`);
     return items.map(normalizeUsageLedgerEntry).filter(Boolean) as UsageLedgerEntry[];
   } catch (error) {
     if (isMissingLocalStateError(error)) {
       return [] as UsageLedgerEntry[];
+    }
+
+    throw error;
+  }
+}
+
+export async function putBillingCycle(cycle: BillingCycle) {
+  await Promise.all([
+    getDynamoDocumentClient().send(
+      new PutCommand({
+        TableName: appStateTableName(),
+        Item: {
+          ...billingCycleKey(cycle.billing_cycle_id),
+          ...cycle,
+        },
+      }),
+    ),
+    getDynamoDocumentClient().send(
+      new PutCommand({
+        TableName: appStateTableName(),
+        Item: {
+          ...tenantBillingCycleKey(cycle.tenant_id, cycle.period_start, cycle.billing_cycle_id),
+          ...cycle,
+        },
+      }),
+    ),
+  ]);
+
+  return cycle;
+}
+
+export async function getBillingCycle(billingCycleId: string) {
+  return normalizeBillingCycle(await getItem(billingCycleKey(billingCycleId)));
+}
+
+export async function updateBillingCycle(
+  billingCycleId: string,
+  patch: Partial<BillingCycle>,
+) {
+  const current = await getBillingCycle(billingCycleId);
+  if (!current) {
+    throw new Error(`Billing cycle ${billingCycleId} was not found.`);
+  }
+
+  const next = normalizeBillingCycle({
+    ...current,
+    ...patch,
+    billing_cycle_id: current.billing_cycle_id,
+    tenant_id: current.tenant_id,
+    billing_period: current.billing_period,
+    period_start: current.period_start,
+    period_end: current.period_end,
+    grace_until: current.grace_until,
+    created_at: current.created_at,
+    updated_at: nowIso(),
+  });
+  if (!next) {
+    throw new Error("Billing cycle update produced an invalid shape.");
+  }
+
+  return putBillingCycle(next);
+}
+
+export async function listBillingCyclesByTenant(tenantId: string) {
+  try {
+    const items = await queryPartition(`TENANT_BILLING_CYCLES#${tenantId}`, {
+      scanIndexForward: false,
+    });
+    return items.map(normalizeBillingCycle).filter(Boolean) as BillingCycle[];
+  } catch (error) {
+    if (isMissingLocalStateError(error)) {
+      return [] as BillingCycle[];
+    }
+
+    throw error;
+  }
+}
+
+export async function putBillingAdjustment(adjustment: BillingAdjustment) {
+  await Promise.all([
+    getDynamoDocumentClient().send(
+      new PutCommand({
+        TableName: appStateTableName(),
+        Item: {
+          ...billingAdjustmentKey(adjustment.adjustment_id),
+          ...adjustment,
+        },
+      }),
+    ),
+    getDynamoDocumentClient().send(
+      new PutCommand({
+        TableName: appStateTableName(),
+        Item: {
+          ...cycleBillingAdjustmentKey(
+            adjustment.billing_cycle_id,
+            adjustment.created_at,
+            adjustment.adjustment_id,
+          ),
+          ...adjustment,
+        },
+      }),
+    ),
+  ]);
+
+  return adjustment;
+}
+
+export async function listBillingAdjustmentsByCycle(billingCycleId: string) {
+  try {
+    const items = await queryPartition(`BILLING_ADJUSTMENTS#${billingCycleId}`, {
+      scanIndexForward: false,
+    });
+    return items.map(normalizeBillingAdjustment).filter(Boolean) as BillingAdjustment[];
+  } catch (error) {
+    if (isMissingLocalStateError(error)) {
+      return [] as BillingAdjustment[];
     }
 
     throw error;
@@ -1921,38 +2197,22 @@ export async function buildBillingReportRows(billingPeriod: string) {
   const rows: BillingReportRow[] = [];
 
   for (const tenant of tenants) {
-    const [calendars, entries] = await Promise.all([
-      listCalendarConnectionsByTenant(tenant.tenant_id),
-      listUsageLedgerEntriesByTenantPeriod(tenant.tenant_id, billingPeriod),
-    ]);
-    const calendarsById = new Map(
-      calendars.map((calendar) => [calendar.calendar_connection_id, calendar]),
-    );
-    const grouped = new Map<string, UsageLedgerEntry[]>();
-    for (const entry of entries) {
-      const key = `${entry.calendar_connection_id}#${entry.currency}`;
-      const existing = grouped.get(key) || [];
-      existing.push(entry);
-      grouped.set(key, existing);
-    }
-
-    for (const [key, group] of grouped.entries()) {
-      const [calendarConnectionId, currency] = key.split("#");
-      const calendar = calendarsById.get(calendarConnectionId);
+    const cycles = await listBillingCyclesByTenant(tenant.tenant_id);
+    for (const cycle of cycles.filter((entry) => entry.billing_period === billingPeriod)) {
       rows.push({
         tenant_id: tenant.tenant_id,
         tenant_name: tenant.name,
-        calendar_connection_id: calendarConnectionId,
-        calendar_display_name: calendar?.display_name || calendarConnectionId,
+        billing_cycle_id: cycle.billing_cycle_id,
         billing_period: billingPeriod,
-        session_count: group.length,
-        gross_volume: Number(
-          group.reduce((sum, entry) => sum + entry.gross_amount, 0).toFixed(2),
-        ),
-        service_fee_due: Number(
-          group.reduce((sum, entry) => sum + entry.service_fee_amount, 0).toFixed(2),
-        ),
-        currency,
+        period_start: cycle.period_start,
+        period_end: cycle.period_end,
+        status: deriveBillingCycleStatus(cycle, tenant.billing_status),
+        session_count: cycle.recognized_session_count,
+        gross_zatoshis: cycle.gross_zatoshis,
+        service_fee_zatoshis: cycle.service_fee_zatoshis,
+        credited_zatoshis: cycle.credited_zatoshis,
+        waived_zatoshis: cycle.waived_zatoshis,
+        outstanding_zatoshis: cycle.outstanding_zatoshis,
       });
     }
   }
