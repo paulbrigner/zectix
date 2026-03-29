@@ -222,10 +222,13 @@ export async function getTenantBillingSnapshot(tenantId: string) {
   const cycles = await listTenantBillingCycles(tenantId);
   const adjustmentsByCycle = new Map<string, BillingAdjustment[]>(
     await Promise.all(
-      cycles.map(async (cycle) => [
-        cycle.billing_cycle_id,
-        await listBillingAdjustmentsByCycle(cycle.billing_cycle_id),
-      ]),
+      cycles.map(
+        async (cycle): Promise<readonly [string, BillingAdjustment[]]> =>
+          [
+            cycle.billing_cycle_id,
+            await listBillingAdjustmentsByCycle(cycle.billing_cycle_id),
+          ] as const,
+      ),
     ),
   );
 
