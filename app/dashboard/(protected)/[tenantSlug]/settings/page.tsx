@@ -4,6 +4,7 @@ import {
   createCalendarConnectionAction,
   createCipherPayConnectionAction,
   disableCalendarConnectionAction,
+  updateCalendarEmbedSettingsAction,
   updateCalendarConnectionLumaKeyAction,
   validateAndSyncCalendarAction,
   validateCipherPayConnectionAction,
@@ -13,6 +14,7 @@ import { ConsoleFieldLabel } from "@/components/ConsoleFieldLabel";
 import { ConsoleInfoTip } from "@/components/ConsoleInfoTip";
 import { LocalDateTime } from "@/components/LocalDateTime";
 import type { CalendarConnection } from "@/lib/app-state/types";
+import { appUrl } from "@/lib/app-paths";
 import { requireTenantPageAccess } from "@/lib/tenant-auth-server";
 import { getTenantSelfServeDetailBySlug } from "@/lib/tenancy/service";
 
@@ -66,6 +68,79 @@ function calendarConnectionHealthLabel(calendar: CalendarConnection, hasSavedKey
   return "Needs validation";
 }
 
+function humanizeOnboardingStatus(value: string) {
+  return value.replaceAll("_", " ");
+}
+
+function buildOnboardingChecklist(
+  detail: NonNullable<Awaited<ReturnType<typeof getTenantSelfServeDetailBySlug>>>,
+) {
+  const hasCalendar = detail.calendars.length > 0;
+  const hasValidatedCalendar = detail.calendars.some(
+    (calendar) => calendar.status === "active" && Boolean(calendar.last_validated_at),
+  );
+  const hasCipherPayConnection = detail.cipherpay_connections.length > 0;
+  const hasValidatedCipherPay = detail.cipherpay_connections.some(
+    (connection) => connection.status === "active",
+  );
+
+  return [
+    {
+      label: "Draft organizer created",
+      complete: true,
+      description: `Status ${detail.tenant.status} · onboarding ${humanizeOnboardingStatus(detail.tenant.onboarding_status)}`,
+    },
+    {
+      label: "Connect at least one Luma calendar",
+      complete: hasCalendar,
+      description: hasCalendar
+        ? `${detail.calendars.length} calendar connection${detail.calendars.length === 1 ? "" : "s"} configured`
+        : "Add a calendar connection below to start mirroring inventory.",
+    },
+    {
+      label: "Validate and sync Luma",
+      complete: hasValidatedCalendar,
+      description: hasValidatedCalendar
+        ? "At least one calendar was validated and mirrored."
+        : "Run Connect and sync once the Luma key is saved.",
+    },
+    {
+      label: "Attach a CipherPay account",
+      complete: hasCipherPayConnection,
+      description: hasCipherPayConnection
+        ? `${detail.cipherpay_connections.length} CipherPay configuration${detail.cipherpay_connections.length === 1 ? "" : "s"} saved`
+        : "Save a CipherPay account for the calendar you want to use for checkout.",
+    },
+    {
+      label: "Validate CipherPay",
+      complete: hasValidatedCipherPay,
+      description: hasValidatedCipherPay
+        ? "At least one CipherPay configuration is marked active."
+        : "Validate the current CipherPay connection after saving it.",
+    },
+    {
+      label: "Activate the tenant for public checkout",
+      complete: detail.tenant.status === "active",
+      description:
+        detail.tenant.status === "active"
+          ? "Public calendar routes can resolve for active calendars."
+          : "A draft tenant stays dark publicly until it is activated.",
+    },
+  ];
+}
+
+function buildEmbedEventUrl(calendarSlug: string, eventApiId: string) {
+  const relativeUrl =
+    `/c/${encodeURIComponent(calendarSlug)}` +
+    `/events/${encodeURIComponent(eventApiId)}?embed=1`;
+  return appUrl(relativeUrl) || relativeUrl;
+}
+
+function buildEmbedSnippet(url: string, title: string, height: number) {
+  const safeTitle = title.replaceAll('"', "&quot;");
+  return `<iframe src="${url}" title="${safeTitle}" style="width:100%;height:${height}px;border:0;" loading="lazy"></iframe>`;
+}
+
 export default async function TenantSettingsPage({
   params,
 }: {
@@ -107,6 +182,7 @@ export default async function TenantSettingsPage({
   const historicalCipherPayConnections = cipherPayConnectionRows.filter(
     (entry) => !entry.isCurrentConnection,
   );
+  const onboardingChecklist = buildOnboardingChecklist(detail);
 
   return (
     <>
@@ -115,8 +191,8 @@ export default async function TenantSettingsPage({
           <div>
             <h2>Settings</h2>
             <p className="subtle-text">
-              Connect your Luma calendar, keep the managed webhook healthy, and attach one
-              live CipherPay account per calendar for checkout.
+              Complete the setup checklist, keep the managed webhook healthy,
+              and attach one live CipherPay account per calendar for checkout.
             </p>
           </div>
         </div>
@@ -125,6 +201,18 @@ export default async function TenantSettingsPage({
           <article className="console-detail-card">
             <h3>Primary contact</h3>
             <p className="subtle-text">{detail.tenant.contact_email}</p>
+          </article>
+          <article className="console-detail-card">
+            <h3>Onboarding status</h3>
+            <p className="console-kpi-label">{humanizeOnboardingStatus(detail.tenant.onboarding_status)}</p>
+            <p className="subtle-text">
+              Tenant status {detail.tenant.status}
+              {detail.tenant.onboarding_started_at ? (
+                <>
+                  {" "}· started <LocalDateTime iso={detail.tenant.onboarding_started_at} />
+                </>
+              ) : null}
+            </p>
           </article>
           <article className="console-detail-card">
             <h3>Public dashboard links</h3>
@@ -137,6 +225,28 @@ export default async function TenantSettingsPage({
               </Link>
             </div>
           </article>
+        </div>
+      </section>
+
+      <section className="console-section">
+        <div className="console-section-header">
+          <div>
+            <h2>Onboarding checklist</h2>
+            <p className="subtle-text">
+              This tracks the draft-to-live path for self-service setup. Public
+              checkout stays off until the tenant is activated.
+            </p>
+          </div>
+        </div>
+
+        <div className="console-card-grid">
+          {onboardingChecklist.map((item) => (
+            <article className="console-detail-card" key={item.label}>
+              <p className="console-kpi-label">{item.complete ? "complete" : "next"}</p>
+              <h3>{item.label}</h3>
+              <p className="subtle-text">{item.description}</p>
+            </article>
+          ))}
         </div>
       </section>
 
@@ -230,6 +340,11 @@ export default async function TenantSettingsPage({
                 : webhookConfigured
                   ? "Configured"
                   : "Pending";
+            const embedExampleEvents = enabledEvents
+              .filter((event) => isFutureEvent(event.start_at))
+              .slice(0, 2);
+            const embedReady =
+              calendar.embed_enabled && calendar.embed_allowed_origins.length > 0;
 
             return (
               <article
@@ -382,6 +497,199 @@ export default async function TenantSettingsPage({
                       Save new Luma API key
                     </button>
                   </form>
+                </ConsoleDisclosure>
+
+                <ConsoleDisclosure
+                  defaultOpen={false}
+                  description="Allow this calendar's event pages to render inside an iframe on approved origins."
+                  title="Embed checkout"
+                >
+                  <form action={updateCalendarEmbedSettingsAction} className="console-content">
+                    <input
+                      name="calendar_connection_id"
+                      type="hidden"
+                      value={calendar.calendar_connection_id}
+                    />
+                    <input name="tenant_slug" type="hidden" value={detail.tenant.slug} />
+                    <input name="redirect_to" type="hidden" value={settingsBasePath} />
+
+                    <div className="public-field-grid">
+                      <label className="console-field">
+                        <ConsoleFieldLabel
+                          info="Turn on iframe rendering for this calendar's event checkout entry pages."
+                          label="Enable embedding"
+                        />
+                        <input
+                          defaultChecked={calendar.embed_enabled}
+                          name="embed_enabled"
+                          type="checkbox"
+                        />
+                      </label>
+                      <label className="console-field">
+                        <ConsoleFieldLabel
+                          info="Recommended iframe height in pixels for generated snippets. Hosts can still override this."
+                          label="Default iframe height"
+                        />
+                        <input
+                          className="console-input"
+                          defaultValue={calendar.embed_default_height_px}
+                          min={480}
+                          name="embed_default_height_px"
+                          type="number"
+                        />
+                      </label>
+                      <label className="console-field">
+                        <ConsoleFieldLabel
+                          info="Keep the compact ZecTix/Tenant branding header visible inside the iframe."
+                          label="Show branding"
+                        />
+                        <input
+                          defaultChecked={calendar.embed_show_branding}
+                          name="embed_show_branding"
+                          type="checkbox"
+                        />
+                      </label>
+                    </div>
+
+                    <label className="console-field">
+                      <ConsoleFieldLabel
+                        info="Enter one site origin per line, for example https://events.example.com. Only these origins can host the iframe."
+                        label="Allowed origins"
+                      />
+                      <textarea
+                        className="console-input"
+                        defaultValue={calendar.embed_allowed_origins.join("\n")}
+                        name="embed_allowed_origins"
+                        rows={4}
+                      />
+                    </label>
+
+                    <div className="public-field-grid">
+                      <label className="console-field">
+                        <ConsoleFieldLabel
+                          info="Optional accent color override for embedded buttons and highlights."
+                          label="Accent color"
+                          optional
+                        />
+                        <input
+                          className="console-input"
+                          defaultValue={calendar.embed_theme.accent_color || ""}
+                          name="embed_accent_color"
+                          placeholder="#d4920a"
+                          type="text"
+                        />
+                      </label>
+                      <label className="console-field">
+                        <ConsoleFieldLabel
+                          info="Optional page background color for the embedded shell."
+                          label="Background color"
+                          optional
+                        />
+                        <input
+                          className="console-input"
+                          defaultValue={calendar.embed_theme.background_color || ""}
+                          name="embed_background_color"
+                          placeholder="#fafaf9"
+                          type="text"
+                        />
+                      </label>
+                      <label className="console-field">
+                        <ConsoleFieldLabel
+                          info="Optional card surface color for the embedded shell."
+                          label="Surface color"
+                          optional
+                        />
+                        <input
+                          className="console-input"
+                          defaultValue={calendar.embed_theme.surface_color || ""}
+                          name="embed_surface_color"
+                          placeholder="#ffffff"
+                          type="text"
+                        />
+                      </label>
+                      <label className="console-field">
+                        <ConsoleFieldLabel
+                          info="Optional high-contrast text color override for the embed shell."
+                          label="Text color"
+                          optional
+                        />
+                        <input
+                          className="console-input"
+                          defaultValue={calendar.embed_theme.text_color || ""}
+                          name="embed_text_color"
+                          placeholder="#131b2d"
+                          type="text"
+                        />
+                      </label>
+                      <label className="console-field">
+                        <ConsoleFieldLabel
+                          info="Optional border radius for embedded cards, in pixels."
+                          label="Corner radius"
+                          optional
+                        />
+                        <input
+                          className="console-input"
+                          defaultValue={calendar.embed_theme.radius_px || ""}
+                          name="embed_radius_px"
+                          placeholder="22"
+                          type="number"
+                        />
+                      </label>
+                    </div>
+
+                    <button className="button button-secondary button-small" type="submit">
+                      Save embed settings
+                    </button>
+                  </form>
+
+                  <div className="console-content">
+                    <div className="console-inline-action">
+                      <p className="subtle-text">
+                        Embed status: {embedReady ? "ready" : "needs enabled events and an allowlist"}
+                      </p>
+                      <ConsoleInfoTip label="How embed mode works">
+                        <p>
+                          The iframe uses the same mirrored event pages as public checkout,
+                          but renders in a compact embedded shell and emits resize and status
+                          events to the parent window.
+                        </p>
+                      </ConsoleInfoTip>
+                    </div>
+
+                    {embedExampleEvents.length > 0 ? (
+                      <div className="console-content">
+                        {embedExampleEvents.map((event) => {
+                          const url = buildEmbedEventUrl(
+                            calendar.slug,
+                            event.event_api_id,
+                          );
+                          return (
+                            <label className="console-field" key={event.event_api_id}>
+                              <ConsoleFieldLabel
+                                info="Use this iframe tag in your app or CMS. The host page controls final width."
+                                label={`Embed snippet · ${event.name}`}
+                              />
+                              <textarea
+                                className="console-input"
+                                readOnly
+                                rows={4}
+                                value={buildEmbedSnippet(
+                                  url,
+                                  `${detail.tenant.name} checkout for ${event.name}`,
+                                  calendar.embed_default_height_px,
+                                )}
+                              />
+                            </label>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="subtle-text">
+                        Enable at least one future ticketed event to generate a ready-to-paste
+                        iframe snippet here.
+                      </p>
+                    )}
+                  </div>
                 </ConsoleDisclosure>
               </article>
             );

@@ -29,6 +29,8 @@ import type {
   EventMirrorStatus,
   SecretPreview,
   Tenant,
+  TenantOnboardingSource,
+  TenantOnboardingStatus,
   TenantStatus,
   TicketMirror,
 } from "@/lib/app-state/types";
@@ -40,6 +42,12 @@ import {
   slugify,
 } from "@/lib/app-state/utils";
 import type { CipherPayClientConfig } from "@/lib/cipherpay";
+import {
+  DEFAULT_EMBED_HEIGHT_PX,
+  normalizeCalendarEmbedTheme,
+  normalizeEmbedHeight,
+  normalizeOriginList,
+} from "@/lib/embed";
 import { evaluateTicketEligibility } from "@/lib/eligibility/ticket-eligibility";
 import { getSecretStore } from "@/lib/secrets";
 import {
@@ -210,12 +218,18 @@ export async function createTenant(input: {
   monthly_minimum_usd_cents?: number;
   service_fee_bps?: number;
   pilot_notes?: string | null;
+  onboarding_source?: TenantOnboardingSource;
+  onboarding_status?: TenantOnboardingStatus;
 }) {
   const timestamp = nowIso();
   const slug = await dedupeSlug(
     input.slug || input.name,
     async (candidate) => getTenantBySlug(candidate),
   );
+  const onboardingSource = input.onboarding_source || "ops";
+  const onboardingStatus =
+    input.onboarding_status ||
+    (onboardingSource === "self_serve" ? "in_progress" : "not_started");
 
   const tenant: Tenant = {
     tenant_id: randomUUID(),
@@ -223,6 +237,10 @@ export async function createTenant(input: {
     slug,
     contact_email: input.contact_email.trim(),
     status: "draft",
+    onboarding_source: onboardingSource,
+    onboarding_status: onboardingStatus,
+    onboarding_started_at: onboardingSource === "self_serve" ? timestamp : null,
+    onboarding_completed_at: null,
     monthly_minimum_usd_cents: input.monthly_minimum_usd_cents || 0,
     service_fee_bps: input.service_fee_bps || 0,
     pilot_notes: input.pilot_notes?.trim() || null,
@@ -231,6 +249,83 @@ export async function createTenant(input: {
   };
 
   return putTenant(tenant);
+}
+
+function deriveTenantOnboardingStatus(input: {
+  tenant: Tenant;
+  calendars: CalendarConnection[];
+  cipherpayConnections: CipherPayConnection[];
+}) {
+  if (input.tenant.status === "active") {
+    return "completed" as const;
+  }
+
+  const hasCalendarConnection = input.calendars.length > 0;
+  const hasValidatedCalendar = input.calendars.some(
+    (calendar) => calendar.status === "active" && Boolean(calendar.last_validated_at),
+  );
+  const hasCipherPayConnection = input.cipherpayConnections.length > 0;
+  const hasActiveCipherPayConnection = input.cipherpayConnections.some(
+    (connection) => connection.status === "active",
+  );
+
+  if (hasValidatedCalendar && hasActiveCipherPayConnection) {
+    return "ready_for_review" as const;
+  }
+
+  if (
+    hasCalendarConnection ||
+    hasCipherPayConnection ||
+    input.tenant.onboarding_source === "self_serve" ||
+    input.tenant.onboarding_status === "in_progress"
+  ) {
+    return "in_progress" as const;
+  }
+
+  return "not_started" as const;
+}
+
+async function refreshTenantOnboardingProgress(tenantId: string) {
+  const tenant = await getTenant(tenantId);
+  if (!tenant) {
+    return null;
+  }
+
+  const [calendars, cipherpayConnections] = await Promise.all([
+    listCalendarConnectionsByTenant(tenantId),
+    listCipherPayConnectionsByTenant(tenantId),
+  ]);
+  const onboardingStatus = deriveTenantOnboardingStatus({
+    tenant,
+    calendars,
+    cipherpayConnections,
+  });
+  const onboardingCompletedAt =
+    tenant.status === "active"
+      ? tenant.onboarding_completed_at || nowIso()
+      : onboardingStatus === "completed"
+        ? tenant.onboarding_completed_at
+        : null;
+  const onboardingStartedAt =
+    tenant.onboarding_source === "self_serve"
+      ? tenant.onboarding_started_at || tenant.created_at
+      : tenant.onboarding_started_at;
+
+  if (
+    tenant.onboarding_status === onboardingStatus &&
+    tenant.onboarding_completed_at === onboardingCompletedAt &&
+    tenant.onboarding_started_at === onboardingStartedAt
+  ) {
+    return tenant;
+  }
+
+  return putTenant({
+    ...tenant,
+    onboarding_status: onboardingStatus,
+    onboarding_started_at: onboardingStartedAt,
+    onboarding_completed_at: onboardingCompletedAt,
+    updated_at: nowIso(),
+  });
 }
 
 export async function setTenantStatus(tenantId: string, status: TenantStatus) {
@@ -245,7 +340,8 @@ export async function setTenantStatus(tenantId: string, status: TenantStatus) {
     updated_at: nowIso(),
   };
 
-  return putTenant(nextTenant);
+  await putTenant(nextTenant);
+  return refreshTenantOnboardingProgress(tenantId);
 }
 
 export async function createCalendarConnection(input: {
@@ -274,11 +370,18 @@ export async function createCalendarConnection(input: {
     last_validated_at: null,
     last_synced_at: null,
     last_sync_error: null,
+    embed_enabled: false,
+    embed_allowed_origins: [],
+    embed_default_height_px: DEFAULT_EMBED_HEIGHT_PX,
+    embed_show_branding: true,
+    embed_theme: normalizeCalendarEmbedTheme(null),
     created_at: timestamp,
     updated_at: timestamp,
   };
 
-  return putCalendarConnection(connection);
+  const saved = await putCalendarConnection(connection);
+  await refreshTenantOnboardingProgress(input.tenant_id);
+  return saved;
 }
 
 export async function updateCalendarConnectionLumaKey(
@@ -306,7 +409,9 @@ export async function updateCalendarConnectionLumaKey(
     updated_at: nowIso(),
   };
 
-  return putCalendarConnection(nextConnection);
+  const saved = await putCalendarConnection(nextConnection);
+  await refreshTenantOnboardingProgress(connection.tenant_id);
+  return saved;
 }
 
 export async function disableCalendarConnection(calendarConnectionId: string) {
@@ -341,7 +446,9 @@ export async function disableCalendarConnection(calendarConnectionId: string) {
     updated_at: nowIso(),
   };
 
-  return putCalendarConnection(nextConnection);
+  const saved = await putCalendarConnection(nextConnection);
+  await refreshTenantOnboardingProgress(connection.tenant_id);
+  return saved;
 }
 
 export async function createCipherPayConnection(input: {
@@ -402,7 +509,9 @@ export async function createCipherPayConnection(input: {
         updated_at: timestamp,
       };
 
-  return putCipherPayConnection(connection);
+  const saved = await putCipherPayConnection(connection);
+  await refreshTenantOnboardingProgress(input.tenant_id);
+  return saved;
 }
 
 export async function validateCipherPayConnection(cipherpayConnectionId: string) {
@@ -432,13 +541,16 @@ export async function validateCipherPayConnection(cipherpayConnectionId: string)
     updated_at: nowIso(),
   };
   await putCipherPayConnection(next, { attachToCalendar: false });
+  await refreshTenantOnboardingProgress(connection.tenant_id);
   return next;
 }
 
 export async function validateAndSyncCalendar(calendarConnectionId: string) {
   await validateCalendarConnection(calendarConnectionId);
   await ensureCalendarConnectionWebhookSubscription(calendarConnectionId);
-  return syncCalendarConnection(calendarConnectionId);
+  const result = await syncCalendarConnection(calendarConnectionId);
+  await refreshTenantOnboardingProgress(result.connection.tenant_id);
+  return result;
 }
 
 export async function syncCalendarEventForOps(input: {
@@ -531,6 +643,35 @@ export async function resolveCipherPayWebhookSecretForCalendar(
   }
 
   return getSecretStore().getSecret(connection.cipherpay_webhook_secret_ref);
+}
+
+export async function updateCalendarEmbedSettings(input: {
+  calendar_connection_id: string;
+  embed_enabled: boolean;
+  embed_allowed_origins: string[] | string;
+  embed_default_height_px?: number | string | null;
+  embed_show_branding: boolean;
+  embed_theme?: unknown;
+}) {
+  const connection = await getCalendarConnection(input.calendar_connection_id);
+  if (!connection) {
+    throw new Error(`Calendar connection ${input.calendar_connection_id} was not found.`);
+  }
+
+  const nextConnection: CalendarConnection = {
+    ...connection,
+    embed_enabled: input.embed_enabled,
+    embed_allowed_origins: normalizeOriginList(input.embed_allowed_origins),
+    embed_default_height_px: normalizeEmbedHeight(
+      input.embed_default_height_px,
+      connection.embed_default_height_px || DEFAULT_EMBED_HEIGHT_PX,
+    ),
+    embed_show_branding: input.embed_show_branding,
+    embed_theme: normalizeCalendarEmbedTheme(input.embed_theme),
+    updated_at: nowIso(),
+  };
+
+  return putCalendarConnection(nextConnection);
 }
 
 export async function setTicketOperatorAssertions(input: {

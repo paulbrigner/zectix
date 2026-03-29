@@ -84,11 +84,13 @@ const {
   buildFocusedEventSyncReview,
   createCalendarConnection,
   createCipherPayConnection,
+  createTenant,
   disableCalendarConnection,
   getTenantOpsDetail,
   getTenantSelfServeDetailBySlug,
   listSelfServeTenantsForEmail,
   syncCalendarEventForOps,
+  updateCalendarEmbedSettings,
   updateCalendarConnectionLumaKey,
   validateCipherPayConnection,
 } = await import(
@@ -127,9 +129,12 @@ beforeEach(() => {
 
   mockPutCalendarConnection.mockImplementation(async (connection) => connection);
   mockPutCipherPayConnection.mockImplementation(async (connection) => connection);
+  mockPutTenant.mockImplementation(async (tenant) => tenant);
   mockGetSecret.mockResolvedValue("resolved-secret");
   mockListLumaEvents.mockResolvedValue([]);
   mockListSessionsByTenant.mockResolvedValue([]);
+  mockListCalendarConnectionsByTenant.mockResolvedValue([]);
+  mockListCipherPayConnectionsByTenant.mockResolvedValue([]);
   mockListTenantsByContactEmail.mockResolvedValue([]);
   mockListWebhookDeliveriesByTenant.mockResolvedValue([]);
   mockListRegistrationTasksByTenant.mockResolvedValue([]);
@@ -219,6 +224,25 @@ describe("createCalendarConnection", () => {
     expect(result.luma_webhook_id).toBeNull();
     expect(result.luma_webhook_secret_ref).toBeNull();
     expect(result.luma_webhook_token_ref).toBeNull();
+  });
+});
+
+describe("createTenant", () => {
+  it("can start a self-serve tenant in onboarding mode", async () => {
+    mockGetTenantBySlug.mockResolvedValue(null);
+
+    const result = await createTenant({
+      name: "Self Serve Org",
+      contact_email: "owner@example.com",
+      onboarding_source: "self_serve",
+      onboarding_status: "in_progress",
+    });
+
+    expect(result.status).toBe("draft");
+    expect(result.onboarding_source).toBe("self_serve");
+    expect(result.onboarding_status).toBe("in_progress");
+    expect(result.onboarding_started_at).not.toBeNull();
+    expect(result.onboarding_completed_at).toBeNull();
   });
 });
 
@@ -380,6 +404,44 @@ describe("validateCipherPayConnection", () => {
       }),
       { attachToCalendar: false },
     );
+  });
+});
+
+describe("updateCalendarEmbedSettings", () => {
+  it("stores normalized origins and embed theme settings", async () => {
+    const existingConnection = makeCalendarConnection();
+    mockGetCalendarConnection.mockResolvedValue(existingConnection);
+
+    const result = await updateCalendarEmbedSettings({
+      calendar_connection_id: existingConnection.calendar_connection_id,
+      embed_enabled: true,
+      embed_allowed_origins:
+        "https://events.example.com\nhttps://app.example.com/page",
+      embed_default_height_px: "920",
+      embed_show_branding: false,
+      embed_theme: {
+        accent_color: "#F7931A",
+        background_color: "#FAFAF9",
+        surface_color: "#FFFFFF",
+        text_color: "#131B2D",
+        radius_px: "26",
+      },
+    });
+
+    expect(result.embed_enabled).toBe(true);
+    expect(result.embed_allowed_origins).toEqual([
+      "https://events.example.com",
+      "https://app.example.com",
+    ]);
+    expect(result.embed_default_height_px).toBe(920);
+    expect(result.embed_show_branding).toBe(false);
+    expect(result.embed_theme).toEqual({
+      accent_color: "#f7931a",
+      background_color: "#fafaf9",
+      surface_color: "#ffffff",
+      text_color: "#131b2d",
+      radius_px: 26,
+    });
   });
 });
 

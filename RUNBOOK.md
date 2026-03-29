@@ -47,8 +47,8 @@ When something looks off, check these in order:
 ### Readiness or deployment looks wrong
 
 1. Check `/api/health` to confirm the app is serving.
-2. Check `/api/ready` to confirm tenant configuration exists and DynamoDB access works.
-3. If `/api/ready` shows missing tenant data, finish onboarding at `/ops/tenants`.
+2. Check `/api/ready` to confirm the app can read tenant data and see whether `tenant_traffic_ready` is `true`.
+3. If `/api/ready` reports `tenant_traffic_ready: false`, the environment is healthy but no tenants are live yet. Finish onboarding through `/dashboard/start` or `/ops/tenants`.
 4. If `/api/ready` shows DynamoDB errors, verify the AWS role and table permissions.
 
 ### Luma integration inquiries are not arriving
@@ -73,11 +73,13 @@ When something looks off, check these in order:
 3. Confirm the tenant `contact_email` matches the email address being used for sign-in.
 4. Confirm the `from` address or domain is verified in SES and the Amplify compute role can send from it.
 5. Confirm the browser session cookie has not expired and that one-time email links are being used only once.
+6. If the organizer has never had access before, start from `/dashboard/start` to create the draft tenant and send the first sign-in link.
 
 ## Recovery Notes
 
 - The ops console is the main recovery surface.
 - The tenant dashboard is the main self-serve surface for calendar setup, event review, and checkout visibility.
+- The tenant settings page also owns calendar-level iframe embed settings and generated snippets for enabled events.
 - The tenant detail page is the quickest place to compare the current live Luma feed against mirrored inventory when something looks off.
 - Calendar connections can be disabled from the tenant detail page. Disabling turns off the public calendar route for that connection and clears the managed Luma webhook state, but keeps mirrored inventory available for review.
 - The tenant events page separates upstream-only future Luma events from mirrored events and supports event-focused sync/import actions.

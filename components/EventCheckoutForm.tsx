@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { CheckoutSession, TicketMirror } from "@/lib/app-state/types";
 import { formatFiatAmount } from "@/lib/app-state/utils";
 import { appApiPath, readJsonOrThrow } from "@/lib/client-http";
+import { emitEmbedEvent } from "@/lib/embed-client";
 
 type CheckoutResponse = {
   session: CheckoutSession;
@@ -19,6 +20,9 @@ type EventCheckoutFormProps = {
   calendarSlug: string;
   eventApiId: string;
   ticketTypes: TicketMirror[];
+  embedMode?: boolean;
+  embedParentOrigin?: string | null;
+  embedParentToken?: string | null;
 };
 
 function ticketPriceLabel(ticket: TicketMirror | null) {
@@ -29,6 +33,9 @@ export function EventCheckoutForm({
   calendarSlug,
   eventApiId,
   ticketTypes,
+  embedMode = false,
+  embedParentOrigin = null,
+  embedParentToken = null,
 }: EventCheckoutFormProps) {
   const router = useRouter();
   const [name, setName] = useState("");
@@ -74,11 +81,34 @@ export function EventCheckoutForm({
       );
 
       setNotice(`Invoice ${response.invoice.invoice_id} is ready. Loading payment details...`);
+      if (embedMode) {
+        emitEmbedEvent("checkout_created", {
+          calendarSlug,
+          eventApiId,
+          invoiceId: response.invoice.invoice_id,
+          sessionId: response.session.session_id,
+        });
+      }
 
       startTransition(() => {
-        const nextUrl = response.viewer_token
-          ? `/checkout/${encodeURIComponent(response.session.session_id)}?t=${encodeURIComponent(response.viewer_token)}`
-          : `/checkout/${encodeURIComponent(response.session.session_id)}`;
+        const params = new URLSearchParams();
+        if (response.viewer_token) {
+          params.set("t", response.viewer_token);
+        }
+        if (embedMode) {
+          params.set("embed", "1");
+          if (embedParentToken) {
+            params.set("et", embedParentToken);
+          }
+          if (embedParentOrigin) {
+            params.set("po", embedParentOrigin);
+          }
+        }
+
+        const query = params.toString();
+        const nextUrl =
+          `/checkout/${encodeURIComponent(response.session.session_id)}` +
+          (query ? `?${query}` : "");
         router.push(nextUrl);
       });
     } catch (submitError) {

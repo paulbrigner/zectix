@@ -15,6 +15,7 @@ import {
   setTicketOperatorAssertions,
   syncCalendarEventForOps,
   updateCalendarConnectionLumaKey,
+  updateCalendarEmbedSettings,
   validateAndSyncCalendar,
   validateCipherPayConnection,
 } from "@/lib/tenancy/service";
@@ -172,6 +173,28 @@ export async function validateCipherPayConnectionAction(formData: FormData) {
   const cipherpayConnectionId = String(formData.get("cipherpay_connection_id") || "");
   await requireCipherPayTenantAccess(tenant.tenant_id, cipherpayConnectionId);
   await validateCipherPayConnection(cipherpayConnectionId);
+  redirectTo(formData, `/dashboard/${encodeURIComponent(tenant.slug)}/settings`);
+}
+
+export async function updateCalendarEmbedSettingsAction(formData: FormData) {
+  const tenantSlug = String(formData.get("tenant_slug") || "");
+  const tenant = await requireTenantSlugAccess(tenantSlug);
+  const calendarConnectionId = String(formData.get("calendar_connection_id") || "");
+  await requireCalendarTenantAccess(tenant.tenant_id, calendarConnectionId);
+  await updateCalendarEmbedSettings({
+    calendar_connection_id: calendarConnectionId,
+    embed_enabled: asBoolean(formData.get("embed_enabled")),
+    embed_allowed_origins: String(formData.get("embed_allowed_origins") || ""),
+    embed_default_height_px: asString(formData.get("embed_default_height_px")),
+    embed_show_branding: asBoolean(formData.get("embed_show_branding")),
+    embed_theme: {
+      accent_color: asString(formData.get("embed_accent_color")),
+      background_color: asString(formData.get("embed_background_color")),
+      surface_color: asString(formData.get("embed_surface_color")),
+      text_color: asString(formData.get("embed_text_color")),
+      radius_px: asString(formData.get("embed_radius_px")),
+    },
+  });
   redirectTo(formData, `/dashboard/${encodeURIComponent(tenant.slug)}/settings`);
 }
 

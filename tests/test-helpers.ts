@@ -1,11 +1,25 @@
 import type {
   CalendarConnection,
+  CalendarEmbedTheme,
   CheckoutSession,
   CipherPayConnection,
   EventMirror,
   Tenant,
   TicketMirror,
 } from "@/lib/app-state/types";
+
+function makeCalendarEmbedTheme(
+  overrides: Partial<CalendarEmbedTheme> = {},
+): CalendarEmbedTheme {
+  return {
+    accent_color: null,
+    background_color: null,
+    surface_color: null,
+    text_color: null,
+    radius_px: null,
+    ...overrides,
+  };
+}
 
 export function makeTenant(overrides: Partial<Tenant> = {}): Tenant {
   return {
@@ -14,6 +28,10 @@ export function makeTenant(overrides: Partial<Tenant> = {}): Tenant {
     slug: "demo-organizer",
     contact_email: "ops@example.com",
     status: "active",
+    onboarding_source: "ops",
+    onboarding_status: "completed",
+    onboarding_started_at: null,
+    onboarding_completed_at: "2026-03-24T12:00:00.000Z",
     monthly_minimum_usd_cents: 2500,
     service_fee_bps: 450,
     pilot_notes: null,
@@ -39,6 +57,11 @@ export function makeCalendarConnection(
     last_validated_at: "2026-03-24T12:00:00.000Z",
     last_synced_at: "2026-03-24T12:00:00.000Z",
     last_sync_error: null,
+    embed_enabled: false,
+    embed_allowed_origins: [],
+    embed_default_height_px: 860,
+    embed_show_branding: true,
+    embed_theme: makeCalendarEmbedTheme(),
     created_at: "2026-03-24T12:00:00.000Z",
     updated_at: "2026-03-24T12:00:00.000Z",
     ...overrides,

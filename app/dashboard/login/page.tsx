@@ -70,6 +70,9 @@ export default async function TenantLoginPage({
               />
               <div className="button-row">
                 <Button type="submit">Email sign-in link</Button>
+                <Button variant="secondary" href="/dashboard/start">
+                  Start onboarding
+                </Button>
                 <Button variant="secondary" href="/">
                   Back home
                 </Button>

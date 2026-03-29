@@ -6,6 +6,7 @@ import { LocalDateTime } from "@/components/LocalDateTime";
 import type { CheckoutSession, EventMirror } from "@/lib/app-state/types";
 import { formatFiatAmount } from "@/lib/app-state/utils";
 import { appApiPath, readJsonOrThrow } from "@/lib/client-http";
+import { emitEmbedEvent } from "@/lib/embed-client";
 
 type SyncResponse = {
   session: CheckoutSession;
@@ -15,6 +16,7 @@ type CheckoutStatusCardProps = {
   initialSession: CheckoutSession;
   event: EventMirror | null;
   viewerToken: string | null;
+  embedMode?: boolean;
 };
 
 function readRegistrationGuest(value: Record<string, unknown> | null | undefined) {
@@ -136,6 +138,7 @@ export function CheckoutStatusCard({
   initialSession,
   event,
   viewerToken,
+  embedMode = false,
 }: CheckoutStatusCardProps) {
   const showCheckoutSessionPanel = false;
   const [session, setSession] = useState(initialSession);
@@ -356,6 +359,27 @@ export function CheckoutStatusCard({
       window.clearTimeout(timeoutId);
     };
   }, [copyNotice]);
+
+  useEffect(() => {
+    if (!embedMode) {
+      return;
+    }
+
+    emitEmbedEvent("checkout_state", {
+      sessionId: session.session_id,
+      status: session.status,
+      registrationStatus: session.registration_status,
+      passReady,
+      paymentAccepted,
+    });
+  }, [
+    embedMode,
+    passReady,
+    paymentAccepted,
+    session.registration_status,
+    session.session_id,
+    session.status,
+  ]);
 
   async function copyValue(value: string | null, label: string) {
     if (!value) return;
@@ -891,22 +915,26 @@ export function CheckoutStatusCard({
               <div className="pass-head-top">
                 <p className="eyebrow">{passReady ? "Attendee pass" : "Payment accepted"}</p>
                 <div className="pass-actions">
-                  <button
-                    className="button button-secondary button-small"
-                    disabled={!passReady || !entryQrDataUrl}
-                    onClick={() => openPrintView()}
-                    type="button"
-                  >
-                    Print / PDF
-                  </button>
-                  <button
-                    className="button button-secondary button-small"
-                    disabled={!passReady || !entryQrDataUrl}
-                    onClick={() => savePassFile()}
-                    type="button"
-                  >
-                    Save pass
-                  </button>
+                  {!embedMode ? (
+                    <>
+                      <button
+                        className="button button-secondary button-small"
+                        disabled={!passReady || !entryQrDataUrl}
+                        onClick={() => openPrintView()}
+                        type="button"
+                      >
+                        Print / PDF
+                      </button>
+                      <button
+                        className="button button-secondary button-small"
+                        disabled={!passReady || !entryQrDataUrl}
+                        onClick={() => savePassFile()}
+                        type="button"
+                      >
+                        Save pass
+                      </button>
+                    </>
+                  ) : null}
                   {event?.url ? (
                     <a
                       className="button button-secondary button-small"
