@@ -124,6 +124,11 @@ Optional production values for emailed tenant sign-in:
 - `TENANT_AUTH_FROM_EMAIL`
 - `TENANT_MAGIC_LINK_SECRET`
 
+Optional production values for tenant billing defaults:
+
+- `TENANT_DEFAULT_SERVICE_FEE_BPS`
+- `TENANT_DEFAULT_SETTLEMENT_THRESHOLD_ZATOSHIS`
+
 If the tenant-specific values are unset, tenant sign-in reuses the admin sender and signing secrets.
 
 ## Probes

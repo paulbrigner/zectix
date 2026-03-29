@@ -75,17 +75,24 @@ function asBillingCycleStatus(
 
 export async function createTenantAction(formData: FormData) {
   await requireOpsPageAccess();
+  const serviceFeeBpsValue = asString(formData.get("service_fee_bps"));
+  const settlementThresholdValue = asString(
+    formData.get("settlement_threshold_zatoshis"),
+  );
   const tenant = await createTenant({
     name: String(formData.get("name") || ""),
     slug: asString(formData.get("slug")),
     contact_email: String(formData.get("contact_email") || ""),
-    service_fee_bps: asNonNegativeInteger(formData.get("service_fee_bps"), 0),
+    service_fee_bps:
+      serviceFeeBpsValue == null
+        ? undefined
+        : asNonNegativeInteger(serviceFeeBpsValue, 0),
     billing_status: asTenantBillingStatus(formData.get("billing_status"), "active"),
     billing_grace_days: asNonNegativeInteger(formData.get("billing_grace_days"), 7),
-    settlement_threshold_zatoshis: asNonNegativeInteger(
-      formData.get("settlement_threshold_zatoshis"),
-      0,
-    ),
+    settlement_threshold_zatoshis:
+      settlementThresholdValue == null
+        ? undefined
+        : asNonNegativeInteger(settlementThresholdValue, 0),
     pilot_notes: asString(formData.get("pilot_notes")),
   });
 

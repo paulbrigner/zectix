@@ -59,6 +59,10 @@ import {
 import { deleteLumaWebhook, listLumaEvents } from "@/lib/luma";
 import type { LumaEvent } from "@/lib/luma";
 import { getTenantBillingSnapshot } from "@/lib/billing/usage-ledger";
+import {
+  defaultTenantServiceFeeBps,
+  defaultTenantSettlementThresholdZatoshis,
+} from "@/lib/tenant-billing-defaults";
 
 async function dedupeSlug(
   baseSlug: string,
@@ -234,6 +238,14 @@ export async function createTenant(input: {
   const onboardingStatus =
     input.onboarding_status ||
     (onboardingSource === "self_serve" ? "in_progress" : "not_started");
+  const serviceFeeBps =
+    input.service_fee_bps == null
+      ? defaultTenantServiceFeeBps()
+      : Math.max(0, Math.floor(input.service_fee_bps));
+  const settlementThresholdZatoshis =
+    input.settlement_threshold_zatoshis == null
+      ? defaultTenantSettlementThresholdZatoshis()
+      : Math.max(0, Math.floor(input.settlement_threshold_zatoshis));
 
   const tenant: Tenant = {
     tenant_id: randomUUID(),
@@ -246,9 +258,9 @@ export async function createTenant(input: {
     onboarding_status: onboardingStatus,
     onboarding_started_at: onboardingSource === "self_serve" ? timestamp : null,
     onboarding_completed_at: null,
-    service_fee_bps: input.service_fee_bps || 0,
+    service_fee_bps: serviceFeeBps,
     billing_grace_days: input.billing_grace_days ?? 7,
-    settlement_threshold_zatoshis: input.settlement_threshold_zatoshis || 0,
+    settlement_threshold_zatoshis: settlementThresholdZatoshis,
     pilot_notes: input.pilot_notes?.trim() || null,
     created_at: timestamp,
     updated_at: timestamp,

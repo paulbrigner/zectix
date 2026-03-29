@@ -186,6 +186,11 @@ Optional automation and recovery:
 - `OPS_AUTOMATION_SECRET`
 - `ALLOW_RUNTIME_SECRET_STORAGE`
 
+Optional tenant billing defaults:
+
+- `TENANT_DEFAULT_SERVICE_FEE_BPS`
+- `TENANT_DEFAULT_SETTLEMENT_THRESHOLD_ZATOSHIS`
+
 Optional inbox for the Luma integration beta application:
 
 - `LUMA_INTEREST_FROM_EMAIL`
