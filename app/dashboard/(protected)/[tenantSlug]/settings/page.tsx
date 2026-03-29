@@ -307,9 +307,11 @@ export default async function TenantSettingsPage({
               enabledEvents,
               enabledTickets,
             } = summarizeCalendarInventory(detail, calendar);
-            const previewEvents = livePreview?.events.filter((event) => isFutureEvent(event.start_at));
+            const previewEvents = livePreview
+              ? selectUpcomingEvents(livePreview.events)
+              : [];
             const nextLiveEvents =
-              previewEvents && previewEvents.length > 0
+              previewEvents.length > 0
                 ? previewEvents.slice(0, 4)
                 : livePreview?.events.slice(0, 4) || [];
             const liveEventCount = livePreview?.events.length || 0;
