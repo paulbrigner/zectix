@@ -64,6 +64,11 @@ function parseHexPair(value: string) {
   return Number.parseInt(value, 16);
 }
 
+function asTimestampMs(value: string) {
+  const timestampMs = new Date(value).getTime();
+  return Number.isFinite(timestampMs) ? timestampMs : null;
+}
+
 export function normalizeOrigin(value: string | null | undefined) {
   const trimmed = value?.trim();
   if (!trimmed) {
@@ -75,6 +80,36 @@ export function normalizeOrigin(value: string | null | undefined) {
   } catch {
     return null;
   }
+}
+
+export function isUpcomingEvent(startAt: string, nowMs = Date.now()) {
+  const timestampMs = asTimestampMs(startAt);
+  return timestampMs != null && timestampMs >= nowMs;
+}
+
+export function selectUpcomingEvents<T extends { start_at: string }>(
+  events: readonly T[],
+  nowMs = Date.now(),
+) {
+  const upcomingEvents = events.filter((event) => isUpcomingEvent(event.start_at, nowMs));
+  upcomingEvents.sort((left, right) => {
+    const leftMs = asTimestampMs(left.start_at);
+    const rightMs = asTimestampMs(right.start_at);
+    if (leftMs == null && rightMs == null) {
+      return 0;
+    }
+
+    if (leftMs == null) {
+      return 1;
+    }
+
+    if (rightMs == null) {
+      return -1;
+    }
+
+    return leftMs - rightMs;
+  });
+  return upcomingEvents;
 }
 
 export function normalizeOriginList(value: unknown) {

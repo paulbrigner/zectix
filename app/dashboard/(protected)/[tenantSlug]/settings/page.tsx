@@ -15,16 +15,12 @@ import { ConsoleInfoTip } from "@/components/ConsoleInfoTip";
 import { LocalDateTime } from "@/components/LocalDateTime";
 import type { CalendarConnection } from "@/lib/app-state/types";
 import { appUrl } from "@/lib/app-paths";
+import { selectUpcomingEvents } from "@/lib/embed";
 import { requireTenantPageAccess } from "@/lib/tenant-auth-server";
 import { getTenantSelfServeDetailBySlug } from "@/lib/tenancy/service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-function isFutureEvent(startAt: string) {
-  const startAtMs = new Date(startAt).getTime();
-  return Number.isFinite(startAtMs) && startAtMs >= Date.now();
-}
 
 function summarizeCalendarInventory(
   detail: Awaited<ReturnType<typeof getTenantSelfServeDetailBySlug>>,
@@ -37,7 +33,7 @@ function summarizeCalendarInventory(
   const mirroredByEventId = new Map(
     mirroredEvents.map((event) => [event.event_api_id, event] as const),
   );
-  const futureMirroredEvents = mirroredEvents.filter((event) => isFutureEvent(event.start_at));
+  const futureMirroredEvents = selectUpcomingEvents(mirroredEvents);
   const tickets = mirroredEvents.flatMap(
     (event) => detail?.tickets_by_event.get(event.event_api_id) || [],
   );
@@ -340,9 +336,7 @@ export default async function TenantSettingsPage({
                 : webhookConfigured
                   ? "Configured"
                   : "Pending";
-            const embedExampleEvents = enabledEvents
-              .filter((event) => isFutureEvent(event.start_at))
-              .slice(0, 2);
+            const embedExampleEvents = selectUpcomingEvents(enabledEvents);
             const embedReady =
               calendar.embed_enabled && calendar.embed_allowed_origins.length > 0;
 

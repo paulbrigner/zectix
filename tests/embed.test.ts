@@ -6,6 +6,7 @@ import {
   normalizeOriginList,
   readEmbedParentOrigin,
   resolveEmbedParentOrigin,
+  selectUpcomingEvents,
 } from "@/lib/embed";
 
 afterEach(() => {
@@ -87,5 +88,19 @@ describe("embed helpers", () => {
     expect(style["--surface-card"]).toBe("#ffffff");
     expect(style["--color-gray-900"]).toBe("#131b2d");
     expect(style["--radius-xl"]).toBe("24px");
+  });
+
+  it("returns all upcoming events in start order for embed snippets", () => {
+    expect(
+      selectUpcomingEvents(
+        [
+          { event_api_id: "evt-june", start_at: "2026-06-02T01:30:00.000Z" },
+          { event_api_id: "evt-past", start_at: "2026-03-01T13:00:00.000Z" },
+          { event_api_id: "evt-may", start_at: "2026-05-01T13:00:00.000Z" },
+          { event_api_id: "evt-april", start_at: "2026-04-01T13:00:00.000Z" },
+        ],
+        Date.parse("2026-03-28T00:00:00.000Z"),
+      ).map((event) => event.event_api_id),
+    ).toEqual(["evt-april", "evt-may", "evt-june"]);
   });
 });

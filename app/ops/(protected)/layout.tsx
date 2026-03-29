@@ -31,7 +31,7 @@ export default async function OpsLayout({
             </Link>
             {isAdminAuthEnabled() ? (
               <form action={appPath("/api/ops/logout")} method="post">
-                <button className="button button-ghost" type="submit">
+                <button className="button button-secondary" type="submit">
                   Sign out
                 </button>
               </form>
