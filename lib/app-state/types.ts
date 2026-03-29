@@ -15,6 +15,12 @@ export type CipherPaySessionStatus =
 export type RegistrationStatus = "pending" | "registered" | "failed";
 
 export type TenantStatus = "draft" | "active" | "suspended" | "archived";
+export type TenantOnboardingSource = "ops" | "self_serve";
+export type TenantOnboardingStatus =
+  | "not_started"
+  | "in_progress"
+  | "ready_for_review"
+  | "completed";
 export type CalendarConnectionStatus =
   | "pending_validation"
   | "active"
@@ -37,12 +43,24 @@ export type UsageLedgerStatus = "billable" | "waived" | "credited";
 export type WebhookProvider = "cipherpay" | "luma";
 export type WebhookApplyStatus = "received" | "applied" | "ignored" | "error";
 
+export type CalendarEmbedTheme = {
+  accent_color: string | null;
+  background_color: string | null;
+  surface_color: string | null;
+  text_color: string | null;
+  radius_px: number | null;
+};
+
 export type Tenant = {
   tenant_id: string;
   name: string;
   slug: string;
   contact_email: string;
   status: TenantStatus;
+  onboarding_source: TenantOnboardingSource;
+  onboarding_status: TenantOnboardingStatus;
+  onboarding_started_at: string | null;
+  onboarding_completed_at: string | null;
   monthly_minimum_usd_cents: number;
   service_fee_bps: number;
   pilot_notes: string | null;
@@ -63,6 +81,11 @@ export type CalendarConnection = {
   last_validated_at: string | null;
   last_synced_at: string | null;
   last_sync_error: string | null;
+  embed_enabled: boolean;
+  embed_allowed_origins: string[];
+  embed_default_height_px: number;
+  embed_show_branding: boolean;
+  embed_theme: CalendarEmbedTheme;
   created_at: string;
   updated_at: string;
 };

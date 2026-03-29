@@ -38,6 +38,12 @@ import {
   nowIso,
   sortByIsoDateDesc,
 } from "@/lib/app-state/utils";
+import {
+  DEFAULT_EMBED_HEIGHT_PX,
+  normalizeCalendarEmbedTheme,
+  normalizeEmbedHeight,
+  normalizeOriginList,
+} from "@/lib/embed";
 
 function isMissingLocalStateError(error: unknown) {
   const candidate = error as { name?: string; message?: string } | null;
@@ -281,6 +287,17 @@ function normalizeTenant(value: unknown): Tenant | null {
       item?.status === "archived"
         ? item.status
         : "draft",
+    onboarding_source: item?.onboarding_source === "self_serve" ? "self_serve" : "ops",
+    onboarding_status:
+      item?.onboarding_status === "in_progress" ||
+      item?.onboarding_status === "ready_for_review" ||
+      item?.onboarding_status === "completed"
+        ? item.onboarding_status
+        : item?.status === "active"
+          ? "completed"
+          : "not_started",
+    onboarding_started_at: asIsoTimestamp(item?.onboarding_started_at),
+    onboarding_completed_at: asIsoTimestamp(item?.onboarding_completed_at),
     monthly_minimum_usd_cents: asNonNegativeInteger(item?.monthly_minimum_usd_cents, 0),
     service_fee_bps: asNonNegativeInteger(item?.service_fee_bps, 0),
     pilot_notes: asString(item?.pilot_notes),
@@ -321,6 +338,14 @@ function normalizeCalendarConnection(value: unknown): CalendarConnection | null 
     last_validated_at: asIsoTimestamp(item?.last_validated_at),
     last_synced_at: asIsoTimestamp(item?.last_synced_at),
     last_sync_error: asString(item?.last_sync_error),
+    embed_enabled: asBoolean(item?.embed_enabled, false),
+    embed_allowed_origins: normalizeOriginList(item?.embed_allowed_origins),
+    embed_default_height_px: normalizeEmbedHeight(
+      item?.embed_default_height_px,
+      DEFAULT_EMBED_HEIGHT_PX,
+    ),
+    embed_show_branding: asBoolean(item?.embed_show_branding, true),
+    embed_theme: normalizeCalendarEmbedTheme(item?.embed_theme),
     created_at: createdAt,
     updated_at: updatedAt,
   };
@@ -1795,6 +1820,53 @@ export async function consumeOpsLoginRateLimit({
       ok: false,
       retry_after_seconds: windowSeconds,
       reason: "Too many login attempts. Please wait a few minutes and try again.",
+    };
+  }
+
+  return {
+    ok: true,
+    retry_after_seconds: null,
+    reason: null,
+  };
+}
+
+export async function consumeTenantOnboardingRateLimit({
+  ipAddress,
+}: {
+  ipAddress: string | null;
+}) {
+  const now = Date.now();
+  const windowSeconds = 10 * 60;
+  const windowStart = new Date(
+    Math.floor(now / (windowSeconds * 1000)) * windowSeconds * 1000,
+  ).toISOString();
+  const expiresAt = new Date(now + windowSeconds * 1000).toISOString();
+  const timestamp = nowIso();
+  const ipIdentifier = hashIdentifier(ipAddress || "unknown");
+
+  const result = await getDynamoDocumentClient().send(
+    new UpdateCommand({
+      TableName: appStateTableName(),
+      Key: opsLoginRateLimitKey("TENANT_ONBOARDING", ipIdentifier, windowStart),
+      UpdateExpression:
+        "SET request_count = if_not_exists(request_count, :zero) + :one, expires_at = :expires_at, updated_at = :updated_at, created_at = if_not_exists(created_at, :created_at)",
+      ExpressionAttributeValues: {
+        ":zero": 0,
+        ":one": 1,
+        ":expires_at": expiresAt,
+        ":updated_at": timestamp,
+        ":created_at": timestamp,
+      },
+      ReturnValues: "ALL_NEW",
+    }),
+  );
+
+  const count = asFiniteNumber(asRecord(result.Attributes)?.request_count) || 0;
+  if (count > 12) {
+    return {
+      ok: false,
+      retry_after_seconds: windowSeconds,
+      reason: "Too many onboarding attempts. Please wait a few minutes and try again.",
     };
   }
 

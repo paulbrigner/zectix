@@ -100,6 +100,11 @@ export default function LumaIntegrationPage() {
               We only need enough information to understand your use case,
               evaluate fit for the beta, and follow up.
             </p>
+            <div className="button-row">
+              <Link className="button button-secondary button-small" href="/dashboard/start">
+                Prefer self-serve onboarding?
+              </Link>
+            </div>
             <LumaIntegrationInterestForm />
           </div>
         </div>

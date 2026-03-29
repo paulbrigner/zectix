@@ -29,14 +29,16 @@ The repository is designed to run in two environments:
 ## Main Flows
 
 1. Ops creates a tenant and sets the tenant contact email.
-2. The tenant signs in through `/dashboard/login` with a one-time email link.
-3. The tenant or ops connects a Luma calendar and stores the Luma API key in the secret store.
-4. The tenant settings page shows connection health, live Luma preview metadata, and mirrored inventory status for review.
-5. The tenant or ops syncs mirrored events and tickets from Luma and connects CipherPay for checkout.
-6. Public checkout happens under `/c/[calendarSlug]` and `/c/[calendarSlug]/events/[eventId]`.
-7. CipherPay webhooks update payment state and immediately attempt registration once payment is detected in the mempool.
-8. The registration worker processes any follow-up retries through `/api/ops/process-registration-tasks` or the ops recovery UI.
-9. Successful registrations are attached back to the checkout session and recorded in the usage ledger.
+2. Organizers can also start a draft tenant through `/dashboard/start`, which emails the first sign-in link to the owner contact.
+3. The tenant signs in through `/dashboard/login` with a one-time email link.
+4. The tenant or ops connects a Luma calendar and stores the Luma API key in the secret store.
+5. The tenant settings page shows onboarding progress, connection health, embed settings, live Luma preview metadata, and mirrored inventory status for review.
+6. The tenant or ops syncs mirrored events and tickets from Luma and connects CipherPay for checkout.
+7. Public checkout happens under `/c/[calendarSlug]` and `/c/[calendarSlug]/events/[eventId]`.
+8. Tenants can enable iframe embed mode per calendar with allowed origins, default height, and compact theme overrides.
+9. CipherPay webhooks update payment state and immediately attempt registration once payment is detected in the mempool.
+10. The registration worker processes any follow-up retries through `/api/ops/process-registration-tasks` or the ops recovery UI.
+11. Successful registrations are attached back to the checkout session and recorded in the usage ledger.
 
 ## Main Routes
 
@@ -45,6 +47,7 @@ The repository is designed to run in two environments:
 - `/c/[calendarSlug]/events/[eventId]` public checkout entry page
 - `/checkout/[sessionId]` payment and registration status page
 - `/dashboard/login` tenant sign-in
+- `/dashboard/start` public self-serve tenant creation and first-owner sign-in
 - `/dashboard` tenant dashboard landing page
 - `/dashboard/[tenantSlug]` tenant overview
 - `/dashboard/[tenantSlug]/events` tenant event review and ticket settings
@@ -192,7 +195,8 @@ Optional inbox for the Luma integration beta application:
 
 - `/ops` is the primary console for onboarding, monitoring, retries, and reporting.
 - operator auth can run in password mode or emailed one-time-link mode. Email mode uses the configured admin email, stores one-time verification tokens in DynamoDB, and sends the link through SES.
-- `/dashboard` is the tenant self-serve surface. The first version uses the tenant `contact_email` as the organizer sign-in identity and sends one-time login links through SES.
+- `/dashboard/start` creates a draft tenant for self-serve onboarding and emails the first one-time sign-in link.
+- `/dashboard` is the tenant self-serve surface. The first version still uses the tenant `contact_email` as the organizer sign-in identity and sends one-time login links through SES.
 - `/luma-integration` is the public-facing beta application page for the managed Luma integration.
 - `/api/luma-integration-interest` validates the application payload and sends an SES email to the configured inbox.
 - operators save the Luma API key only; managed Luma webhook ids and secrets are stored internally after `validate and sync`.
@@ -204,13 +208,15 @@ Optional inbox for the Luma integration beta application:
 - event-focused sync controls let ops sync one mirrored or upstream-only event at a time while still using the existing full-calendar refresh as the backend source of truth.
 - upstream-only events have a surgical import path in the UI: syncing one selected upstream event imports it into mirrored inventory if it is still present in Luma, and the result is shown as an event-focused diff.
 - the tenant dashboard is the internal organizer-style view for connection health, upcoming mirrored inventory, recent sessions, and webhook visibility.
+- the tenant settings page now also manages calendar-level iframe embed settings, including origin allowlists, default iframe height, branding visibility, and compact theme overrides.
 - the public event form shows only ticket tiers that are active and enabled for managed Zcash checkout.
+- embedded checkout reuses the mirrored public event and checkout pages, adds a compact shell, and emits `postMessage` events for resize and checkout state updates.
 - the checkout page centers the attendee-facing payment/pass states: pay with Zcash, preparing your pass, pass ready, open on Luma, and save pass.
 - `/api/luma/webhook` verifies the raw request body before refreshing mirrored Luma events.
 - `/api/ops/process-registration-tasks` is protected by `OPS_AUTOMATION_SECRET`.
 - `/api/ops/reports` returns JSON by default and CSV when `?format=csv` is supplied.
 - `/api/health` is a simple liveness probe.
-- `/api/ready` verifies the service is ready for tenant traffic.
+- `/api/ready` now reports whether the environment is healthy and whether tenant traffic is ready, even when no tenants exist yet.
 
 ## Verification
 
