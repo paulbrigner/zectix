@@ -3,12 +3,19 @@ import { createTenantAction } from "@/app/ops/actions";
 import { ConsoleDisclosure } from "@/components/ConsoleDisclosure";
 import { ConsoleFieldLabel } from "@/components/ConsoleFieldLabel";
 import { listTenants } from "@/lib/app-state/state";
+import {
+  defaultTenantServiceFeeBps,
+  defaultTenantSettlementThresholdZatoshis,
+} from "@/lib/tenant-billing-defaults";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export default async function TenantsPage() {
   const tenants = await listTenants();
+  const defaultServiceFeeBps = defaultTenantServiceFeeBps();
+  const defaultSettlementThresholdZatoshis =
+    defaultTenantSettlementThresholdZatoshis();
 
   return (
     <>
@@ -52,7 +59,12 @@ export default async function TenantsPage() {
                   label="Service fee (bps)"
                   optional
                 />
-                <input className="console-input" name="service_fee_bps" type="number" />
+                <input
+                  className="console-input"
+                  defaultValue={defaultServiceFeeBps}
+                  name="service_fee_bps"
+                  type="number"
+                />
               </label>
               <label className="console-field">
                 <ConsoleFieldLabel
@@ -68,7 +80,12 @@ export default async function TenantsPage() {
                   label="Settlement threshold (zatoshis)"
                   optional
                 />
-                <input className="console-input" name="settlement_threshold_zatoshis" type="number" />
+                <input
+                  className="console-input"
+                  defaultValue={defaultSettlementThresholdZatoshis}
+                  name="settlement_threshold_zatoshis"
+                  type="number"
+                />
               </label>
               <label className="console-field">
                 <ConsoleFieldLabel

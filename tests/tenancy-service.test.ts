@@ -103,6 +103,7 @@ const {
 );
 
 beforeEach(() => {
+  vi.unstubAllEnvs();
   mockGetCalendarConnection.mockReset();
   mockGetCalendarConnectionBySlug.mockReset();
   mockGetCipherPayConnection.mockReset();
@@ -255,6 +256,20 @@ describe("createTenant", () => {
     expect(result.onboarding_status).toBe("in_progress");
     expect(result.onboarding_started_at).not.toBeNull();
     expect(result.onboarding_completed_at).toBeNull();
+  });
+
+  it("uses env-backed billing defaults when commercial fields are omitted", async () => {
+    vi.stubEnv("TENANT_DEFAULT_SERVICE_FEE_BPS", "33");
+    vi.stubEnv("TENANT_DEFAULT_SETTLEMENT_THRESHOLD_ZATOSHIS", "1000000");
+    mockGetTenantBySlug.mockResolvedValue(null);
+
+    const result = await createTenant({
+      name: "Env Default Org",
+      contact_email: "owner@example.com",
+    });
+
+    expect(result.service_fee_bps).toBe(33);
+    expect(result.settlement_threshold_zatoshis).toBe(1_000_000);
   });
 });
 

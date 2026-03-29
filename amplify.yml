@@ -30,6 +30,8 @@ frontend:
         - env | grep -e CIPHERPAY_NETWORK >> .env.production || true
         - env | grep -e CIPHERPAY_API_BASE_URL >> .env.production || true
         - env | grep -e CIPHERPAY_CHECKOUT_BASE_URL >> .env.production || true
+        - env | grep -e TENANT_DEFAULT_SERVICE_FEE_BPS >> .env.production || true
+        - env | grep -e TENANT_DEFAULT_SETTLEMENT_THRESHOLD_ZATOSHIS >> .env.production || true
         - env | grep -e LUMA_INTEREST_FROM_EMAIL >> .env.production || true
         - env | grep -e LUMA_INTEREST_INBOX_EMAIL >> .env.production || true
         - env | grep -e OPS_AUTOMATION_SECRET >> .env.production || true
