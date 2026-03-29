@@ -11,10 +11,11 @@ import {
 import type { CheckoutSession, WebhookDelivery } from "@/lib/app-state/types";
 import {
   asRecord,
-  calculateServiceFeeAmount,
+  calculateServiceFeeZatoshis,
   cipherPayStatusFromEvent,
   normalizeEmailAddress,
   nowIso,
+  zecToZatoshis,
 } from "@/lib/app-state/utils";
 import { createCipherPayInvoice } from "@/lib/cipherpay";
 import { extractLumaWebhookEventApiId } from "@/lib/luma-webhook";
@@ -173,6 +174,7 @@ export async function createCheckoutSession(input: CreateCheckoutInput) {
   });
 
   const timestamp = nowIso();
+  const cipherpayPriceZatoshis = zecToZatoshis(invoice.price_zec);
   const session: CheckoutSession = {
     session_id: randomUUID(),
     tenant_id: calendarData.tenant.tenant_id,
@@ -197,8 +199,8 @@ export async function createCheckoutSession(input: CreateCheckoutInput) {
       ticket_name: ticket.name,
     },
     service_fee_bps_snapshot: calendarData.tenant.service_fee_bps,
-    service_fee_amount_snapshot: calculateServiceFeeAmount(
-      ticket.amount || 0,
+    service_fee_zatoshis_snapshot: calculateServiceFeeZatoshis(
+      cipherpayPriceZatoshis,
       calendarData.tenant.service_fee_bps,
     ),
     checkout_url,
@@ -207,6 +209,7 @@ export async function createCheckoutSession(input: CreateCheckoutInput) {
     cipherpay_payment_address: invoice.payment_address,
     cipherpay_zcash_uri: invoice.zcash_uri,
     cipherpay_price_zec: invoice.price_zec,
+    cipherpay_price_zatoshis: cipherpayPriceZatoshis,
     cipherpay_expires_at: invoice.expires_at,
     status: invoice.status === "unknown" ? "pending" : invoice.status,
     registration_status: "pending",

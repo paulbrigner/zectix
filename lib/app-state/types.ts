@@ -15,12 +15,21 @@ export type CipherPaySessionStatus =
 export type RegistrationStatus = "pending" | "registered" | "failed";
 
 export type TenantStatus = "draft" | "active" | "suspended" | "archived";
+export type TenantBillingStatus = "active" | "past_due" | "suspended";
 export type TenantOnboardingSource = "ops" | "self_serve";
 export type TenantOnboardingStatus =
   | "not_started"
   | "in_progress"
   | "ready_for_review"
   | "completed";
+export type BillingCycleStatus =
+  | "open"
+  | "invoiced"
+  | "paid"
+  | "past_due"
+  | "suspended"
+  | "carried_over";
+export type BillingAdjustmentType = "credit" | "waiver";
 export type CalendarConnectionStatus =
   | "pending_validation"
   | "active"
@@ -57,12 +66,14 @@ export type Tenant = {
   slug: string;
   contact_email: string;
   status: TenantStatus;
+  billing_status: TenantBillingStatus;
   onboarding_source: TenantOnboardingSource;
   onboarding_status: TenantOnboardingStatus;
   onboarding_started_at: string | null;
   onboarding_completed_at: string | null;
-  monthly_minimum_usd_cents: number;
   service_fee_bps: number;
+  billing_grace_days: number;
+  settlement_threshold_zatoshis: number;
   pilot_notes: string | null;
   created_at: string;
   updated_at: string;
@@ -170,13 +181,14 @@ export type CheckoutSession = {
   pricing_source: "mirror";
   pricing_snapshot_json: Record<string, unknown>;
   service_fee_bps_snapshot: number;
-  service_fee_amount_snapshot: number;
+  service_fee_zatoshis_snapshot: number;
   checkout_url: string | null;
   cipherpay_invoice_id: string;
   cipherpay_memo_code: string | null;
   cipherpay_payment_address: string | null;
   cipherpay_zcash_uri: string | null;
   cipherpay_price_zec: number | null;
+  cipherpay_price_zatoshis: number | null;
   cipherpay_expires_at: string | null;
   status: CipherPaySessionStatus;
   registration_status: RegistrationStatus;
@@ -239,13 +251,46 @@ export type UsageLedgerEntry = {
   session_id: string;
   cipherpay_invoice_id: string;
   event_api_id: string;
-  gross_amount: number;
-  currency: string;
+  gross_zatoshis: number;
   service_fee_bps: number;
-  service_fee_amount: number;
+  service_fee_zatoshis: number;
   recognized_at: string;
   billing_period: string;
+  billing_cycle_id: string;
   status: UsageLedgerStatus;
+};
+
+export type BillingCycle = {
+  billing_cycle_id: string;
+  tenant_id: string;
+  billing_period: string;
+  period_start: string;
+  period_end: string;
+  grace_until: string;
+  status: BillingCycleStatus;
+  recognized_session_count: number;
+  gross_zatoshis: number;
+  service_fee_zatoshis: number;
+  credited_zatoshis: number;
+  waived_zatoshis: number;
+  outstanding_zatoshis: number;
+  invoice_reference: string | null;
+  settlement_txid: string | null;
+  invoiced_at: string | null;
+  paid_at: string | null;
+  last_reconciled_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type BillingAdjustment = {
+  adjustment_id: string;
+  billing_cycle_id: string;
+  tenant_id: string;
+  type: BillingAdjustmentType;
+  amount_zatoshis: number;
+  reason: string;
+  created_at: string;
 };
 
 export type AdminAuditEvent = {
@@ -282,13 +327,17 @@ export type OpsDashboardData = {
 export type BillingReportRow = {
   tenant_id: string;
   tenant_name: string;
-  calendar_connection_id: string;
-  calendar_display_name: string;
+  billing_cycle_id: string;
   billing_period: string;
+  period_start: string;
+  period_end: string;
+  status: BillingCycleStatus;
   session_count: number;
-  gross_volume: number;
-  service_fee_due: number;
-  currency: string;
+  gross_zatoshis: number;
+  service_fee_zatoshis: number;
+  credited_zatoshis: number;
+  waived_zatoshis: number;
+  outstanding_zatoshis: number;
 };
 
 export type PublicCalendar = {

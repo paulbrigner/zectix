@@ -22,7 +22,7 @@ export default async function OpsLayout({
             <h1>LumaZcash service ops</h1>
             <p className="subtle-text">
               Onboard tenants, sync mirrored inventory, inspect webhooks, retry registrations,
-              and export monthly billing data.
+              and manage ZEC-native billing cycles.
             </p>
           </div>
           <div className="button-row">
@@ -46,13 +46,9 @@ export default async function OpsLayout({
           <Link className="console-nav-link" href="/ops/tenants">
             Tenants
           </Link>
-          <span
-            aria-disabled="true"
-            className="console-nav-link console-nav-link-disabled"
-            title="Reports is temporarily disabled while the billing workflow is refined."
-          >
-            Reports
-          </span>
+          <Link className="console-nav-link" href="/ops/reports">
+            Billing
+          </Link>
         </nav>
 
         <div className="console-content">{children}</div>

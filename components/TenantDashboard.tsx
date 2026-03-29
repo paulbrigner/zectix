@@ -2,7 +2,7 @@ import Link from "next/link";
 import { LocalDateTime } from "@/components/LocalDateTime";
 import { ConsoleStatusPill } from "@/components/ConsoleStatusPill";
 import { appUrl } from "@/lib/app-paths";
-import { formatFiatAmount } from "@/lib/app-state/utils";
+import { formatFiatAmount, formatZecAmount } from "@/lib/app-state/utils";
 import { createSessionViewerToken } from "@/lib/session-viewer";
 import type { TenantOpsDetail } from "@/lib/tenancy/service";
 
@@ -99,6 +99,7 @@ export function TenantDashboard({
   ).length;
   const settingsHref = isTenantAudience ? `${tenantBasePath}/settings` : tenantBasePath;
   const eventsHref = `${tenantBasePath}/events`;
+  const billingHref = isTenantAudience ? `${tenantBasePath}/billing` : "/ops/reports";
 
   return (
     <div className="console-page-body">
@@ -118,6 +119,9 @@ export function TenantDashboard({
           <div className="button-row">
             <Link className="button button-secondary button-small" href={settingsHref}>
               {isTenantAudience ? "Settings" : "Tenant settings"}
+            </Link>
+            <Link className="button button-secondary button-small" href={billingHref}>
+              Billing
             </Link>
             <Link
               className="button button-secondary button-small"
@@ -178,11 +182,15 @@ export function TenantDashboard({
 
           {isTenantAudience ? (
             <article className="console-detail-card">
-              <h3>Primary contact</h3>
-              <p className="subtle-text">{detail.tenant.contact_email}</p>
+              <h3>Billing</h3>
               <p className="subtle-text">
-                Use the settings page to connect Luma, refresh mirrored events, and keep
-                your CipherPay account aligned with checkout.
+                Status {detail.tenant.billing_status} · fee {detail.tenant.service_fee_bps} bps
+              </p>
+              <p className="subtle-text">
+                Current outstanding {formatZecAmount(detail.billing?.current_cycle?.outstanding_zatoshis || 0)}
+              </p>
+              <p className="subtle-text">
+                Review cycle history, credits, and settlement notes from the billing tab.
               </p>
             </article>
           ) : (
@@ -192,10 +200,10 @@ export function TenantDashboard({
                 Service fee {detail.tenant.service_fee_bps} bps
               </p>
               <p className="subtle-text">
-                Monthly minimum {detail.tenant.monthly_minimum_usd_cents} cents
+                Billing {detail.tenant.billing_status} · grace {detail.tenant.billing_grace_days} days
               </p>
               <p className="subtle-text">
-                Contact {detail.tenant.contact_email}
+                Threshold {formatZecAmount(detail.tenant.settlement_threshold_zatoshis)} · contact {detail.tenant.contact_email}
               </p>
             </article>
           )}

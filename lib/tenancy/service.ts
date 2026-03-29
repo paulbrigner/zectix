@@ -29,6 +29,7 @@ import type {
   EventMirrorStatus,
   SecretPreview,
   Tenant,
+  TenantBillingStatus,
   TenantOnboardingSource,
   TenantOnboardingStatus,
   TenantStatus,
@@ -57,6 +58,7 @@ import {
 } from "@/lib/sync/luma-sync";
 import { deleteLumaWebhook, listLumaEvents } from "@/lib/luma";
 import type { LumaEvent } from "@/lib/luma";
+import { getTenantBillingSnapshot } from "@/lib/billing/usage-ledger";
 
 async function dedupeSlug(
   baseSlug: string,
@@ -215,8 +217,10 @@ export async function createTenant(input: {
   name: string;
   slug?: string | null;
   contact_email: string;
-  monthly_minimum_usd_cents?: number;
   service_fee_bps?: number;
+  billing_status?: TenantBillingStatus;
+  billing_grace_days?: number;
+  settlement_threshold_zatoshis?: number;
   pilot_notes?: string | null;
   onboarding_source?: TenantOnboardingSource;
   onboarding_status?: TenantOnboardingStatus;
@@ -237,12 +241,14 @@ export async function createTenant(input: {
     slug,
     contact_email: input.contact_email.trim(),
     status: "draft",
+    billing_status: input.billing_status || "active",
     onboarding_source: onboardingSource,
     onboarding_status: onboardingStatus,
     onboarding_started_at: onboardingSource === "self_serve" ? timestamp : null,
     onboarding_completed_at: null,
-    monthly_minimum_usd_cents: input.monthly_minimum_usd_cents || 0,
     service_fee_bps: input.service_fee_bps || 0,
+    billing_grace_days: input.billing_grace_days ?? 7,
+    settlement_threshold_zatoshis: input.settlement_threshold_zatoshis || 0,
     pilot_notes: input.pilot_notes?.trim() || null,
     created_at: timestamp,
     updated_at: timestamp,
@@ -342,6 +348,33 @@ export async function setTenantStatus(tenantId: string, status: TenantStatus) {
 
   await putTenant(nextTenant);
   return refreshTenantOnboardingProgress(tenantId);
+}
+
+export async function updateTenantBillingSettings(input: {
+  tenant_id: string;
+  service_fee_bps: number;
+  billing_status: TenantBillingStatus;
+  billing_grace_days: number;
+  settlement_threshold_zatoshis: number;
+}) {
+  const tenant = await getTenant(input.tenant_id);
+  if (!tenant) {
+    throw new Error(`Tenant ${input.tenant_id} was not found.`);
+  }
+
+  const nextTenant: Tenant = {
+    ...tenant,
+    service_fee_bps: Math.max(0, Math.floor(input.service_fee_bps)),
+    billing_status: input.billing_status,
+    billing_grace_days: Math.max(0, Math.floor(input.billing_grace_days)),
+    settlement_threshold_zatoshis: Math.max(
+      0,
+      Math.floor(input.settlement_threshold_zatoshis),
+    ),
+    updated_at: nowIso(),
+  };
+
+  return putTenant(nextTenant);
 }
 
 export async function createCalendarConnection(input: {
@@ -720,13 +753,14 @@ export async function getTenantOpsDetail(tenantId: string) {
     return null;
   }
 
-  const [calendars, cipherpayConnections, sessions, webhooks, tasks] =
+  const [calendars, cipherpayConnections, sessions, webhooks, tasks, billing] =
     await Promise.all([
       listCalendarConnectionsByTenant(tenantId),
       listCipherPayConnectionsByTenant(tenantId),
       listSessionsByTenant(tenantId, 100),
       listWebhookDeliveriesByTenant(tenantId, 100),
       listRegistrationTasksByTenant(tenantId, 100),
+      getTenantBillingSnapshot(tenantId),
     ]);
 
   const events = await Promise.all(
@@ -840,6 +874,7 @@ export async function getTenantOpsDetail(tenantId: string) {
     cipherpay_secret_previews: cipherPaySecretPreviews,
     upstream_luma_events_by_calendar: upstreamLumaEventsByCalendar,
     active_cipherpay_connections_by_calendar: activeCipherPayConnectionsByCalendar,
+    billing,
   };
 }
 

@@ -22,7 +22,7 @@ export default async function TenantsPage() {
 
         <ConsoleDisclosure
           defaultOpen={!tenants.length}
-          description="Optional commercial fields can be added now or later."
+          description="Commercial terms are ZEC-native and can be refined later from the tenant detail page."
           title="Create organizer record"
         >
           <form action={createTenantAction} className="console-content">
@@ -48,19 +48,39 @@ export default async function TenantsPage() {
               </label>
               <label className="console-field">
                 <ConsoleFieldLabel
-                  info="Internal billing floor in USD cents. Leave blank to store 0."
-                  label="Monthly minimum (USD cents)"
-                  optional
-                />
-                <input className="console-input" name="monthly_minimum_usd_cents" type="number" />
-              </label>
-              <label className="console-field">
-                <ConsoleFieldLabel
                   info="Service fee in basis points. 100 bps = 1%."
                   label="Service fee (bps)"
                   optional
                 />
                 <input className="console-input" name="service_fee_bps" type="number" />
+              </label>
+              <label className="console-field">
+                <ConsoleFieldLabel
+                  info="How many days after the monthly cycle closes before unpaid balances are considered overdue."
+                  label="Billing grace days"
+                  optional
+                />
+                <input className="console-input" defaultValue={7} name="billing_grace_days" type="number" />
+              </label>
+              <label className="console-field">
+                <ConsoleFieldLabel
+                  info="Below this zatoshi balance, billing can be carried manually until more volume accrues."
+                  label="Settlement threshold (zatoshis)"
+                  optional
+                />
+                <input className="console-input" name="settlement_threshold_zatoshis" type="number" />
+              </label>
+              <label className="console-field">
+                <ConsoleFieldLabel
+                  info="Separate from tenant status so public checkout availability and billing delinquency can be managed independently."
+                  label="Billing status"
+                  optional
+                />
+                <select className="console-input" defaultValue="active" name="billing_status">
+                  <option value="active">active</option>
+                  <option value="past_due">past_due</option>
+                  <option value="suspended">suspended</option>
+                </select>
               </label>
               <label className="console-field">
                 <ConsoleFieldLabel

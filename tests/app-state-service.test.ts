@@ -166,7 +166,8 @@ describe("checkout service", () => {
     expect(mockPutSession).toHaveBeenCalledTimes(1);
     expect(result.session.cipherpay_invoice_id).toBe("invoice_123");
     expect(result.session.service_fee_bps_snapshot).toBe(450);
-    expect(result.session.service_fee_amount_snapshot).toBe(1.13);
+    expect(result.session.service_fee_zatoshis_snapshot).toBe(45_000);
+    expect(result.session.cipherpay_price_zatoshis).toBe(1_000_000);
     expect(result.session.session_id).not.toBe("invoice_123");
   });
 });

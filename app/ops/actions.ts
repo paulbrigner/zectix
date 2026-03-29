@@ -2,9 +2,17 @@
 
 import { redirect, unstable_rethrow } from "next/navigation";
 import { asBoolean, asNonNegativeInteger, asString } from "@/lib/app-state/utils";
+import {
+  createBillingAdjustment,
+  updateBillingCycleState,
+} from "@/lib/billing/usage-ledger";
 import { retryRegistrationForSession, retryDueRegistrations } from "@/lib/app-state/service";
 import { requireOpsPageAccess } from "@/lib/admin-auth-server";
-import type { TenantStatus } from "@/lib/app-state/types";
+import type {
+  BillingCycleStatus,
+  TenantBillingStatus,
+  TenantStatus,
+} from "@/lib/app-state/types";
 import {
   createCalendarConnection,
   createCipherPayConnection,
@@ -13,6 +21,7 @@ import {
   setTenantStatus,
   setTicketOperatorAssertions,
   syncCalendarEventForOps,
+  updateTenantBillingSettings,
   updateCalendarConnectionLumaKey,
   validateAndSyncCalendar,
   validateCipherPayConnection,
@@ -41,17 +50,42 @@ function asTenantStatus(value: unknown, fallback: TenantStatus = "draft"): Tenan
     : fallback;
 }
 
+function asTenantBillingStatus(
+  value: unknown,
+  fallback: TenantBillingStatus = "active",
+): TenantBillingStatus {
+  return value === "past_due" || value === "suspended" || value === "active"
+    ? value
+    : fallback;
+}
+
+function asBillingCycleStatus(
+  value: unknown,
+  fallback: BillingCycleStatus = "open",
+): BillingCycleStatus {
+  return value === "invoiced" ||
+    value === "paid" ||
+    value === "past_due" ||
+    value === "suspended" ||
+    value === "carried_over" ||
+    value === "open"
+    ? value
+    : fallback;
+}
+
 export async function createTenantAction(formData: FormData) {
   await requireOpsPageAccess();
   const tenant = await createTenant({
     name: String(formData.get("name") || ""),
     slug: asString(formData.get("slug")),
     contact_email: String(formData.get("contact_email") || ""),
-    monthly_minimum_usd_cents: asNonNegativeInteger(
-      formData.get("monthly_minimum_usd_cents"),
+    service_fee_bps: asNonNegativeInteger(formData.get("service_fee_bps"), 0),
+    billing_status: asTenantBillingStatus(formData.get("billing_status"), "active"),
+    billing_grace_days: asNonNegativeInteger(formData.get("billing_grace_days"), 7),
+    settlement_threshold_zatoshis: asNonNegativeInteger(
+      formData.get("settlement_threshold_zatoshis"),
       0,
     ),
-    service_fee_bps: asNonNegativeInteger(formData.get("service_fee_bps"), 0),
     pilot_notes: asString(formData.get("pilot_notes")),
   });
 
@@ -64,6 +98,46 @@ export async function setTenantStatusAction(formData: FormData) {
   const status = asTenantStatus(formData.get("status"), "draft");
   await setTenantStatus(tenantId, status);
   redirectTo(formData, `/ops/tenants/${encodeURIComponent(tenantId)}`);
+}
+
+export async function updateTenantBillingSettingsAction(formData: FormData) {
+  await requireOpsPageAccess();
+  const tenantId = String(formData.get("tenant_id") || "");
+  await updateTenantBillingSettings({
+    tenant_id: tenantId,
+    service_fee_bps: asNonNegativeInteger(formData.get("service_fee_bps"), 0),
+    billing_status: asTenantBillingStatus(formData.get("billing_status"), "active"),
+    billing_grace_days: asNonNegativeInteger(formData.get("billing_grace_days"), 7),
+    settlement_threshold_zatoshis: asNonNegativeInteger(
+      formData.get("settlement_threshold_zatoshis"),
+      0,
+    ),
+  });
+  redirectTo(formData, `/ops/tenants/${encodeURIComponent(tenantId)}`);
+}
+
+export async function updateBillingCycleStatusAction(formData: FormData) {
+  await requireOpsPageAccess();
+  const billingCycleId = String(formData.get("billing_cycle_id") || "");
+  await updateBillingCycleState({
+    billing_cycle_id: billingCycleId,
+    status: asBillingCycleStatus(formData.get("status"), "open"),
+    invoice_reference: asString(formData.get("invoice_reference")),
+    settlement_txid: asString(formData.get("settlement_txid")),
+  });
+  redirectTo(formData, "/ops/reports");
+}
+
+export async function createBillingAdjustmentAction(formData: FormData) {
+  await requireOpsPageAccess();
+  const billingCycleId = String(formData.get("billing_cycle_id") || "");
+  await createBillingAdjustment({
+    billing_cycle_id: billingCycleId,
+    type: formData.get("type") === "waiver" ? "waiver" : "credit",
+    amount_zatoshis: asNonNegativeInteger(formData.get("amount_zatoshis"), 0),
+    reason: String(formData.get("reason") || ""),
+  });
+  redirectTo(formData, "/ops/reports");
 }
 
 export async function createCalendarConnectionAction(formData: FormData) {
