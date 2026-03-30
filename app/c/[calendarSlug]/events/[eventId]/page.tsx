@@ -72,7 +72,10 @@ export default async function PublicEventPage({
     : undefined;
 
   return (
-    <main className={`page checkout-shell${embedMode ? " embed-page-shell" : ""}`} style={pageStyle}>
+    <main
+      className={`page checkout-shell${embedMode ? " embed-page-shell" : ""}`}
+      style={pageStyle}
+    >
       {embedMode ? (
         <EmbedFrameBridge
           calendarSlug={data.calendar.slug}
@@ -82,11 +85,17 @@ export default async function PublicEventPage({
           view="event"
         />
       ) : null}
-      <section className={`card event-page-card${embedMode ? " embed-page-card" : ""}`}>
+      <section
+        className={`card event-page-card${embedMode ? " embed-page-card" : ""}`}
+      >
         {!embedMode || data.calendar.embed_show_branding ? (
-          <div className={`event-page-topbar${embedMode ? " embed-page-topbar" : ""}`}>
+          <div
+            className={`event-page-topbar${embedMode ? " embed-page-topbar" : ""}`}
+          >
             <div className="public-brand">
-              <span>{embedMode ? data.calendar.display_name : data.tenant.name}</span>
+              <span>
+                {embedMode ? data.calendar.display_name : data.tenant.name}
+              </span>
             </div>
             {!embedMode ? (
               <div className="button-row">
@@ -116,19 +125,30 @@ export default async function PublicEventPage({
             {data.event.cover_url ? (
               <div className="event-page-media">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img alt={data.event.name} className="event-page-image" src={data.event.cover_url} />
+                <img
+                  alt={data.event.name}
+                  className="event-page-image"
+                  src={data.event.cover_url}
+                />
               </div>
             ) : null}
 
             <div className="event-page-copy">
-              <p className="eyebrow">{embedMode ? "Embedded checkout" : "Managed checkout"}</p>
+              {!embedMode ? <p className="eyebrow">Managed checkout</p> : null}
               <h1>{data.event.name}</h1>
               <p className="subtle-text">
-                {eventDateLabel(data.event.start_at, data.event.timezone || undefined)}
-                {data.event.location_label ? ` · ${data.event.location_label}` : ""}
+                {eventDateLabel(
+                  data.event.start_at,
+                  data.event.timezone || undefined,
+                )}
+                {data.event.location_label
+                  ? ` · ${data.event.location_label}`
+                  : ""}
               </p>
               {data.event.description ? (
-                <p className="event-page-detail subtle-text">{data.event.description}</p>
+                <p className="event-page-detail subtle-text">
+                  {data.event.description}
+                </p>
               ) : null}
             </div>
           </div>
