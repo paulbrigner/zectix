@@ -102,11 +102,17 @@ export default async function PublicCalendarPage({
           view="calendar"
         />
       ) : null}
-      <div className={`public-home-main${embedMode ? " embed-calendar-main" : ""}`}>
+      <div
+        className={`public-home-main${embedMode ? " embed-calendar-main" : ""}`}
+      >
         {!embedMode || data.calendar.embed_show_branding ? (
-          <div className={`public-home-topbar${embedMode ? " embed-page-topbar" : ""}`}>
+          <div
+            className={`public-home-topbar${embedMode ? " embed-page-topbar" : ""}`}
+          >
             <div className="public-brand">
-              <span>{embedMode ? data.calendar.display_name : data.tenant.name}</span>
+              <span>
+                {embedMode ? data.calendar.display_name : data.tenant.name}
+              </span>
             </div>
             {!embedMode ? (
               <Link className="button button-secondary button-small" href="/">
@@ -117,19 +123,23 @@ export default async function PublicCalendarPage({
         ) : null}
 
         <section className="public-events-section">
-          <div className="public-section-heading">
-            <p className="eyebrow">{embedMode ? "Embedded calendar" : "Public calendar"}</p>
-            <h1 className="public-display">Upcoming events</h1>
-            <p className="subtle-text">
-              {data.calendar.display_name} events that were mirrored from Luma and enabled for managed Zcash checkout.
-            </p>
-          </div>
+          {!embedMode ? (
+            <div className="public-section-heading">
+              <p className="eyebrow">Public calendar</p>
+              <h1 className="public-display">Upcoming events</h1>
+              <p className="subtle-text">
+                {data.calendar.display_name} events that were mirrored from Luma
+                and enabled for managed Zcash checkout.
+              </p>
+            </div>
+          ) : null}
 
           {data.events.length === 0 ? (
             <div className="home-empty-state">
               <h3>No public events yet</h3>
               <p>
-                No public Zcash-enabled events are currently available for this organizer.
+                No public Zcash-enabled events are currently available for this
+                organizer.
               </p>
             </div>
           ) : (
@@ -156,10 +166,17 @@ export default async function PublicCalendarPage({
                     <p className="console-kpi-label">Upcoming event</p>
                     <h3>{event.name}</h3>
                     <p className="subtle-text">
-                      {eventDateLabel(event.start_at, event.timezone || undefined)}
-                      {event.location_label ? ` · ${event.location_label}` : " · Luma event"}
+                      {eventDateLabel(
+                        event.start_at,
+                        event.timezone || undefined,
+                      )}
+                      {event.location_label
+                        ? ` · ${event.location_label}`
+                        : " · Luma event"}
                     </p>
-                    <span className="public-inline-link">Managed Zcash checkout</span>
+                    <span className="public-inline-link">
+                      Managed Zcash checkout
+                    </span>
                   </div>
                   <span className="public-row-action">Get tickets</span>
                 </Link>

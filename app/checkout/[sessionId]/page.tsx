@@ -4,7 +4,11 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { EmbedFrameBridge } from "@/components/EmbedFrameBridge";
 import { CheckoutStatusCard } from "@/components/CheckoutStatusCard";
-import { getCalendarConnection, getEventMirror, getSession } from "@/lib/app-state/state";
+import {
+  getCalendarConnection,
+  getEventMirror,
+  getSession,
+} from "@/lib/app-state/state";
 import {
   buildEmbedThemeStyle,
   isCalendarEmbedEnabled,
@@ -20,7 +24,12 @@ export default async function CheckoutPage({
   searchParams,
 }: {
   params: Promise<{ sessionId: string }>;
-  searchParams: Promise<{ t?: string; embed?: string; et?: string; po?: string }>;
+  searchParams: Promise<{
+    t?: string;
+    embed?: string;
+    et?: string;
+    po?: string;
+  }>;
 }) {
   const { sessionId } = await params;
   const { t, embed, et, po } = await searchParams;
@@ -29,7 +38,13 @@ export default async function CheckoutPage({
     notFound();
   }
 
-  if (!isSessionViewerTokenValid(session.session_id, session.attendee_email, t || null)) {
+  if (
+    !isSessionViewerTokenValid(
+      session.session_id,
+      session.attendee_email,
+      t || null,
+    )
+  ) {
     notFound();
   }
 
@@ -64,7 +79,10 @@ export default async function CheckoutPage({
       : undefined;
 
   return (
-    <main className={`page checkout-shell${embedMode ? " embed-page-shell" : ""}`} style={pageStyle}>
+    <main
+      className={`page checkout-shell${embedMode ? " embed-page-shell" : ""}`}
+      style={pageStyle}
+    >
       {embedMode ? (
         <EmbedFrameBridge
           calendarSlug={session.public_calendar_slug}
@@ -74,11 +92,17 @@ export default async function CheckoutPage({
           view="checkout"
         />
       ) : null}
-      <section className={`card event-page-card${embedMode ? " embed-page-card" : ""}`}>
+      <section
+        className={`card event-page-card${embedMode ? " embed-page-card" : ""}`}
+      >
         {!embedMode || calendar?.embed_show_branding ? (
-          <div className={`event-page-topbar${embedMode ? " embed-page-topbar" : ""}`}>
+          <div
+            className={`event-page-topbar${embedMode ? " embed-page-topbar" : ""}`}
+          >
             <div className="public-brand">
-              <span>{calendar?.display_name || session.public_calendar_slug}</span>
+              <span>
+                {calendar?.display_name || session.public_calendar_slug}
+              </span>
             </div>
             {!embedMode ? (
               <div className="event-page-actions">
@@ -104,7 +128,7 @@ export default async function CheckoutPage({
         ) : null}
 
         <div className="status-page-heading">
-          <p className="eyebrow">{embedMode ? "Embedded checkout" : "Checkout"}</p>
+          {!embedMode ? <p className="eyebrow">Checkout</p> : null}
           <h1>{session.event_name}</h1>
           <p className="subtle-text">Ticket for {session.attendee_name}</p>
         </div>

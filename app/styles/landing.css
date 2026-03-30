@@ -667,6 +667,11 @@
   align-items: start;
 }
 
+.landing-interest-layout-single {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 860px;
+}
+
 .landing-interest-overview {
   display: flex;
   flex-direction: column;
