@@ -12,6 +12,14 @@ export type TenantOnboardingChecklistItem = {
   complete: boolean;
   description: string;
   label: string;
+  stepId:
+    | "draft_organizer_created"
+    | "connect_luma_calendar"
+    | "validate_sync_luma"
+    | "attach_cipherpay"
+    | "validate_cipherpay"
+    | "activate_public_checkout"
+    | "publish_event_and_ticket";
 };
 
 export type TenantEventWorkspaceFilter =
@@ -207,11 +215,13 @@ export function buildOnboardingChecklist(
 
   return [
     {
+      stepId: "draft_organizer_created",
       label: "Draft organizer created",
       complete: true,
       description: `Status ${detail.tenant.status} · onboarding ${humanizeOnboardingStatus(detail.tenant.onboarding_status)}`,
     },
     {
+      stepId: "connect_luma_calendar",
       label: "Connect at least one Luma calendar",
       complete: hasCalendar,
       description: hasCalendar
@@ -219,6 +229,7 @@ export function buildOnboardingChecklist(
         : "Add a calendar connection to start mirroring inventory.",
     },
     {
+      stepId: "validate_sync_luma",
       label: "Validate and sync Luma",
       complete: hasValidatedCalendar,
       description: hasValidatedCalendar
@@ -226,6 +237,7 @@ export function buildOnboardingChecklist(
         : "Run Connect and sync once the Luma key is saved.",
     },
     {
+      stepId: "attach_cipherpay",
       label: "Attach a CipherPay account",
       complete: hasCipherPayConnection,
       description: hasCipherPayConnection
@@ -233,6 +245,7 @@ export function buildOnboardingChecklist(
         : "Save a CipherPay account for the calendar you want to use for checkout.",
     },
     {
+      stepId: "validate_cipherpay",
       label: "Validate CipherPay",
       complete: hasValidatedCipherPay,
       description: hasValidatedCipherPay
@@ -240,6 +253,7 @@ export function buildOnboardingChecklist(
         : "Save a CipherPay connection to validate it automatically for organizer checkout.",
     },
     {
+      stepId: "activate_public_checkout",
       label: "Activate public checkout",
       complete: detail.tenant.status === "active",
       description:
@@ -248,6 +262,7 @@ export function buildOnboardingChecklist(
           : "A draft organization stays dark publicly until it is activated.",
     },
     {
+      stepId: "publish_event_and_ticket",
       label: "Publish at least one event and ticket",
       complete: livePublicEvents.length > 0,
       description:

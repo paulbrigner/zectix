@@ -17,17 +17,19 @@ import {
   calendarConnectionHealthLabel,
   recentSessionsForDashboard,
   summarizeCalendarInventory,
+  type TenantOnboardingChecklistItem,
 } from "@/lib/tenant-self-serve";
 
-function overviewDestination(label: string) {
-  switch (label) {
-    case "Connect at least one Luma calendar":
-    case "Validate and sync Luma":
-    case "Attach a CipherPay account":
-    case "Validate CipherPay":
-    case "Activate public checkout":
+function overviewDestination(stepId: TenantOnboardingChecklistItem["stepId"]) {
+  switch (stepId) {
+    case "connect_luma_calendar":
+    case "validate_sync_luma":
+    case "attach_cipherpay":
+    case "validate_cipherpay":
+    case "activate_public_checkout":
+    case "draft_organizer_created":
       return "connections" as const;
-    case "Publish at least one event and ticket":
+    case "publish_event_and_ticket":
       return "events" as const;
     default:
       return "connections" as const;
@@ -50,7 +52,7 @@ export function TenantOverviewWorkspace({
   const summary = buildWorkspaceOverview(detail);
   const currentOutstanding =
     detail.billing?.current_cycle?.outstanding_zatoshis || 0;
-  const nextStepHref = `${tenantBasePath}/${overviewDestination(summary.nextStep?.label || "")}`;
+  const nextStepHref = `${tenantBasePath}/${overviewDestination(summary.nextStep?.stepId || "draft_organizer_created")}`;
   const recentSessions = recentSessionsForDashboard(detail.sessions);
 
   return (

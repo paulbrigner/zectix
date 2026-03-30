@@ -167,8 +167,12 @@ export async function activatePublicCheckoutAction(formData: FormData) {
     redirect("/dashboard");
   }
 
-  const prerequisitesReady = buildOnboardingChecklist(detail)
-    .slice(0, -1)
+  const onboardingChecklist = buildOnboardingChecklist(detail);
+  const activationStepIndex = onboardingChecklist.findIndex(
+    (item) => item.stepId === "activate_public_checkout",
+  );
+  const prerequisitesReady = onboardingChecklist
+    .slice(0, activationStepIndex)
     .every((item) => item.complete);
 
   if (prerequisitesReady && detail.tenant.status !== "active") {
