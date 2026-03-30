@@ -533,7 +533,10 @@ export function TenantEventsWorkspace({
       <div
         className={`tenant-events-workspace${selectedRow ? " tenant-events-workspace-detail-open" : ""}`}
       >
-        <section className="console-section tenant-events-table-panel">
+        <section
+          className="console-section console-anchor-target tenant-events-table-panel"
+          id="event-review-queue"
+        >
           <div className="console-section-header">
             <div>
               <h2>Review queue</h2>

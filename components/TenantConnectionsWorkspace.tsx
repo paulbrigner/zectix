@@ -37,7 +37,7 @@ export function TenantConnectionsWorkspace({
   ).length;
   const checklistComplete = completedSteps === onboardingChecklist.length;
   const activationStepIndex = onboardingChecklist.findIndex(
-    (item) => item.label === "Activate public checkout",
+    (item) => item.stepId === "activate_public_checkout",
   );
   const activationReady = onboardingChecklist
     .slice(0, activationStepIndex)
@@ -76,9 +76,34 @@ export function TenantConnectionsWorkspace({
     (entry) => !entry.isCurrentConnection,
   );
 
+  function checklistItemHref(stepId: (typeof onboardingChecklist)[number]["stepId"]) {
+    switch (stepId) {
+      case "draft_organizer_created":
+        return `${connectionsBasePath}#setup-checklist`;
+      case "connect_luma_calendar":
+        return `${connectionsBasePath}#connect-luma-calendar`;
+      case "validate_sync_luma":
+        return `${connectionsBasePath}#luma-calendars`;
+      case "attach_cipherpay":
+        return `${connectionsBasePath}#connect-cipherpay`;
+      case "validate_cipherpay":
+        return `${connectionsBasePath}#${
+          detail.cipherpay_connections.length
+            ? "current-cipherpay-connection"
+            : "connect-cipherpay"
+        }`;
+      case "activate_public_checkout":
+        return `${connectionsBasePath}#activate-public-checkout`;
+      case "publish_event_and_ticket":
+        return `${eventsBasePath}#event-review-queue`;
+      default:
+        return connectionsBasePath;
+    }
+  }
+
   return (
     <div className="console-page-body">
-      <section className="console-section">
+      <section className="console-section console-anchor-target" id="setup-checklist">
         <div className="console-section-header">
           <div>
             <h2>Connections</h2>
@@ -172,16 +197,28 @@ export function TenantConnectionsWorkspace({
           <ol className="tenant-checklist">
             {onboardingChecklist.map((item, index) => (
               <li
-                className={`tenant-checklist-item${item.complete ? " tenant-checklist-item-complete" : ""}`}
+                className={`tenant-checklist-item console-anchor-target${item.complete ? " tenant-checklist-item-complete" : ""}`}
+                id={
+                  item.stepId === "activate_public_checkout"
+                    ? "activate-public-checkout"
+                    : undefined
+                }
                 key={item.label}
               >
                 <div className="tenant-checklist-marker" aria-hidden="true">
                   {item.complete ? "✓" : String(index + 1)}
                 </div>
                 <div>
-                  <strong>{item.label}</strong>
+                  <strong>
+                    <Link
+                      className="tenant-checklist-link"
+                      href={checklistItemHref(item.stepId)}
+                    >
+                      {item.label}
+                    </Link>
+                  </strong>
                   <p className="subtle-text">{item.description}</p>
-                  {item.label === "Activate public checkout" && !item.complete ? (
+                  {item.stepId === "activate_public_checkout" && !item.complete ? (
                     <div className="button-row tenant-checklist-item-actions">
                       {activationReady ? (
                         <ConsoleConfirmDialog
@@ -222,7 +259,7 @@ export function TenantConnectionsWorkspace({
         </ConsoleDisclosure>
       </section>
 
-      <section className="console-section">
+      <section className="console-section console-anchor-target" id="luma-calendars">
         <div className="console-section-header">
           <div>
             <h2>Luma calendars</h2>
@@ -234,64 +271,66 @@ export function TenantConnectionsWorkspace({
           </div>
         </div>
 
-        <ConsoleDisclosure
-          defaultOpen={!detail.calendars.length}
-          description="Save the Luma API key first. Connect and sync will verify access, register the managed event webhook, and refresh mirrored inventory for that calendar."
-          title="Add calendar connection"
-        >
-          <form
-            action={createCalendarConnectionAction}
-            className="console-content"
+        <div className="console-anchor-target" id="connect-luma-calendar">
+          <ConsoleDisclosure
+            defaultOpen={!detail.calendars.length}
+            description="Save the Luma API key first. Connect and sync will verify access, register the managed event webhook, and refresh mirrored inventory for that calendar."
+            title="Add calendar connection"
           >
-            <input
-              name="tenant_slug"
-              type="hidden"
-              value={detail.tenant.slug}
-            />
-            <input
-              name="redirect_to"
-              type="hidden"
-              value={connectionsBasePath}
-            />
-            <div className="public-field-grid">
-              <label className="console-field">
-                <ConsoleFieldLabel
-                  info="Shown in your dashboard and used as the default public label for this calendar."
-                  label="Display name"
-                />
-                <input
-                  className="console-input"
-                  name="display_name"
-                  required
-                  type="text"
-                />
-              </label>
-              <label className="console-field">
-                <ConsoleFieldLabel
-                  info="Public URL path under /c/{slug}. Leave blank to generate it from the display name and add a numeric suffix if needed."
-                  label="Public slug"
-                  optional
-                />
-                <input className="console-input" name="slug" type="text" />
-              </label>
-              <label className="console-field">
-                <ConsoleFieldLabel
-                  info="Organizer-owned Luma API key used to mirror events, attach attendees after payment, and register the managed event webhook."
-                  label="Luma API key"
-                />
-                <input
-                  className="console-input"
-                  name="luma_api_key"
-                  required
-                  type="password"
-                />
-              </label>
-            </div>
-            <button className="button" type="submit">
-              Save calendar connection
-            </button>
-          </form>
-        </ConsoleDisclosure>
+            <form
+              action={createCalendarConnectionAction}
+              className="console-content"
+            >
+              <input
+                name="tenant_slug"
+                type="hidden"
+                value={detail.tenant.slug}
+              />
+              <input
+                name="redirect_to"
+                type="hidden"
+                value={connectionsBasePath}
+              />
+              <div className="public-field-grid">
+                <label className="console-field">
+                  <ConsoleFieldLabel
+                    info="Shown in your dashboard and used as the default public label for this calendar."
+                    label="Display name"
+                  />
+                  <input
+                    className="console-input"
+                    name="display_name"
+                    required
+                    type="text"
+                  />
+                </label>
+                <label className="console-field">
+                  <ConsoleFieldLabel
+                    info="Public URL path under /c/{slug}. Leave blank to generate it from the display name and add a numeric suffix if needed."
+                    label="Public slug"
+                    optional
+                  />
+                  <input className="console-input" name="slug" type="text" />
+                </label>
+                <label className="console-field">
+                  <ConsoleFieldLabel
+                    info="Organizer-owned Luma API key used to mirror events, attach attendees after payment, and register the managed event webhook."
+                    label="Luma API key"
+                  />
+                  <input
+                    className="console-input"
+                    name="luma_api_key"
+                    required
+                    type="password"
+                  />
+                </label>
+              </div>
+              <button className="button" type="submit">
+                Save calendar connection
+              </button>
+            </form>
+          </ConsoleDisclosure>
+        </div>
 
         {!detail.calendars.length ? (
           <div className="console-preview-empty">
@@ -585,7 +624,7 @@ export function TenantConnectionsWorkspace({
         )}
       </section>
 
-      <section className="console-section">
+      <section className="console-section console-anchor-target" id="connect-cipherpay">
         <div className="console-section-header">
           <div>
             <h2>CipherPay checkout</h2>
@@ -706,7 +745,10 @@ export function TenantConnectionsWorkspace({
         </ConsoleDisclosure>
 
         {!currentCipherPayConnections.length ? (
-          <div className="console-preview-empty">
+          <div
+            className="console-preview-empty console-anchor-target"
+            id="current-cipherpay-connection"
+          >
             <strong>No live checkout connection yet</strong>
             <p className="subtle-text">
               Add a CipherPay connection to make public checkout payable for one
@@ -714,7 +756,10 @@ export function TenantConnectionsWorkspace({
             </p>
           </div>
         ) : (
-          <div className="console-card-grid">
+          <div
+            className="console-card-grid console-anchor-target"
+            id="current-cipherpay-connection"
+          >
             {currentCipherPayConnections.map(
               ({ calendarName, connection, previews }) => (
                 <article
