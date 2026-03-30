@@ -53,9 +53,6 @@ export default async function TenantStartPage({
               sign-in link so you can connect Luma, validate your calendar, and
               configure CipherPay from the organizer dashboard.
             </p>
-            <p className="subtle-text">
-              Public checkout stays dark until the organization is activated.
-            </p>
 
             {resolvedSearchParams.email_sent === "1" ? (
               <div className="tenant-start-notice tenant-start-notice-success" role="status">
