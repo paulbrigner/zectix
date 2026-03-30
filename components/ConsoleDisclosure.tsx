@@ -2,17 +2,22 @@ import type { ReactNode } from "react";
 
 export function ConsoleDisclosure({
   children,
+  className,
   defaultOpen = false,
   description,
   title,
 }: {
   children: ReactNode;
+  className?: string;
   defaultOpen?: boolean;
   description?: string;
   title: string;
 }) {
   return (
-    <details className="console-disclosure" open={defaultOpen}>
+    <details
+      className={className ? `console-disclosure ${className}` : "console-disclosure"}
+      open={defaultOpen}
+    >
       <summary className="console-disclosure-summary">
         <div className="console-disclosure-heading">
           <div>
