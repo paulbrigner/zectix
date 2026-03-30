@@ -40,7 +40,11 @@ function redirectToWithQuery(base: string, params: URLSearchParams) {
     redirect(base);
   }
 
-  redirect(`${base}${base.includes("?") ? "&" : "?"}${query}`);
+  const [baseWithoutHash, hash = ""] = base.split("#", 2);
+  const nextUrl =
+    `${baseWithoutHash}${baseWithoutHash.includes("?") ? "&" : "?"}${query}` +
+    (hash ? `#${hash}` : "");
+  redirect(nextUrl);
 }
 
 async function requireTenantSlugAccess(tenantSlug: string) {
