@@ -26,7 +26,8 @@ const checklistSections: ChecklistSection[] = [
     items: [
       {
         id: "billing-zec",
-        label: "I understand ZecTix is a non-custodial integration.",
+        label:
+          "I understand ZecTix is non-custodial and cannot spend, move, or otherwise transact with my ZEC.",
         detail:
           "Platform fees, cycle balances, and settlement tracking are all handled in ZEC rather than USD.",
       },
