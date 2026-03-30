@@ -5,7 +5,7 @@ import { useEffect } from "react";
 type EmbedFrameBridgeProps = {
   enabled: boolean;
   parentOrigin: string | null;
-  view: "event" | "checkout";
+  view: "calendar" | "event" | "checkout";
   calendarSlug?: string;
   eventId?: string;
   sessionId?: string;

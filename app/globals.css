@@ -417,9 +417,13 @@ select {
 
 .tenant-events-workspace {
   display: grid;
-  grid-template-columns: minmax(0, 1.7fr) minmax(320px, 0.82fr);
+  grid-template-columns: 1fr;
   gap: 1.25rem;
   align-items: start;
+}
+
+.tenant-events-workspace-detail-open {
+  grid-template-columns: minmax(0, 1.7fr) minmax(320px, 0.82fr);
 }
 
 .tenant-events-table-panel,
@@ -3053,6 +3057,16 @@ select {
   background: transparent;
 }
 
+.embed-calendar-main {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.embed-page-shell .public-events-section {
+  margin-top: 0;
+}
+
 .embed-page-card {
   width: 100%;
   margin: 0;
@@ -3094,6 +3108,15 @@ select {
 .embed-page-shell .public-status-chip {
   background: var(--accent-subtle);
   color: var(--accent-text);
+}
+
+.embed-page-shell .public-event-row {
+  background: var(--surface-card);
+  box-shadow: none;
+}
+
+.embed-page-shell .public-event-row:hover {
+  box-shadow: none;
 }
 
 .embed-page-shell .public-ticket-status,
@@ -3694,7 +3717,8 @@ select {
     flex-direction: column;
   }
 
-  .tenant-events-workspace {
+  .tenant-events-workspace,
+  .tenant-events-workspace-detail-open {
     grid-template-columns: 1fr;
   }
 
@@ -3783,7 +3807,8 @@ select {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .tenant-events-workspace {
+  .tenant-events-workspace,
+  .tenant-events-workspace-detail-open {
     grid-template-columns: 1fr;
   }
 

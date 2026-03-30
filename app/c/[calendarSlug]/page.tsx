@@ -1,5 +1,14 @@
 import Link from "next/link";
+import type { CSSProperties } from "react";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
+import { EmbedFrameBridge } from "@/components/EmbedFrameBridge";
+import {
+  buildEmbedThemeStyle,
+  createEmbedParentToken,
+  isCalendarEmbedEnabled,
+  resolveEmbedParentOrigin,
+} from "@/lib/embed";
 import { getPublicCalendar } from "@/lib/public/public-calendars";
 
 export const runtime = "nodejs";
@@ -26,30 +35,90 @@ function eventInitials(name: string) {
 
 export default async function PublicCalendarPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ calendarSlug: string }>;
+  searchParams: Promise<{ embed?: string; et?: string; po?: string }>;
 }) {
   const { calendarSlug } = await params;
+  const resolvedSearchParams = await searchParams;
   const data = await getPublicCalendar(calendarSlug);
   if (!data) {
     notFound();
   }
 
+  const embedMode = resolvedSearchParams.embed === "1";
+  let embedParentOrigin: string | null = null;
+  let embedParentToken: string | null = null;
+
+  if (embedMode) {
+    if (!isCalendarEmbedEnabled(data.calendar)) {
+      notFound();
+    }
+
+    const requestHeaders = await headers();
+    embedParentOrigin = resolveEmbedParentOrigin({
+      calendarConnectionId: data.calendar.calendar_connection_id,
+      allowedOrigins: data.calendar.embed_allowed_origins,
+      requestHeaders,
+      parentToken: resolvedSearchParams.et || null,
+      parentOriginHint: resolvedSearchParams.po || null,
+    });
+    if (!embedParentOrigin) {
+      notFound();
+    }
+
+    embedParentToken =
+      resolvedSearchParams.et ||
+      createEmbedParentToken(
+        data.calendar.calendar_connection_id,
+        embedParentOrigin,
+      ) ||
+      null;
+  }
+
+  const pageStyle = embedMode
+    ? (buildEmbedThemeStyle(data.calendar.embed_theme) as CSSProperties)
+    : undefined;
+  const embedEventQuery =
+    embedMode && embedParentOrigin
+      ? new URLSearchParams({
+          embed: "1",
+          ...(embedParentToken ? { et: embedParentToken } : {}),
+          po: embedParentOrigin,
+        }).toString()
+      : null;
+
   return (
-    <main className="public-home-shell">
-      <div className="public-home-main">
-        <div className="public-home-topbar">
-          <div className="public-brand">
-            <span>{data.tenant.name}</span>
+    <main
+      className={`public-home-shell${embedMode ? " embed-page-shell embed-calendar-shell" : ""}`}
+      style={pageStyle}
+    >
+      {embedMode ? (
+        <EmbedFrameBridge
+          calendarSlug={data.calendar.slug}
+          enabled
+          parentOrigin={embedParentOrigin}
+          view="calendar"
+        />
+      ) : null}
+      <div className={`public-home-main${embedMode ? " embed-calendar-main" : ""}`}>
+        {!embedMode || data.calendar.embed_show_branding ? (
+          <div className={`public-home-topbar${embedMode ? " embed-page-topbar" : ""}`}>
+            <div className="public-brand">
+              <span>{embedMode ? data.calendar.display_name : data.tenant.name}</span>
+            </div>
+            {!embedMode ? (
+              <Link className="button button-secondary button-small" href="/">
+                Service home
+              </Link>
+            ) : null}
           </div>
-          <Link className="button button-secondary button-small" href="/">
-            Service home
-          </Link>
-        </div>
+        ) : null}
 
         <section className="public-events-section">
           <div className="public-section-heading">
-            <p className="eyebrow">Public calendar</p>
+            <p className="eyebrow">{embedMode ? "Embedded calendar" : "Public calendar"}</p>
             <h1 className="public-display">Upcoming events</h1>
             <p className="subtle-text">
               {data.calendar.display_name} events that were mirrored from Luma and enabled for managed Zcash checkout.
@@ -68,7 +137,7 @@ export default async function PublicCalendarPage({
               {data.events.map((event) => (
                 <Link
                   className="public-event-row"
-                  href={`/c/${encodeURIComponent(data.calendar.slug)}/events/${encodeURIComponent(event.event_api_id)}`}
+                  href={`/c/${encodeURIComponent(data.calendar.slug)}/events/${encodeURIComponent(event.event_api_id)}${embedEventQuery ? `?${embedEventQuery}` : ""}`}
                   key={event.event_api_id}
                 >
                   <div className="public-event-icon" aria-hidden="true">

@@ -7,6 +7,7 @@ import { appUrl } from "@/lib/app-paths";
 import { selectUpcomingEvents } from "@/lib/embed";
 import type { TenantOpsDetail } from "@/lib/tenancy/service";
 import {
+  buildEmbedCalendarUrl,
   buildEmbedEventUrl,
   buildEmbedSnippet,
   summarizeCalendarInventory,
@@ -112,13 +113,10 @@ export function TenantEmbedWorkspace({
           <div className="console-luma-card-stack">
             {detail.calendars.map((calendar) => {
               const inventory = summarizeCalendarInventory(detail, calendar);
-              const embedExampleEvents = selectUpcomingEvents(
-                inventory.enabledEvents,
-              );
-              const embedReady =
-                calendar.embed_enabled &&
-                calendar.embed_allowed_origins.length > 0 &&
-                embedExampleEvents.length > 0;
+              const embedExampleEvents = selectUpcomingEvents(inventory.enabledEvents);
+              const calendarSnippetReady =
+                calendar.embed_enabled && calendar.embed_allowed_origins.length > 0;
+              const embedReady = calendarSnippetReady && embedExampleEvents.length > 0;
 
               return (
                 <article
@@ -352,12 +350,30 @@ export function TenantEmbedWorkspace({
                   </div>
 
                   <ConsoleDisclosure
-                    defaultOpen={embedReady}
-                    description="Ready-to-paste iframe tags for upcoming public events on this calendar."
-                    title="Generated iframe snippets"
+                    defaultOpen={calendarSnippetReady}
+                    description="Ready-to-paste iframe tags for the calendar landing view plus any upcoming public event embeds."
+                    title="Generated calendar and event embeds"
                   >
-                    {embedExampleEvents.length > 0 ? (
+                    {calendarSnippetReady ? (
                       <div className="console-content">
+                        <label className="console-field">
+                          <ConsoleFieldLabel
+                            info="Use this iframe tag to embed the full public event list for this calendar."
+                            label={`Calendar embed · ${calendar.display_name}`}
+                          />
+                          <textarea
+                            className="console-input"
+                            readOnly
+                            rows={4}
+                            value={buildEmbedSnippet(
+                              appUrl(buildEmbedCalendarUrl(calendar.slug)) ||
+                                buildEmbedCalendarUrl(calendar.slug),
+                              `${detail.tenant.name} calendar for ${calendar.display_name}`,
+                              calendar.embed_default_height_px,
+                            )}
+                          />
+                        </label>
+
                         {embedExampleEvents.map((event) => {
                           const relativeUrl = buildEmbedEventUrl(
                             calendar.slug,
@@ -368,7 +384,7 @@ export function TenantEmbedWorkspace({
                             <label className="console-field" key={event.event_api_id}>
                               <ConsoleFieldLabel
                                 info="Use this iframe tag in your app or CMS. The host page controls final width."
-                                label={`Embed snippet · ${event.name}`}
+                                label={`Event embed · ${event.name}`}
                               />
                               <textarea
                                 className="console-input"
@@ -383,11 +399,18 @@ export function TenantEmbedWorkspace({
                             </label>
                           );
                         })}
+
+                        {!embedExampleEvents.length ? (
+                          <p className="subtle-text">
+                            Calendar embed is ready. Event-specific snippets will appear once this
+                            calendar has at least one upcoming public event.
+                          </p>
+                        ) : null}
                       </div>
                     ) : (
                       <p className="subtle-text">
-                        Enable at least one future public event to generate a ready-to-paste iframe
-                        snippet here.
+                        Turn on embedding and add at least one allowed origin to generate
+                        ready-to-paste iframe snippets here.
                       </p>
                     )}
                   </ConsoleDisclosure>
