@@ -54,24 +54,6 @@ export default async function TenantHelpPage({
         <p className="console-error-text">{resolvedSearchParams.error}</p>
       ) : null}
 
-      <div className="console-card-grid">
-        <article className="console-detail-card">
-          <p className="console-kpi-label">Signed in as</p>
-          <h3>{email}</h3>
-          <p className="subtle-text">
-            We&apos;ll use this as the reply-to address for your request.
-          </p>
-        </article>
-        <article className="console-detail-card">
-          <p className="console-kpi-label">Best for</p>
-          <h3>Dashboard, sync, billing, and embed help</h3>
-          <p className="subtle-text">
-            Share what you were trying to do and what happened, and we&apos;ll
-            follow up with the fastest next step.
-          </p>
-        </article>
-      </div>
-
       <form action={submitSupportRequestAction} className="console-content">
         <input name="redirect_to" type="hidden" value="/dashboard/help" />
         <input

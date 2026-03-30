@@ -34,6 +34,8 @@ frontend:
         - env | grep -e TENANT_DEFAULT_SETTLEMENT_THRESHOLD_ZATOSHIS >> .env.production || true
         - env | grep -e LUMA_INTEREST_FROM_EMAIL >> .env.production || true
         - env | grep -e LUMA_INTEREST_INBOX_EMAIL >> .env.production || true
+        - env | grep -e SUPPORT_FROM_EMAIL >> .env.production || true
+        - env | grep -e SUPPORT_INBOX_EMAIL >> .env.production || true
         - env | grep -e OPS_AUTOMATION_SECRET >> .env.production || true
         - npm run build
   artifacts:

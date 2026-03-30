@@ -235,7 +235,7 @@ export async function submitSupportRequestAction(formData: FormData) {
     console.error("Failed to send organizer support request.", error);
     params.set(
       "error",
-      "We couldn't send your support request right now. Confirm the support email settings are configured.",
+      "We couldn't send your support request right now. Please try again in a moment.",
     );
     redirectToWithQuery(redirectBase, params);
   }
