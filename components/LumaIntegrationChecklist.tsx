@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui";
 
@@ -29,21 +29,14 @@ const checklistSections: ChecklistSection[] = [
         label:
           "I understand ZecTix is non-custodial and cannot spend, move, or otherwise transact with my ZEC.",
         detail:
-          "Platform fees, cycle balances, and settlement tracking are all handled in ZEC rather than USD.",
+          "Managed checkout uses CipherPay's non-custodial, fully shielded payment flow to settle directly to your Zcash wallet.",
       },
       {
         id: "billing-fees",
         label:
           "I understand successful managed checkouts incur a ZecTix service fee.",
         detail:
-          "The organizer dashboard will show current billing status, cycle history, and outstanding balances.",
-      },
-      {
-        id: "public-controls",
-        label:
-          "I understand public checkout can be enabled or hidden at the event and ticket level.",
-        detail:
-          "Meeting the ticket assertions does not force an event live. Unsupported or intentionally hidden inventory can stay private.",
+          "Platform fees of 33 bps are billed monthly via a CipherPay invoice.",
       },
     ],
   },
@@ -94,7 +87,7 @@ const checklistSections: ChecklistSection[] = [
         label:
           "My supported public ticket tiers do not require extra checkout questions.",
         detail:
-          "Question-heavy flows can stay off until they are handled in a way that fits the mirrored checkout model.",
+          "Checkout questions are not supported in the managed mirrored checkout flow at this time.",
       },
     ],
   },
@@ -112,12 +105,7 @@ export function LumaIntegrationChecklist() {
       >,
   );
 
-  const completedCount = useMemo(
-    () => Object.values(checkedItems).filter(Boolean).length,
-    [checkedItems],
-  );
-  const totalCount = allItems.length;
-  const readyToContinue = completedCount === totalCount;
+  const readyToContinue = allItems.every((item) => checkedItems[item.id]);
 
   return (
     <div className="landing-interest-card landing-readiness-card">
@@ -126,23 +114,10 @@ export function LumaIntegrationChecklist() {
         Confirm these requirements
       </h2>
       <p className="landing-section-desc">
-        Make sure the billing model, technical inputs, and ticket restrictions
-        fit your setup. When every item is checked, you can continue straight
-        into organizer onboarding.
+        Make sure the technical inputs and ticket restrictions fit your setup.
+        When every item is checked, you can continue straight into organizer
+        onboarding.
       </p>
-      <p className="landing-interest-help">
-        ZecTix configures the managed Luma webhook for you after you connect a
-        valid API key.
-      </p>
-
-      <div aria-live="polite" className="landing-readiness-progress">
-        <strong>{`${completedCount}/${totalCount} confirmed`}</strong>
-        <span>
-          {readyToContinue
-            ? "Everything is confirmed. Continue to connect your accounts."
-            : "Check every item to unlock dashboard setup."}
-        </span>
-      </div>
 
       <div className="landing-readiness-sections">
         {checklistSections.map((section) => (
@@ -201,9 +176,6 @@ export function LumaIntegrationChecklist() {
         >
           Continue to dashboard setup
         </Button>
-        <p className="landing-interest-help">
-          You will connect Luma and CipherPay inside the organizer dashboard.
-        </p>
       </div>
     </div>
   );
