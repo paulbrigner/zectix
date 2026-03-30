@@ -3,11 +3,12 @@ import type { CheckoutSession } from "@/lib/app-state/types";
 import {
   applyDerivedCheckoutSessionState,
   billingPeriodForTimestamp,
-  calculateServiceFeeAmount,
+  calculateServiceFeeZatoshis,
   cipherPayStatusFromEvent,
   maskSecretPreview,
   normalizeEmailAddress,
   supportedTicketCurrencies,
+  zecToZatoshis,
 } from "@/lib/app-state/utils";
 import { evaluateEventCheckoutState } from "@/lib/eligibility/event-checkout";
 import { evaluateTicketEligibility } from "@/lib/eligibility/ticket-eligibility";
@@ -50,7 +51,7 @@ describe("app-state utilities", () => {
   });
 
   it("computes service fees and ticket eligibility with operator assertions", () => {
-    expect(calculateServiceFeeAmount(25, 450)).toBe(1.13);
+    expect(calculateServiceFeeZatoshis(zecToZatoshis(25), 450)).toBe(112_500_000);
 
     vi.stubEnv("SUPPORTED_TICKET_CURRENCIES", "USD,EUR");
     expect([...supportedTicketCurrencies()]).toEqual(["USD", "EUR"]);
