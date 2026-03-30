@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { CSSProperties } from "react";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
+import { EmbedBrandingFooter } from "@/components/EmbedBrandingFooter";
 import { EmbedFrameBridge } from "@/components/EmbedFrameBridge";
 import {
   buildEmbedThemeStyle,
@@ -105,7 +106,7 @@ export default async function PublicCalendarPage({
       <div
         className={`public-home-main${embedMode ? " embed-calendar-main" : ""}`}
       >
-        {!embedMode || data.calendar.embed_show_branding ? (
+        {!embedMode ? (
           <div
             className={`public-home-topbar${embedMode ? " embed-page-topbar" : ""}`}
           >
@@ -184,6 +185,10 @@ export default async function PublicCalendarPage({
             </div>
           )}
         </section>
+
+        {embedMode && data.calendar.embed_show_branding ? (
+          <EmbedBrandingFooter />
+        ) : null}
       </div>
     </main>
   );
