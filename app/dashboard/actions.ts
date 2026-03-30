@@ -183,7 +183,7 @@ export async function createCipherPayConnectionAction(formData: FormData) {
   const tenant = await requireTenantSlugAccess(tenantSlug);
   const calendarConnectionId = String(formData.get("calendar_connection_id") || "");
   await requireCalendarTenantAccess(tenant.tenant_id, calendarConnectionId);
-  await createCipherPayConnection({
+  const connection = await createCipherPayConnection({
     tenant_id: tenant.tenant_id,
     calendar_connection_id: calendarConnectionId,
     network: formData.get("network") === "mainnet" ? "mainnet" : "testnet",
@@ -192,6 +192,7 @@ export async function createCipherPayConnectionAction(formData: FormData) {
     cipherpay_api_key: String(formData.get("cipherpay_api_key") || ""),
     cipherpay_webhook_secret: String(formData.get("cipherpay_webhook_secret") || ""),
   });
+  await validateCipherPayConnection(connection.cipherpay_connection_id);
 
   redirectTo(formData, `/dashboard/${encodeURIComponent(tenant.slug)}/connections`);
 }

@@ -112,7 +112,7 @@ function baseTicketMirror(
     description: input.description,
     active: input.active,
     price_source: input.price_source,
-    public_checkout_requested: existing?.public_checkout_requested ?? true,
+    public_checkout_requested: existing?.public_checkout_requested ?? false,
     confirmed_fixed_price: existing?.confirmed_fixed_price || false,
     confirmed_no_approval_required: existing?.confirmed_no_approval_required || false,
     confirmed_no_extra_required_questions:
@@ -358,7 +358,7 @@ export async function syncCalendarConnection(calendarConnectionId: string) {
         event_api_id: event.api_id,
         luma_api_key: lumaApiKey,
       });
-      const publicCheckoutRequested = existing?.public_checkout_requested ?? true;
+      const publicCheckoutRequested = existing?.public_checkout_requested ?? false;
       const eventCheckoutState = evaluateEventCheckoutState({
         enabled_ticket_count: tickets.filter((ticket) => ticket.zcash_enabled).length,
         public_checkout_requested: publicCheckoutRequested,

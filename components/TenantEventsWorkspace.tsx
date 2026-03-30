@@ -188,7 +188,7 @@ function ticketReviewLabel(ticket: TicketMirror) {
     return "Ready for checkout";
   }
   if (ticket.automatic_eligibility_reasons.length) {
-    return "Needs attention";
+    return null;
   }
   return "Needs refresh";
 }
@@ -925,8 +925,8 @@ export function TenantEventsWorkspace({
                       <h2>Event visibility</h2>
                       <p className="subtle-text">
                         Decide whether this event should appear on public
-                        checkout at all. Ticket assertions only matter when this
-                        event toggle is on.
+                        checkout at all. At least one ticket also needs to be
+                        allowed for the event to go live.
                       </p>
                     </div>
                   </div>
@@ -966,23 +966,16 @@ export function TenantEventsWorkspace({
                       defaultChecked={
                         selectedRow.mirrored_event.public_checkout_requested
                       }
-                      description="Keep this on only when the event itself should be available on public checkout."
                       label="Allow this event on public checkout"
                       name="public_checkout_requested"
+                      submitOnChange
                     />
 
                     <p className="subtle-text">
                       {selectedRow.mirrored_event.public_checkout_requested
-                        ? "This event can go live once at least one ticket is also allowed and passes review."
-                        : "This event will stay hidden even if tickets are individually ready."}
+                        ? "This event can go live once at least one ticket is also allowed on public checkout."
+                        : "This event will stay hidden even if tickets are individually allowed."}
                     </p>
-
-                    <button
-                      className="button button-secondary button-small"
-                      type="submit"
-                    >
-                      Save event visibility
-                    </button>
                   </form>
                 </section>
               ) : null}
@@ -1042,15 +1035,17 @@ export function TenantEventsWorkspace({
                           </strong>
                         </ConsoleTableCell>
                         <ConsoleTableCell>
-                          <div className="console-mini-pill-row console-ticket-review-pills">
-                            <span
-                              className={pillClassName(
-                                ticketReviewTone(ticket),
-                              )}
-                            >
-                              {ticketReviewLabel(ticket)}
-                            </span>
-                          </div>
+                          {ticketReviewLabel(ticket) ? (
+                            <div className="console-mini-pill-row console-ticket-review-pills">
+                              <span
+                                className={pillClassName(
+                                  ticketReviewTone(ticket),
+                                )}
+                              >
+                                {ticketReviewLabel(ticket)}
+                              </span>
+                            </div>
+                          ) : null}
                           <p className="subtle-text console-table-note">
                             {ticketReviewCopy(ticket)}
                           </p>
@@ -1094,7 +1089,6 @@ export function TenantEventsWorkspace({
                             <ConsoleSwitch
                               className="tenant-ticket-review-check tenant-ticket-review-inline-switch"
                               defaultChecked={ticket.public_checkout_requested}
-                              description="Saves immediately."
                               label="Allow this ticket"
                               name="public_checkout_requested"
                               submitOnChange
