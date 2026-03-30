@@ -24,17 +24,6 @@ export function TenantEmbedWorkspace({
   tenantBasePath: string;
 }) {
   const embedBasePath = `${tenantBasePath}/embed`;
-  const calendarsWithEmbed = detail.calendars.filter(
-    (calendar) => calendar.embed_enabled,
-  );
-  const snippetReadyCalendars = detail.calendars.filter((calendar) => {
-    const inventory = summarizeCalendarInventory(detail, calendar);
-    return (
-      calendar.embed_enabled &&
-      calendar.embed_allowed_origins.length > 0 &&
-      selectUpcomingEvents(inventory.enabledEvents).length > 0
-    );
-  });
 
   return (
     <div className="console-page-body">
@@ -47,49 +36,6 @@ export function TenantEmbedWorkspace({
               checkout appearance without changing your public hosted flow.
             </p>
           </div>
-        </div>
-
-        <div className="console-kpi-grid">
-          <article className="console-kpi-card">
-            <p className="console-kpi-label">Calendars</p>
-            <p className="console-kpi-value">{detail.calendars.length}</p>
-            <p className="subtle-text console-kpi-detail">
-              {calendarsWithEmbed.length} with embedding turned on
-            </p>
-          </article>
-          <article className="console-kpi-card">
-            <p className="console-kpi-label">Ready to publish</p>
-            <p className="console-kpi-value">{snippetReadyCalendars.length}</p>
-            <p className="subtle-text console-kpi-detail">
-              calendars have an allowlist and at least one public event
-            </p>
-          </article>
-          <article className="console-kpi-card">
-            <p className="console-kpi-label">Allowed origins</p>
-            <p className="console-kpi-value">
-              {detail.calendars.reduce(
-                (count, calendar) =>
-                  count + calendar.embed_allowed_origins.length,
-                0,
-              )}
-            </p>
-            <p className="subtle-text console-kpi-detail">
-              only listed origins can host the iframe
-            </p>
-          </article>
-          <article className="console-kpi-card">
-            <p className="console-kpi-label">Branding mode</p>
-            <p className="console-kpi-value">
-              {
-                detail.calendars.filter(
-                  (calendar) => calendar.embed_show_branding,
-                ).length
-              }
-            </p>
-            <p className="subtle-text console-kpi-detail">
-              calendars currently showing the compact footer
-            </p>
-          </article>
         </div>
       </section>
 
