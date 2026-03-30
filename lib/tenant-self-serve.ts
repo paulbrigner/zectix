@@ -137,6 +137,9 @@ function primaryBlockerForMirroredEvent(
 }
 
 export function humanizeOnboardingStatus(value: string) {
+  if (value === "ready_for_review") {
+    return "in progress";
+  }
   return value.replaceAll("_", " ");
 }
 

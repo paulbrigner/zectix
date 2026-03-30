@@ -306,7 +306,7 @@ function deriveTenantOnboardingStatus(input: {
   );
 
   if (hasValidatedCalendar && hasActiveCipherPayConnection) {
-    return "ready_for_review" as const;
+    return "in_progress" as const;
   }
 
   if (
@@ -785,6 +785,8 @@ export async function setTicketOperatorAssertions(input: {
     });
   }
 
+  await refreshTenantOnboardingProgress(ticket.tenant_id);
+
   return nextTicket;
 }
 
@@ -813,6 +815,7 @@ export async function setEventPublicCheckoutRequested(input: {
   };
 
   await putEventMirror(nextEvent);
+  await refreshTenantOnboardingProgress(event.tenant_id);
   return nextEvent;
 }
 

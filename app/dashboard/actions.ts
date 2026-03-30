@@ -71,6 +71,61 @@ async function requireCipherPayTenantAccess(tenantId: string, cipherpayConnectio
   return connection;
 }
 
+function onboardingChecklistComplete(
+  detail: Awaited<ReturnType<typeof getTenantSelfServeDetailBySlug>> | null,
+) {
+  return detail ? buildOnboardingChecklist(detail).every((item) => item.complete) : false;
+}
+
+function resolvePublicEventNotice(
+  detail: NonNullable<Awaited<ReturnType<typeof getTenantSelfServeDetailBySlug>>>,
+  preferredEventApiId?: string | null,
+) {
+  const liveEvents = detail.events.flatMap(({ calendar, events }) =>
+    events
+      .filter((event) => event.zcash_enabled)
+      .map((event) => ({
+        href: `/c/${calendar.slug}/events/${encodeURIComponent(event.event_api_id)}`,
+        isPreferred: preferredEventApiId
+          ? event.event_api_id === preferredEventApiId
+          : false,
+        name: event.name,
+      })),
+  );
+
+  if (!liveEvents.length) {
+    return null;
+  }
+
+  return liveEvents.find((event) => event.isPreferred) || liveEvents[0];
+}
+
+async function appendOnboardingCompletionNotice(params: URLSearchParams, input: {
+  eventApiId?: string | null;
+  sessionEmail: string;
+  tenantSlug: string;
+  wasComplete: boolean;
+}) {
+  const nextDetail = await getTenantSelfServeDetailBySlug(
+    input.tenantSlug,
+    input.sessionEmail,
+  );
+  if (!nextDetail) {
+    return;
+  }
+
+  if (input.wasComplete || !onboardingChecklistComplete(nextDetail)) {
+    return;
+  }
+
+  params.set("onboarding_complete", "1");
+  const publicEvent = resolvePublicEventNotice(nextDetail, input.eventApiId);
+  if (publicEvent) {
+    params.set("onboarding_event_href", publicEvent.href);
+    params.set("onboarding_event_name", publicEvent.name);
+  }
+}
+
 export async function createCalendarConnectionAction(formData: FormData) {
   const tenantSlug = String(formData.get("tenant_slug") || "");
   const tenant = await requireTenantSlugAccess(tenantSlug);
@@ -274,11 +329,17 @@ export async function submitSupportRequestAction(formData: FormData) {
 
 export async function setTicketAssertionsAction(formData: FormData) {
   const tenantSlug = String(formData.get("tenant_slug") || "");
+  const sessionEmail = await requireTenantPageAccess();
   const tenant = await requireTenantSlugAccess(tenantSlug);
   const calendarConnectionId = String(formData.get("calendar_connection_id") || "");
   await requireCalendarTenantAccess(tenant.tenant_id, calendarConnectionId);
+  const redirectBase =
+    asString(formData.get("redirect_to")) || `/dashboard/${encodeURIComponent(tenant.slug)}/events`;
+  const beforeDetail = await getTenantSelfServeDetailBySlug(tenant.slug, sessionEmail);
+  const wasComplete = onboardingChecklistComplete(beforeDetail);
+  const eventApiId = String(formData.get("event_api_id") || "");
   await setTicketOperatorAssertions({
-    event_api_id: String(formData.get("event_api_id") || ""),
+    event_api_id: eventApiId,
     ticket_type_api_id: String(formData.get("ticket_type_api_id") || ""),
     confirmed_fixed_price: true,
     confirmed_no_approval_required: true,
@@ -288,18 +349,38 @@ export async function setTicketAssertionsAction(formData: FormData) {
         ? asBoolean(formData.get("public_checkout_requested"))
         : undefined,
   });
-  redirectTo(formData, `/dashboard/${encodeURIComponent(tenant.slug)}/events`);
+  const params = new URLSearchParams();
+  await appendOnboardingCompletionNotice(params, {
+    eventApiId,
+    sessionEmail,
+    tenantSlug: tenant.slug,
+    wasComplete,
+  });
+  redirectToWithQuery(redirectBase, params);
 }
 
 export async function setEventPublicCheckoutAction(formData: FormData) {
   const tenantSlug = String(formData.get("tenant_slug") || "");
+  const sessionEmail = await requireTenantPageAccess();
   const tenant = await requireTenantSlugAccess(tenantSlug);
   const calendarConnectionId = String(formData.get("calendar_connection_id") || "");
   await requireCalendarTenantAccess(tenant.tenant_id, calendarConnectionId);
+  const redirectBase =
+    asString(formData.get("redirect_to")) || `/dashboard/${encodeURIComponent(tenant.slug)}/events`;
+  const beforeDetail = await getTenantSelfServeDetailBySlug(tenant.slug, sessionEmail);
+  const wasComplete = onboardingChecklistComplete(beforeDetail);
+  const eventApiId = String(formData.get("event_api_id") || "");
   await setEventPublicCheckoutRequested({
     calendar_connection_id: calendarConnectionId,
-    event_api_id: String(formData.get("event_api_id") || ""),
+    event_api_id: eventApiId,
     public_checkout_requested: asBoolean(formData.get("public_checkout_requested")),
   });
-  redirectTo(formData, `/dashboard/${encodeURIComponent(tenant.slug)}/events`);
+  const params = new URLSearchParams();
+  await appendOnboardingCompletionNotice(params, {
+    eventApiId,
+    sessionEmail,
+    tenantSlug: tenant.slug,
+    wasComplete,
+  });
+  redirectToWithQuery(redirectBase, params);
 }

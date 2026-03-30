@@ -49,6 +49,11 @@ type SyncNotice = {
   ticketsRemoved: number;
 };
 
+type OnboardingCompletionNotice = {
+  eventHref: string | null;
+  eventName: string | null;
+};
+
 function readSearchValue(value: SearchParamValue) {
   return Array.isArray(value) ? value[0] : value;
 }
@@ -110,6 +115,23 @@ function readSyncNotice(
     syncedAt: readSearchValue(searchParams.sync_at) || null,
     ticketsAdded: readIntSearchValue(searchParams.sync_added),
     ticketsRemoved: readIntSearchValue(searchParams.sync_removed),
+  };
+}
+
+function readOnboardingCompletionNotice(
+  searchParams: Record<string, SearchParamValue>,
+): OnboardingCompletionNotice | null {
+  if (readSearchValue(searchParams.onboarding_complete) !== "1") {
+    return null;
+  }
+
+  const eventHref = readSearchValue(searchParams.onboarding_event_href) || null;
+  const eventName = readSearchValue(searchParams.onboarding_event_name) || null;
+
+  return {
+    eventHref:
+      eventHref && eventHref.startsWith("/c/") ? eventHref : null,
+    eventName,
   };
 }
 
@@ -287,6 +309,8 @@ export function TenantEventsWorkspace({
 }) {
   const eventsPath = `${tenantBasePath}/events`;
   const syncNotice = readSyncNotice(searchParams);
+  const onboardingCompletionNotice =
+    readOnboardingCompletionNotice(searchParams);
   const rows = buildTenantEventWorkspaceRows(detail);
   const searchQuery = (readSearchValue(searchParams.q) || "").trim();
   const stateFilter = readWorkspaceFilter(searchParams.state);
@@ -401,6 +425,34 @@ export function TenantEventsWorkspace({
           </article>
         </div>
       </section>
+
+      {onboardingCompletionNotice ? (
+        <section className="console-section tenant-onboarding-complete-banner" role="status">
+          <div className="console-section-header">
+            <div>
+              <p className="console-kpi-label">Onboarding complete</p>
+              <h3>Congratulations, your first public checkout is live.</h3>
+              <p className="subtle-text">
+                Every organizer setup step is complete and public checkout is
+                now active for your published event.
+              </p>
+            </div>
+            {onboardingCompletionNotice.eventHref ? (
+              <Link
+                className="button button-small"
+                href={onboardingCompletionNotice.eventHref}
+              >
+                Open public event
+              </Link>
+            ) : null}
+          </div>
+          {onboardingCompletionNotice.eventName ? (
+            <p className="subtle-text">
+              Public event: {onboardingCompletionNotice.eventName}
+            </p>
+          ) : null}
+        </section>
+      ) : null}
 
       {syncNotice ? (
         <section
