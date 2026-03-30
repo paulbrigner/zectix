@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
+  setEventPublicCheckoutAction,
   setTicketAssertionsAction,
   syncCalendarEventAction,
   validateAndSyncCalendarAction,
@@ -568,6 +569,51 @@ export default async function TenantEventsPage({
                   </div>
                 </div>
 
+                <section className="tenant-events-publish-section">
+                  <div className="console-section-header">
+                    <div>
+                      <h4>Event visibility</h4>
+                      <p className="subtle-text">
+                        Decide whether this event should be allowed on public checkout at all.
+                        Ticket assertions only matter when this toggle stays on.
+                      </p>
+                    </div>
+                  </div>
+
+                  <form action={setEventPublicCheckoutAction} className="tenant-event-publish-form">
+                    <input
+                      name="calendar_connection_id"
+                      type="hidden"
+                      value={calendar.calendar_connection_id}
+                    />
+                    <input name="event_api_id" type="hidden" value={event.event_api_id} />
+                    <input
+                      name="redirect_to"
+                      type="hidden"
+                      value={`/ops/tenants/${tenantId}/events`}
+                    />
+
+                    <label className="console-checkbox tenant-ticket-review-check">
+                      <input
+                        defaultChecked={event.public_checkout_requested}
+                        name="public_checkout_requested"
+                        type="checkbox"
+                      />
+                      <span>Allow this event on public checkout</span>
+                    </label>
+
+                    <p className="subtle-text">
+                      {event.public_checkout_requested
+                        ? "This event can go live once at least one ticket is also allowed and passes review."
+                        : "This event stays hidden even if individual tickets are ready."}
+                    </p>
+
+                    <button className="button button-secondary button-small" type="submit">
+                      Save event visibility
+                    </button>
+                  </form>
+                </section>
+
                 <div className="console-card-grid console-ticket-assertion-grid">
                   {mirroredTickets.map((ticket) => (
                     <form
@@ -585,6 +631,11 @@ export default async function TenantEventsPage({
                         name="redirect_to"
                         type="hidden"
                         value={`/ops/tenants/${tenantId}/events`}
+                      />
+                      <input
+                        name="public_checkout_requested_present"
+                        type="hidden"
+                        value="1"
                       />
                       <div className="console-preview-body-head">
                         <div>
@@ -610,6 +661,14 @@ export default async function TenantEventsPage({
                         Auto checks: {ticket.automatic_eligibility_status} ·{" "}
                         {ticket.automatic_eligibility_reasons.join(" ")}
                       </p>
+                      <label className="console-checkbox tenant-ticket-review-check">
+                        <input
+                          defaultChecked={ticket.public_checkout_requested}
+                          name="public_checkout_requested"
+                          type="checkbox"
+                        />
+                        <span>Allow this ticket on public checkout</span>
+                      </label>
                       <label className="console-field">
                         <span>
                           <input
@@ -641,8 +700,12 @@ export default async function TenantEventsPage({
                         </span>
                       </label>
                       <p className="subtle-text">
-                        Public status: {ticket.zcash_enabled ? "enabled" : "disabled"} ·{" "}
-                        {ticket.zcash_enabled_reason}
+                        {ticket.public_checkout_requested
+                          ? "This ticket can go live once the review assertions are complete."
+                          : "This ticket stays hidden even if the review assertions are complete."}
+                      </p>
+                      <p className="subtle-text">
+                        Public status: {ticket.zcash_enabled ? "enabled" : "disabled"} · {ticket.zcash_enabled_reason}
                       </p>
                       <button className="button button-secondary button-small" type="submit">
                         Save assertions
