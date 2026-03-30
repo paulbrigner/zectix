@@ -41,7 +41,7 @@ export function getTrustedIpAddress(request: Request) {
     .map((part) => part.trim())
     .filter(Boolean);
 
-  return parts.at(-1) || null;
+  return parts[0] || null;
 }
 
 export function ensureSameOriginMutation(request: Request) {
