@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import Link from "next/link";
 import { requireTenantPageAccess } from "@/lib/tenant-auth-server";
 import { appPath } from "@/lib/app-paths";
 
@@ -23,10 +22,7 @@ export default async function TenantLayout({
               Connect Luma and CipherPay, review mirrored events, and monitor managed checkout plus ZEC billing activity.
             </p>
           </div>
-          <div className="button-row">
-            <Link className="button button-secondary" href="/">
-              Marketing home
-            </Link>
+          <div className="button-row organizer-shell-actions">
             <form action={appPath("/api/dashboard/logout")} method="post">
               <button className="button button-secondary" type="submit">
                 Sign out
