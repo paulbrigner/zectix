@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { LocalDateTime } from "@/components/LocalDateTime";
 import { ConsoleDisclosure } from "@/components/ConsoleDisclosure";
 import type { BillingAdjustment, BillingCycle } from "@/lib/app-state/types";
@@ -32,10 +31,6 @@ function billingTone(value: string): BillingTone {
 
 function pillClassName(tone: BillingTone) {
   return `console-mini-pill console-mini-pill-${tone}`;
-}
-
-function cycleSettled(cycle: BillingCycle) {
-  return cycle.status === "paid" || Boolean(cycle.settlement_txid);
 }
 
 function settlementSummary(cycle: BillingCycle | null) {
@@ -85,54 +80,6 @@ function outstandingSummary(
   return `${formatZecAmount(settlementThresholdZatoshis - outstandingZatoshis)} until the threshold.`;
 }
 
-function nextBillingHeadline(
-  cycle: BillingCycle | null,
-  billingStatus: string,
-  settlementThresholdZatoshis: number,
-) {
-  if (!cycle || cycle.recognized_session_count === 0) {
-    return "No billable activity yet";
-  }
-
-  if (billingStatus === "past_due" || billingStatus === "suspended") {
-    return "Billing needs attention";
-  }
-
-  if (cycle.outstanding_zatoshis >= settlementThresholdZatoshis) {
-    return "Settlement threshold reached";
-  }
-
-  if (cycleSettled(cycle) && cycle.outstanding_zatoshis === 0) {
-    return "Current cycle settled";
-  }
-
-  return "Current cycle is still accruing";
-}
-
-function nextBillingCopy(
-  cycle: BillingCycle | null,
-  billingStatus: string,
-  settlementThresholdZatoshis: number,
-) {
-  if (!cycle || cycle.recognized_session_count === 0) {
-    return "Once a paid registration is recognized in Luma, fees and cycle activity will appear automatically.";
-  }
-
-  if (billingStatus === "past_due" || billingStatus === "suspended") {
-    return "Operator follow-up may be needed before the next settlement is recorded.";
-  }
-
-  if (cycle.outstanding_zatoshis >= settlementThresholdZatoshis) {
-    return "The current balance is at or above the organization settlement threshold.";
-  }
-
-  if (cycleSettled(cycle) && cycle.outstanding_zatoshis === 0) {
-    return "There is no outstanding cycle balance right now.";
-  }
-
-  return "Fees will continue to accrue as additional paid registrations are recognized in this cycle.";
-}
-
 function adjustmentSummary(cycle: BillingCycle) {
   const total = cycle.credited_zatoshis + cycle.waived_zatoshis;
   if (total <= 0) {
@@ -176,7 +123,7 @@ function renderAdjustmentList(adjustments: BillingAdjustment[]) {
 
 export function TenantBillingWorkspace({
   detail,
-  tenantBasePath,
+  tenantBasePath: _tenantBasePath,
 }: {
   detail: TenantOpsDetail;
   tenantBasePath: string;
@@ -192,10 +139,6 @@ export function TenantBillingWorkspace({
     ? cycles.filter((cycle) => cycle.billing_cycle_id !== currentCycle.billing_cycle_id)
     : cycles;
   const currentOutstanding = currentCycle?.outstanding_zatoshis || 0;
-  const nextStepHref =
-    currentCycle && currentCycle.recognized_session_count > 0
-      ? `${tenantBasePath}/events`
-      : `${tenantBasePath}/connections`;
 
   return (
     <div className="console-page-body">
@@ -207,11 +150,6 @@ export function TenantBillingWorkspace({
               ZEC-native platform fees accrue when a paid registration is recognized in Luma. Billing cycles stay separate from public checkout visibility and settlement is still operator-managed.
             </p>
           </div>
-          <Link className="button button-secondary button-small" href={nextStepHref}>
-            {currentCycle && currentCycle.recognized_session_count > 0
-              ? "Review event activity"
-              : "Finish setup"}
-          </Link>
         </div>
 
         <div className="billing-summary-grid">
@@ -259,24 +197,6 @@ export function TenantBillingWorkspace({
             <h3>{detail.tenant.service_fee_bps} bps</h3>
             <p className="subtle-text">
               Applied when a new CipherPay invoice is created and carried into the usage ledger at recognition time.
-            </p>
-          </article>
-
-          <article className="console-detail-card billing-summary-card">
-            <p className="console-kpi-label">Next billing step</p>
-            <h3>
-              {nextBillingHeadline(
-                currentCycle,
-                detail.tenant.billing_status,
-                detail.tenant.settlement_threshold_zatoshis,
-              )}
-            </h3>
-            <p className="subtle-text">
-              {nextBillingCopy(
-                currentCycle,
-                detail.tenant.billing_status,
-                detail.tenant.settlement_threshold_zatoshis,
-              )}
             </p>
           </article>
         </div>
