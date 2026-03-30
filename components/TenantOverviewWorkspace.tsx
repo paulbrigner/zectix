@@ -10,31 +10,14 @@ import {
 import { LocalDateTime } from "@/components/LocalDateTime";
 import { ConsoleStatusPill } from "@/components/ConsoleStatusPill";
 import { createSessionViewerToken } from "@/lib/session-viewer";
-import { formatFiatAmount, formatZecAmount } from "@/lib/app-state/utils";
+import { formatFiatAmount } from "@/lib/app-state/utils";
 import type { TenantOpsDetail } from "@/lib/tenancy/service";
 import {
   buildWorkspaceOverview,
   calendarConnectionHealthLabel,
   recentSessionsForDashboard,
   summarizeCalendarInventory,
-  type TenantOnboardingChecklistItem,
 } from "@/lib/tenant-self-serve";
-
-function overviewDestination(stepId: TenantOnboardingChecklistItem["stepId"]) {
-  switch (stepId) {
-    case "connect_luma_calendar":
-    case "validate_sync_luma":
-    case "attach_cipherpay":
-    case "validate_cipherpay":
-    case "activate_public_checkout":
-    case "draft_organizer_created":
-      return "connections" as const;
-    case "publish_event_and_ticket":
-      return "events" as const;
-    default:
-      return "connections" as const;
-  }
-}
 
 function registrationStatusClassName(status: string) {
   if (status === "registered") return "console-valid-text";
@@ -50,77 +33,11 @@ export function TenantOverviewWorkspace({
   tenantBasePath: string;
 }) {
   const summary = buildWorkspaceOverview(detail);
-  const currentOutstanding =
-    detail.billing?.current_cycle?.outstanding_zatoshis || 0;
-  const nextStepHref = `${tenantBasePath}/${overviewDestination(summary.nextStep?.stepId || "draft_organizer_created")}`;
   const recentSessions = recentSessionsForDashboard(detail.sessions);
 
   return (
     <div className="console-page-body">
       <section className="console-section tenant-overview-hero">
-        <div className="tenant-overview-grid">
-          <article className="console-detail-card tenant-overview-card tenant-overview-card-accent">
-            <p className="console-kpi-label">Next step</p>
-            <h3>{summary.nextStep?.label || "Workspace ready"}</h3>
-            <p className="subtle-text">
-              {summary.nextStep?.description ||
-                "Your organizer workspace is configured and public checkout is live."}
-            </p>
-            <div className="tenant-overview-actions">
-              <Link
-                className="button button-secondary button-small"
-                href={nextStepHref}
-              >
-                Continue setup
-              </Link>
-            </div>
-          </article>
-
-          <article className="console-detail-card tenant-overview-card">
-            <p className="console-kpi-label">Billing</p>
-            <h3>{detail.tenant.billing_status}</h3>
-            <p className="subtle-text">
-              Outstanding {formatZecAmount(currentOutstanding)} at{" "}
-              {detail.tenant.service_fee_bps} bps.
-            </p>
-            <div className="tenant-overview-actions">
-              <Link
-                className="button button-secondary button-small"
-                href={`${tenantBasePath}/billing`}
-              >
-                Open billing
-              </Link>
-            </div>
-          </article>
-
-          <article className="console-detail-card tenant-overview-card">
-            <p className="console-kpi-label">Public checkout</p>
-            <h3>
-              {summary.liveEvents.length} live event
-              {summary.liveEvents.length === 1 ? "" : "s"}
-            </h3>
-            <p className="subtle-text">
-              {summary.ticketsNeedingReview} ticket
-              {summary.ticketsNeedingReview === 1 ? "" : "s"} still need
-              organizer review.
-            </p>
-            <div className="tenant-overview-actions">
-              <Link
-                className="button button-secondary button-small"
-                href={`${tenantBasePath}/events`}
-              >
-                Review events
-              </Link>
-              <Link
-                className="button button-secondary button-small"
-                href={`${tenantBasePath}/embed`}
-              >
-                Embed setup
-              </Link>
-            </div>
-          </article>
-        </div>
-
         <div className="console-kpi-grid tenant-overview-metrics">
           <article className="console-kpi-card">
             <p className="console-kpi-label">Active calendars</p>

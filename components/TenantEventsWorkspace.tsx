@@ -395,19 +395,6 @@ export function TenantEventsWorkspace({
         </section>
       ) : null}
 
-      <section className="console-section">
-        <div className="console-section-header">
-          <div>
-            <h2>Events and tickets</h2>
-            <p className="subtle-text">
-              Use this review queue to scan upcoming events, filter for
-              blockers, and handle sync, import, and ticket decisions from one
-              place.
-            </p>
-          </div>
-        </div>
-      </section>
-
       {syncNotice ? (
         <section
           className={`console-section console-sync-feedback${syncNotice.error ? " console-sync-feedback-error" : ""}`}
@@ -543,16 +530,6 @@ export function TenantEventsWorkspace({
           className="console-section console-anchor-target tenant-events-table-panel"
           id="event-review-queue"
         >
-          <div className="console-section-header">
-            <div>
-              <h2>Review queue</h2>
-              <p className="subtle-text">
-                Showing {visibleRows.length} of {rows.length} upcoming event
-                {rows.length === 1 ? "" : "s"}.
-              </p>
-            </div>
-          </div>
-
           <form className="tenant-events-filter-form" method="get">
             <div className="tenant-events-filter-grid">
               <label className="console-field">
