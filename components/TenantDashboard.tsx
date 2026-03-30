@@ -132,7 +132,7 @@ export function TenantDashboard({
             <h2>{detail.tenant.name}</h2>
             <p className="subtle-text">
               {isTenantAudience
-                ? "Review setup, upcoming mirrored inventory, recent checkouts, and webhook health for your managed Zcash checkout."
+                ? "Review setup, upcoming mirrored inventory, recent checkouts, and webhook health for your public Zcash checkout."
                 : "Service-manager view of organization setup, upcoming mirrored inventory, recent checkout activity, and webhook health. This page is designed so we can reuse it later for organizer auth."}
             </p>
           </div>

@@ -210,7 +210,7 @@ function ticketReviewCopy(ticket: TicketMirror) {
     return `Automatic review: ${ticket.automatic_eligibility_reasons.join(" · ")}`;
   }
   if (ticket.zcash_enabled) {
-    return "This ticket is already available for managed public checkout.";
+    return "This ticket is already available for public checkout.";
   }
   return "Automatic review passed. Confirm the organizer-side requirements below to enable checkout.";
 }

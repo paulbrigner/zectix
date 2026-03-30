@@ -65,7 +65,7 @@ export function evaluateTicketEligibility(
     zcash_enabled_reason: !requestedForPublicCheckout
       ? "Public checkout is turned off for this ticket."
       : zcashEnabled
-        ? "Enabled for managed Zcash checkout."
+        ? "Enabled for public Zcash checkout."
         : automaticReasons[0] || "Ticket still needs operator confirmation.",
   };
 }

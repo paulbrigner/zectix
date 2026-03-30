@@ -67,7 +67,7 @@ const checklistSections: ChecklistSection[] = [
   {
     title: "Supported event restrictions",
     description:
-      "Managed public checkout works best when the mirrored ticket tiers follow these constraints.",
+      "Public checkout works best when the mirrored ticket tiers follow these constraints.",
     items: [
       {
         id: "fixed-price",
