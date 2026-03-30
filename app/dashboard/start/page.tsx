@@ -88,14 +88,6 @@ export default async function TenantStartPage({
                   required
                   type="email"
                 />
-                <Input
-                  info="Optional public-friendly slug. Leave blank to generate it from the organization name."
-                  label="Preferred slug"
-                  maxLength={80}
-                  name="slug"
-                  optional
-                  type="text"
-                />
               </div>
               <div className="button-row">
                 <Button type="submit">Create draft and email sign-in link</Button>
