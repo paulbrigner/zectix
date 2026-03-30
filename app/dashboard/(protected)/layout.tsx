@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 import { requireTenantPageAccess } from "@/lib/tenant-auth-server";
 import { appPath } from "@/lib/app-paths";
 
@@ -23,6 +24,9 @@ export default async function TenantLayout({
             </p>
           </div>
           <div className="button-row organizer-shell-actions">
+            <Link className="button button-secondary" href="/dashboard/help">
+              Help
+            </Link>
             <form action={appPath("/api/dashboard/logout")} method="post">
               <button className="button button-secondary" type="submit">
                 Sign out

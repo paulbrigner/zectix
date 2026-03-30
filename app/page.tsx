@@ -80,6 +80,19 @@ export default function Home() {
           <a href="#managed">Luma</a>
           <a href="#why">Why ZecTix</a>
         </div>
+        <div className="landing-nav-actions">
+          <Button
+            variant="landing-ghost"
+            href="https://www.cipherpay.app/en/dashboard/login"
+            target="_blank"
+            rel="noreferrer"
+          >
+            CipherPay login
+          </Button>
+          <Button variant="landing-ghost" href="/dashboard/login">
+            ZecTix login
+          </Button>
+        </div>
       </nav>
 
       {/* ── Hero ── */}

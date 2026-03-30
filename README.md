@@ -196,12 +196,18 @@ Optional inbox for the Luma integration beta application:
 - `LUMA_INTEREST_FROM_EMAIL`
 - `LUMA_INTEREST_INBOX_EMAIL`
 
+Optional organizer support inbox:
+
+- `SUPPORT_FROM_EMAIL`
+- `SUPPORT_INBOX_EMAIL`
+
 ## Operator Notes
 
 - `/ops` is the primary console for onboarding, monitoring, retries, and reporting.
 - operator auth can run in password mode or emailed one-time-link mode. Email mode uses the configured admin email, stores one-time verification tokens in DynamoDB, and sends the link through SES.
 - `/dashboard/start` creates a draft tenant for self-serve onboarding and emails the first one-time sign-in link.
 - `/dashboard` is the tenant self-serve surface. The first version still uses the tenant `contact_email` as the organizer sign-in identity and sends one-time login links through SES.
+- `/dashboard/help` lets signed-in organizers send a support request through SES without leaving the organizer dashboard.
 - `/luma-integration` is the public-facing beta application page for the managed Luma integration.
 - `/api/luma-integration-interest` validates the application payload and sends an SES email to the configured inbox.
 - operators save the Luma API key only; managed Luma webhook ids and secrets are stored internally after `validate and sync`.

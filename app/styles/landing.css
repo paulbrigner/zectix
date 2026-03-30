@@ -233,6 +233,13 @@
   gap: 2rem;
 }
 
+.landing-nav-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
 .landing-nav-links a {
   font-size: 0.9rem;
   font-weight: 500;
@@ -1054,6 +1061,21 @@
 
   .landing-nav-links {
     display: none;
+  }
+
+  .landing-nav {
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .landing-nav-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .landing-nav-actions .landing-btn {
+    flex: 1 1 100%;
+    justify-content: center;
   }
 
   .landing-footer {

@@ -58,6 +58,13 @@ When something looks off, check these in order:
 3. Confirm the Amplify compute role has `ses:SendEmail` permission for the selected identity.
 4. Submit a test inquiry from `/luma-integration` and check CloudWatch logs for the route error.
 
+### Organizer support requests are not arriving
+
+1. Confirm `SUPPORT_FROM_EMAIL` and `SUPPORT_INBOX_EMAIL` are set on the deployed branch.
+2. Confirm the `from` address or its domain is verified in SES and has sending enabled.
+3. Confirm the Amplify compute role has `ses:SendEmail` permission for the selected identity.
+4. Submit a test request from `/dashboard/help` and check CloudWatch logs for the route error.
+
 ### Operator sign-in fails
 
 1. Confirm `ADMIN_SESSION_SECRET` is set.
@@ -111,6 +118,8 @@ Required production values:
 - `ADMIN_SESSION_SECRET`
 - `LUMA_INTEREST_FROM_EMAIL`
 - `LUMA_INTEREST_INBOX_EMAIL`
+- `SUPPORT_FROM_EMAIL`
+- `SUPPORT_INBOX_EMAIL`
 
 Additional production values for emailed operator sign-in:
 

@@ -909,6 +909,11 @@ select {
   min-height: 8.5rem;
 }
 
+.console-textarea {
+  min-height: 11rem;
+  resize: vertical;
+}
+
 .embed-theme-grid {
   align-items: start;
 }
