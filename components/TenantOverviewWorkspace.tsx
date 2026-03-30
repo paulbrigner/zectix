@@ -18,7 +18,7 @@ function overviewDestination(label: string) {
     case "Attach a CipherPay account":
     case "Validate CipherPay":
       return "connections" as const;
-    case "Activate the tenant for public checkout":
+    case "Activate public checkout":
       return "events" as const;
     default:
       return "connections" as const;

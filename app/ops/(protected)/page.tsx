@@ -14,14 +14,14 @@ export default async function OpsOverviewPage() {
           <div>
             <h2>Service overview</h2>
             <p className="subtle-text">
-              Recent tenant activity across mirrored events, webhook intake, and registration processing.
+              Recent organization activity across mirrored events, webhook intake, and registration processing.
             </p>
           </div>
         </div>
 
         <div className="console-kpi-grid">
           <article className="console-kpi-card">
-            <p className="console-kpi-label">Tenants</p>
+            <p className="console-kpi-label">Organizations</p>
             <p className="console-kpi-value">{data.tenants.length}</p>
           </article>
           <article className="console-kpi-card">
@@ -42,7 +42,7 @@ export default async function OpsOverviewPage() {
       <section className="console-section">
         <div className="console-section-header">
           <div>
-            <h2>Tenants</h2>
+            <h2>Organizations</h2>
             <p className="subtle-text">Each calendar is a billable connection with its own secrets and mirrored inventory.</p>
           </div>
         </div>
@@ -61,7 +61,7 @@ export default async function OpsOverviewPage() {
                   Dashboard
                 </Link>
                 <Link className="button button-secondary button-small" href={`/ops/tenants/${encodeURIComponent(entry.tenant.tenant_id)}`}>
-                  Open tenant
+                  Open organization
                 </Link>
               </div>
             </article>

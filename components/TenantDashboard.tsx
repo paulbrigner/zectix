@@ -118,7 +118,7 @@ export function TenantDashboard({
           </div>
           <div className="button-row">
             <Link className="button button-secondary button-small" href={settingsHref}>
-              {isTenantAudience ? "Connections" : "Tenant settings"}
+              {isTenantAudience ? "Connections" : "Organization settings"}
             </Link>
             <Link className="button button-secondary button-small" href={billingHref}>
               Billing

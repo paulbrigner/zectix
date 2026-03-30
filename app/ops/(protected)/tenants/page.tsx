@@ -22,14 +22,14 @@ export default async function TenantsPage() {
       <section className="console-section">
         <div className="console-section-header">
           <div>
-            <h2>New tenant</h2>
-            <p className="subtle-text">Start with the organizer record, then connect Luma and CipherPay from the tenant detail page.</p>
+            <h2>New organization</h2>
+            <p className="subtle-text">Start with the organizer record, then connect Luma and CipherPay from the organization detail page.</p>
           </div>
         </div>
 
         <ConsoleDisclosure
           defaultOpen={!tenants.length}
-          description="Commercial terms are ZEC-native and can be refined later from the tenant detail page."
+          description="Commercial terms are ZEC-native and can be refined later from the organization detail page."
           title="Create organizer record"
         >
           <form action={createTenantAction} className="console-content">
@@ -40,7 +40,7 @@ export default async function TenantsPage() {
               </label>
               <label className="console-field">
                 <ConsoleFieldLabel
-                  info="Used for internal tenant identity and future organizer URLs. Leave blank to generate it from the name and add a numeric suffix if needed."
+                  info="Used for internal organization identity and future organizer URLs. Leave blank to generate it from the name and add a numeric suffix if needed."
                   label="Slug"
                   optional
                 />
@@ -48,7 +48,7 @@ export default async function TenantsPage() {
               </label>
               <label className="console-field">
                 <ConsoleFieldLabel
-                  info="Primary service-manager contact for this tenant."
+                  info="Primary service-manager contact for this organization."
                   label="Contact email"
                 />
                 <input className="console-input" name="contact_email" required type="email" />
@@ -89,7 +89,7 @@ export default async function TenantsPage() {
               </label>
               <label className="console-field">
                 <ConsoleFieldLabel
-                  info="Separate from tenant status so public checkout availability and billing delinquency can be managed independently."
+                  info="Separate from organization status so public checkout availability and billing delinquency can be managed independently."
                   label="Billing status"
                   optional
                 />
@@ -118,8 +118,8 @@ export default async function TenantsPage() {
       <section className="console-section">
         <div className="console-section-header">
           <div>
-            <h2>Existing tenants</h2>
-            <p className="subtle-text">Open a tenant to attach secrets, sync events, and recover failed registrations.</p>
+            <h2>Existing organizations</h2>
+            <p className="subtle-text">Open an organization to attach secrets, sync events, and recover failed registrations.</p>
           </div>
         </div>
 
@@ -134,7 +134,7 @@ export default async function TenantsPage() {
                   Dashboard
                 </Link>
                 <Link className="button button-secondary button-small" href={`/ops/tenants/${encodeURIComponent(tenant.tenant_id)}`}>
-                  Open tenant
+                  Open organization
                 </Link>
               </div>
             </article>

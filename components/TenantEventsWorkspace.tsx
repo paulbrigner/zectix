@@ -843,113 +843,105 @@ export function TenantEventsWorkspace({
                     </div>
                   </div>
 
-                  <div className="console-table-wrap">
-                    <table className="console-table tenant-events-ticket-table">
-                      <thead>
-                        <tr>
-                          <th>Ticket</th>
-                          <th>Price</th>
-                          <th>Status</th>
-                          <th>Review controls</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {selectedRow.tickets.map((ticket) => (
-                          <tr key={ticket.ticket_type_api_id}>
-                            <td>
-                              <div className="console-table-cell-stack">
-                                <strong>{ticket.name}</strong>
-                                {ticket.description ? (
-                                  <p className="subtle-text console-table-note">
-                                    {ticket.description}
-                                  </p>
-                                ) : null}
-                              </div>
-                            </td>
-                            <td>{formatFiatAmount(ticket.amount, ticket.currency)}</td>
-                            <td>
-                              <div className="console-table-cell-stack">
-                                <span className={pillClassName(ticketReviewTone(ticket))}>
-                                  {ticketReviewLabel(ticket)}
-                                </span>
+                  <div className="console-card-grid console-ticket-review-grid">
+                    {selectedRow.tickets.map((ticket) => (
+                      <form
+                        action={setTicketAssertionsAction}
+                        className="console-detail-card console-ticket-review-card tenant-ticket-review-form"
+                        key={ticket.ticket_type_api_id}
+                      >
+                        <input name="tenant_slug" type="hidden" value={detail.tenant.slug} />
+                        <input
+                          name="calendar_connection_id"
+                          type="hidden"
+                          value={selectedRow.calendar.calendar_connection_id}
+                        />
+                        <input name="event_api_id" type="hidden" value={ticket.event_api_id} />
+                        <input
+                          name="ticket_type_api_id"
+                          type="hidden"
+                          value={ticket.ticket_type_api_id}
+                        />
+                        <input name="redirect_to" type="hidden" value={selectedHref} />
+                        <input
+                          name="public_checkout_requested_present"
+                          type="hidden"
+                          value="1"
+                        />
+
+                        <div className="console-ticket-review-head">
+                          <div className="console-ticket-review-topline">
+                            <div className="console-table-cell-stack">
+                              <strong className="console-ticket-review-title">
+                                {ticket.name}
+                              </strong>
+                              {ticket.description ? (
                                 <p className="subtle-text console-table-note">
-                                  {ticketReviewCopy(ticket)}
+                                  {ticket.description}
                                 </p>
-                              </div>
-                            </td>
-                            <td>
-                              <form
-                                action={setTicketAssertionsAction}
-                                className="tenant-ticket-review-form"
-                              >
-                                <input name="tenant_slug" type="hidden" value={detail.tenant.slug} />
-                                <input
-                                  name="calendar_connection_id"
-                                  type="hidden"
-                                  value={selectedRow.calendar.calendar_connection_id}
-                                />
-                                <input name="event_api_id" type="hidden" value={ticket.event_api_id} />
-                                <input
-                                  name="ticket_type_api_id"
-                                  type="hidden"
-                                  value={ticket.ticket_type_api_id}
-                                />
-                                <input name="redirect_to" type="hidden" value={selectedHref} />
-                                <input
-                                  name="public_checkout_requested_present"
-                                  type="hidden"
-                                  value="1"
-                                />
+                              ) : null}
+                            </div>
+                            <strong className="console-ticket-review-price">
+                              {formatFiatAmount(ticket.amount, ticket.currency)}
+                            </strong>
+                          </div>
 
-                                <div className="tenant-ticket-review-checks">
-                                  <label className="console-checkbox tenant-ticket-review-check">
-                                    <input
-                                      defaultChecked={ticket.public_checkout_requested}
-                                      name="public_checkout_requested"
-                                      type="checkbox"
-                                    />
-                                    <span>Allow this ticket on public checkout</span>
-                                  </label>
-                                  <label className="console-checkbox tenant-ticket-review-check">
-                                    <input
-                                      defaultChecked={ticket.confirmed_fixed_price}
-                                      name="confirmed_fixed_price"
-                                      type="checkbox"
-                                    />
-                                    <span>Fixed price confirmed</span>
-                                  </label>
-                                  <label className="console-checkbox tenant-ticket-review-check">
-                                    <input
-                                      defaultChecked={ticket.confirmed_no_approval_required}
-                                      name="confirmed_no_approval_required"
-                                      type="checkbox"
-                                    />
-                                    <span>No approval required</span>
-                                  </label>
-                                  <label className="console-checkbox tenant-ticket-review-check">
-                                    <input
-                                      defaultChecked={
-                                        ticket.confirmed_no_extra_required_questions
-                                      }
-                                      name="confirmed_no_extra_required_questions"
-                                      type="checkbox"
-                                    />
-                                    <span>No extra required questions</span>
-                                  </label>
-                                </div>
+                          <div className="console-mini-pill-row console-ticket-review-pills">
+                            <span className={pillClassName(ticketReviewTone(ticket))}>
+                              {ticketReviewLabel(ticket)}
+                            </span>
+                          </div>
 
-                                <button
-                                  className="button button-secondary button-small"
-                                  type="submit"
-                                >
-                                  Save ticket review
-                                </button>
-                              </form>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                          <div className="console-ticket-review-summary">
+                            <p className="subtle-text">{ticketReviewCopy(ticket)}</p>
+                          </div>
+                        </div>
+
+                        <div className="tenant-ticket-review-checks">
+                          <label className="console-checkbox tenant-ticket-review-check">
+                            <input
+                              defaultChecked={ticket.public_checkout_requested}
+                              name="public_checkout_requested"
+                              type="checkbox"
+                            />
+                            <span>Allow this ticket on public checkout</span>
+                          </label>
+                          <label className="console-checkbox tenant-ticket-review-check">
+                            <input
+                              defaultChecked={ticket.confirmed_fixed_price}
+                              name="confirmed_fixed_price"
+                              type="checkbox"
+                            />
+                            <span>Fixed price confirmed</span>
+                          </label>
+                          <label className="console-checkbox tenant-ticket-review-check">
+                            <input
+                              defaultChecked={ticket.confirmed_no_approval_required}
+                              name="confirmed_no_approval_required"
+                              type="checkbox"
+                            />
+                            <span>No approval required</span>
+                          </label>
+                          <label className="console-checkbox tenant-ticket-review-check">
+                            <input
+                              defaultChecked={ticket.confirmed_no_extra_required_questions}
+                              name="confirmed_no_extra_required_questions"
+                              type="checkbox"
+                            />
+                            <span>No extra required questions</span>
+                          </label>
+                        </div>
+
+                        <div className="console-ticket-review-actions">
+                          <button
+                            className="button button-secondary button-small"
+                            type="submit"
+                          >
+                            Save ticket review
+                          </button>
+                        </div>
+                      </form>
+                    ))}
                   </div>
                 </section>
               ) : (

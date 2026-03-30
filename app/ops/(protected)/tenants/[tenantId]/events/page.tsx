@@ -7,6 +7,7 @@ import {
   validateAndSyncCalendarAction,
 } from "@/app/ops/actions";
 import { LocalDateTime } from "@/components/LocalDateTime";
+import type { TicketMirror } from "@/lib/app-state/types";
 import { getTenantOpsDetail } from "@/lib/tenancy/service";
 
 export const runtime = "nodejs";
@@ -165,6 +166,48 @@ function syncNoticeCopy(notice: SyncNotice) {
   }
 }
 
+function ticketReviewTone(ticket: TicketMirror): PillTone {
+  if (!ticket.public_checkout_requested) {
+    return "muted";
+  }
+
+  if (ticket.zcash_enabled) {
+    return "success";
+  }
+  if (ticket.automatic_eligibility_reasons.length) {
+    return "warning";
+  }
+  return "muted";
+}
+
+function ticketReviewLabel(ticket: TicketMirror) {
+  if (!ticket.public_checkout_requested) {
+    return "Hidden by choice";
+  }
+
+  if (ticket.zcash_enabled) {
+    return "Ready for checkout";
+  }
+  if (ticket.automatic_eligibility_reasons.length) {
+    return "Needs attention";
+  }
+  return "Needs confirmation";
+}
+
+function ticketReviewCopy(ticket: TicketMirror) {
+  if (!ticket.public_checkout_requested) {
+    return "This ticket is intentionally hidden from public checkout.";
+  }
+
+  if (ticket.automatic_eligibility_reasons.length) {
+    return `Automatic review: ${ticket.automatic_eligibility_reasons.join(" · ")}`;
+  }
+  if (ticket.zcash_enabled) {
+    return "This ticket is already available for managed public checkout.";
+  }
+  return "Automatic review passed. Confirm the organizer-side requirements below to enable checkout.";
+}
+
 function mirroredEventBadges(event: {
   sync_status: string;
   zcash_enabled: boolean;
@@ -238,7 +281,7 @@ export default async function TenantEventsPage({
     <section className="console-section">
       <div className="console-section-header">
         <div>
-          <h2>Tenant events</h2>
+          <h2>Organization events</h2>
           <p className="subtle-text">
             Use event-focused sync actions to review one event at a time without changing
             the backend&apos;s full-calendar mirror model. Imported events still land behind
@@ -618,7 +661,7 @@ export default async function TenantEventsPage({
                   {mirroredTickets.map((ticket) => (
                     <form
                       action={setTicketAssertionsAction}
-                      className="console-detail-card console-ticket-assertion-card"
+                      className="console-detail-card console-ticket-review-card tenant-ticket-review-form"
                       key={ticket.ticket_type_api_id}
                     >
                       <input name="event_api_id" type="hidden" value={ticket.event_api_id} />
@@ -637,79 +680,72 @@ export default async function TenantEventsPage({
                         type="hidden"
                         value="1"
                       />
-                      <div className="console-preview-body-head">
-                        <div>
-                          <p className="console-kpi-label">
-                            {ticket.active ? "Active in Luma" : "Inactive in Luma"}
-                          </p>
-                          <h4>{ticket.name}</h4>
-                        </div>
-                        <div className="console-mini-pill-row">
-                          <span
-                            className={pillClassName(
-                              ticket.zcash_enabled ? "success" : "muted",
-                            )}
-                          >
-                            {ticket.zcash_enabled ? "Enabled" : "Hidden"}
-                          </span>
-                          <span className={pillClassName("info")}>
+                      <div className="console-ticket-review-head">
+                        <div className="console-ticket-review-topline">
+                          <div className="console-table-cell-stack">
+                            <p className="console-kpi-label">
+                              {ticket.active ? "Active in Luma" : "Inactive in Luma"}
+                            </p>
+                            <strong className="console-ticket-review-title">
+                              {ticket.name}
+                            </strong>
+                          </div>
+                          <strong className="console-ticket-review-price">
                             {ticketSummaryLabel(ticket)}
+                          </strong>
+                        </div>
+
+                        <div className="console-mini-pill-row console-ticket-review-pills">
+                          <span className={pillClassName(ticketReviewTone(ticket))}>
+                            {ticketReviewLabel(ticket)}
                           </span>
+                        </div>
+
+                        <div className="console-ticket-review-summary">
+                          <p className="subtle-text">{ticketReviewCopy(ticket)}</p>
                         </div>
                       </div>
-                      <p className="subtle-text">
-                        Auto checks: {ticket.automatic_eligibility_status} ·{" "}
-                        {ticket.automatic_eligibility_reasons.join(" ")}
-                      </p>
-                      <label className="console-checkbox tenant-ticket-review-check">
-                        <input
-                          defaultChecked={ticket.public_checkout_requested}
-                          name="public_checkout_requested"
-                          type="checkbox"
-                        />
-                        <span>Allow this ticket on public checkout</span>
-                      </label>
-                      <label className="console-field">
-                        <span>
+
+                      <div className="tenant-ticket-review-checks">
+                        <label className="console-checkbox tenant-ticket-review-check">
+                          <input
+                            defaultChecked={ticket.public_checkout_requested}
+                            name="public_checkout_requested"
+                            type="checkbox"
+                          />
+                          <span>Allow this ticket on public checkout</span>
+                        </label>
+                        <label className="console-checkbox tenant-ticket-review-check">
                           <input
                             defaultChecked={ticket.confirmed_fixed_price}
                             name="confirmed_fixed_price"
                             type="checkbox"
-                          />{" "}
-                          Confirm fixed price
-                        </span>
-                      </label>
-                      <label className="console-field">
-                        <span>
+                          />
+                          <span>Confirm fixed price</span>
+                        </label>
+                        <label className="console-checkbox tenant-ticket-review-check">
                           <input
                             defaultChecked={ticket.confirmed_no_approval_required}
                             name="confirmed_no_approval_required"
                             type="checkbox"
-                          />{" "}
-                          No approval required
-                        </span>
-                      </label>
-                      <label className="console-field">
-                        <span>
+                          />
+                          <span>No approval required</span>
+                        </label>
+                        <label className="console-checkbox tenant-ticket-review-check">
                           <input
                             defaultChecked={ticket.confirmed_no_extra_required_questions}
                             name="confirmed_no_extra_required_questions"
                             type="checkbox"
-                          />{" "}
-                          No extra required questions
-                        </span>
-                      </label>
-                      <p className="subtle-text">
-                        {ticket.public_checkout_requested
-                          ? "This ticket can go live once the review assertions are complete."
-                          : "This ticket stays hidden even if the review assertions are complete."}
-                      </p>
-                      <p className="subtle-text">
-                        Public status: {ticket.zcash_enabled ? "enabled" : "disabled"} · {ticket.zcash_enabled_reason}
-                      </p>
-                      <button className="button button-secondary button-small" type="submit">
-                        Save assertions
-                      </button>
+                          />
+                          <span>No extra required questions</span>
+                        </label>
+                      </div>
+
+                      <div className="console-ticket-review-actions">
+                        <button className="button button-secondary button-small" type="submit">
+                          Save assertions
+                        </button>
+                      </div>
                     </form>
                   ))}
                 </div>

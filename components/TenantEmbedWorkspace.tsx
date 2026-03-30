@@ -214,7 +214,7 @@ export function TenantEmbedWorkspace({
                       </label>
                       <label className="console-field">
                         <ConsoleFieldLabel
-                          info="Keep the compact ZecTix/Tenant branding header visible inside the iframe."
+                          info="Keep the compact ZecTix/organizer branding header visible inside the iframe."
                           label="Show branding"
                         />
                         <input
