@@ -27,6 +27,8 @@ function overviewDestination(label: string) {
     case "Validate CipherPay":
     case "Activate public checkout":
       return "connections" as const;
+    case "Publish at least one event and ticket":
+      return "events" as const;
     default:
       return "connections" as const;
   }

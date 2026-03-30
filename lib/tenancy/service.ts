@@ -285,8 +285,14 @@ function deriveTenantOnboardingStatus(input: {
   tenant: Tenant;
   calendars: CalendarConnection[];
   cipherpayConnections: CipherPayConnection[];
+  events: EventMirror[];
 }) {
-  if (input.tenant.status === "active") {
+  const hasPublishedCheckoutEvent = input.events.some((event) => {
+    const startAtMs = new Date(event.start_at).getTime();
+    return Number.isFinite(startAtMs) && startAtMs >= Date.now() && event.zcash_enabled;
+  });
+
+  if (input.tenant.status === "active" && hasPublishedCheckoutEvent) {
     return "completed" as const;
   }
 
@@ -325,17 +331,22 @@ async function refreshTenantOnboardingProgress(tenantId: string) {
     listCalendarConnectionsByTenant(tenantId),
     listCipherPayConnectionsByTenant(tenantId),
   ]);
+  const eventPages = await Promise.all(
+    calendars.map((calendar) =>
+      listEventMirrorsByCalendar(calendar.calendar_connection_id),
+    ),
+  );
+  const events = eventPages.flat();
   const onboardingStatus = deriveTenantOnboardingStatus({
     tenant,
     calendars,
     cipherpayConnections,
+    events,
   });
   const onboardingCompletedAt =
-    tenant.status === "active"
+    onboardingStatus === "completed"
       ? tenant.onboarding_completed_at || nowIso()
-      : onboardingStatus === "completed"
-        ? tenant.onboarding_completed_at
-        : null;
+      : null;
   const onboardingStartedAt =
     tenant.onboarding_source === "self_serve"
       ? tenant.onboarding_started_at || tenant.created_at

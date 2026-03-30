@@ -36,8 +36,11 @@ export function TenantConnectionsWorkspace({
     (item) => item.complete,
   ).length;
   const checklistComplete = completedSteps === onboardingChecklist.length;
+  const activationStepIndex = onboardingChecklist.findIndex(
+    (item) => item.label === "Activate public checkout",
+  );
   const activationReady = onboardingChecklist
-    .slice(0, -1)
+    .slice(0, activationStepIndex)
     .every((item) => item.complete);
   const calendarNamesById = new Map(
     detail.calendars.map((calendar) => [

@@ -260,6 +260,15 @@ describe("setTenantStatus", () => {
         updated_at: "2026-03-30T13:00:00.000Z",
       });
 
+    mockListCalendarConnectionsByTenant.mockResolvedValueOnce([makeCalendarConnection()]);
+    mockListCipherPayConnectionsByTenant.mockResolvedValueOnce([makeCipherPayConnection()]);
+    mockListEventMirrorsByCalendar.mockResolvedValueOnce([
+      makeEventMirror({
+        zcash_enabled: true,
+        start_at: "2999-03-30T13:00:00.000Z",
+      }),
+    ]);
+
     const result = await setTenantStatus(tenant.tenant_id, "active");
 
     expect(mockPutTenant).toHaveBeenCalledWith(
@@ -280,6 +289,43 @@ describe("setTenantStatus", () => {
         tenant_id: tenant.tenant_id,
         status: "active",
         onboarding_status: "completed",
+      }),
+    );
+  });
+
+  it("keeps onboarding incomplete until an event and ticket are actually public", async () => {
+    const tenant = makeTenant({
+      status: "draft",
+      onboarding_source: "self_serve",
+      onboarding_status: "in_progress",
+      onboarding_completed_at: null,
+    });
+
+    mockGetTenant
+      .mockResolvedValueOnce(tenant)
+      .mockResolvedValueOnce({
+        ...tenant,
+        status: "active",
+        updated_at: "2026-03-30T13:00:00.000Z",
+      });
+    mockListCalendarConnectionsByTenant.mockResolvedValueOnce([makeCalendarConnection()]);
+    mockListCipherPayConnectionsByTenant.mockResolvedValueOnce([makeCipherPayConnection()]);
+    mockListEventMirrorsByCalendar.mockResolvedValueOnce([
+      makeEventMirror({
+        zcash_enabled: false,
+        public_checkout_requested: false,
+        start_at: "2999-03-30T13:00:00.000Z",
+      }),
+    ]);
+
+    const result = await setTenantStatus(tenant.tenant_id, "active");
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        tenant_id: tenant.tenant_id,
+        status: "active",
+        onboarding_status: "ready_for_review",
+        onboarding_completed_at: null,
       }),
     );
   });
