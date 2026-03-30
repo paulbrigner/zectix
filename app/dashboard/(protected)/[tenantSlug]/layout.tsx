@@ -4,6 +4,7 @@ import { TenantWorkspaceNav } from "@/components/TenantWorkspaceNav";
 import { getTenantBySlug } from "@/lib/app-state/state";
 import { normalizeEmailAddress } from "@/lib/app-state/utils";
 import { requireTenantPageAccess } from "@/lib/tenant-auth-server";
+import { humanizeOnboardingStatus } from "@/lib/tenant-self-serve";
 
 export const runtime = "nodejs";
 
@@ -78,7 +79,7 @@ export default async function TenantScopedLayout({
                 tenant.onboarding_status,
               )}`}
             >
-              onboarding {tenant.onboarding_status.replaceAll("_", " ")}
+              onboarding {humanizeOnboardingStatus(tenant.onboarding_status)}
             </span>
             <span
               className={`console-mini-pill console-mini-pill-${badgeTone(

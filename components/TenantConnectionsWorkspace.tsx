@@ -18,6 +18,7 @@ import type { TenantOpsDetail } from "@/lib/tenancy/service";
 import {
   buildOnboardingChecklist,
   calendarConnectionHealthLabel,
+  humanizeOnboardingStatus,
   summarizeCalendarInventory,
 } from "@/lib/tenant-self-serve";
 
@@ -121,7 +122,7 @@ export function TenantConnectionsWorkspace({
               {completedSteps}/{onboardingChecklist.length}
             </p>
             <p className="subtle-text console-kpi-detail">
-              {detail.tenant.onboarding_status.replaceAll("_", " ")}
+              {humanizeOnboardingStatus(detail.tenant.onboarding_status)}
             </p>
           </article>
           <article className="console-kpi-card">
@@ -177,6 +178,9 @@ export function TenantConnectionsWorkspace({
           <div className="console-section-header">
             <div>
               <h3>What still needs attention</h3>
+              <p className="tenant-checklist-callout">
+                Click each heading below to configure ZecTix.
+              </p>
             </div>
             <div className="button-row">
               <Link
@@ -413,7 +417,11 @@ export function TenantConnectionsWorkspace({
                           value={connectionsBasePath}
                         />
                         <button
-                          className="button button-secondary button-small"
+                          className={`button button-small${
+                            calendar.last_validated_at
+                              ? " button-secondary"
+                              : " button-attention"
+                          }`}
                           type="submit"
                         >
                           {calendar.last_validated_at

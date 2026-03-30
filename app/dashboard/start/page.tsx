@@ -58,10 +58,13 @@ export default async function TenantStartPage({
             </p>
 
             {resolvedSearchParams.email_sent === "1" ? (
-              <p className="console-success-text">
-                Check your inbox for the one-time sign-in link. If this looked
-                like an existing draft organizer, we reused it.
-              </p>
+              <div className="tenant-start-notice tenant-start-notice-success" role="status">
+                <strong>Check your inbox for the one-time sign-in link.</strong>
+                <p>
+                  If this looked like an existing draft organizer, we reused it
+                  and sent the link there.
+                </p>
+              </div>
             ) : null}
             {errorMessage ? <p className="console-error-text">{errorMessage}</p> : null}
 

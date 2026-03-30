@@ -324,7 +324,7 @@ describe("setTenantStatus", () => {
       expect.objectContaining({
         tenant_id: tenant.tenant_id,
         status: "active",
-        onboarding_status: "ready_for_review",
+        onboarding_status: "in_progress",
         onboarding_completed_at: null,
       }),
     );
