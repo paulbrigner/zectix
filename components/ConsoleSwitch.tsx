@@ -10,6 +10,7 @@ export function ConsoleSwitch({
   disabled = false,
   label,
   name,
+  submitOnChange = false,
 }: {
   className?: string;
   defaultChecked?: boolean;
@@ -17,6 +18,7 @@ export function ConsoleSwitch({
   disabled?: boolean;
   label: string;
   name: string;
+  submitOnChange?: boolean;
 }) {
   const labelId = useId();
   const descriptionId = useId();
@@ -70,6 +72,15 @@ export function ConsoleSwitch({
         defaultChecked={defaultChecked}
         disabled={disabled}
         name={name}
+        onCheckedChange={() => {
+          if (!submitOnChange) {
+            return;
+          }
+
+          queueMicrotask(() => {
+            switchRef.current?.form?.requestSubmit();
+          });
+        }}
         ref={switchRef}
       >
         <Switch.Thumb className="console-switch-thumb" />

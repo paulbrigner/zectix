@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+  activatePublicCheckoutAction,
   createCalendarConnectionAction,
   createCipherPayConnectionAction,
   disableCalendarConnectionAction,
@@ -34,6 +35,10 @@ export function TenantConnectionsWorkspace({
   const completedSteps = onboardingChecklist.filter(
     (item) => item.complete,
   ).length;
+  const checklistComplete = completedSteps === onboardingChecklist.length;
+  const activationReady = onboardingChecklist
+    .slice(0, -1)
+    .every((item) => item.complete);
   const calendarNamesById = new Map(
     detail.calendars.map((calendar) => [
       calendar.calendar_connection_id,
@@ -132,7 +137,13 @@ export function TenantConnectionsWorkspace({
 
         <ConsoleDisclosure
           className="tenant-checklist-card"
-          description={`${completedSteps}/${onboardingChecklist.length} setup steps are complete. Open the checklist when you want the full sequence.`}
+          defaultOpen={false}
+          description={
+            checklistComplete
+              ? "All setup steps are complete. Open the checklist whenever you want the full sequence."
+              : `${completedSteps}/${onboardingChecklist.length} setup steps are complete. Finish the checklist below before public checkout goes live.`
+          }
+          lockedOpen={!checklistComplete}
           title="Setup checklist"
         >
           <div className="console-section-header">
@@ -171,6 +182,58 @@ export function TenantConnectionsWorkspace({
               </li>
             ))}
           </ol>
+
+          <div className="tenant-checklist-action">
+            <div>
+              <strong>Step 6: Activate public checkout</strong>
+              <p className="subtle-text">
+                {detail.tenant.status === "active"
+                  ? "Public checkout is active. Event and ticket visibility still stays under your control in the Events workspace."
+                  : activationReady
+                    ? "Your organization is ready. Activate public checkout when you want ready events to be able to go live."
+                    : "Finish the earlier setup steps first, then come back here to activate public checkout."}
+              </p>
+            </div>
+            <div className="button-row">
+              {detail.tenant.status === "active" ? (
+                <Link
+                  className="button button-secondary button-small"
+                  href={eventsBasePath}
+                >
+                  Review events
+                </Link>
+              ) : activationReady ? (
+                <ConsoleConfirmDialog
+                  action={activatePublicCheckoutAction}
+                  confirmClassName="button button-small"
+                  confirmLabel="Activate public checkout"
+                  description="This makes your organizer workspace publicly reachable. Events and tickets still stay hidden until you enable them in the Events workspace."
+                  title="Activate public checkout?"
+                  triggerClassName="button button-small"
+                  triggerLabel="Activate public checkout"
+                >
+                  <input
+                    name="tenant_slug"
+                    type="hidden"
+                    value={detail.tenant.slug}
+                  />
+                  <input
+                    name="redirect_to"
+                    type="hidden"
+                    value={connectionsBasePath}
+                  />
+                </ConsoleConfirmDialog>
+              ) : (
+                <button
+                  className="button button-secondary button-small"
+                  disabled
+                  type="button"
+                >
+                  Finish earlier steps first
+                </button>
+              )}
+            </div>
+          </div>
         </ConsoleDisclosure>
       </section>
 

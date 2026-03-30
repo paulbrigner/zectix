@@ -9,27 +9,34 @@ export function ConsoleDisclosure({
   className,
   defaultOpen = false,
   description,
+  lockedOpen = false,
   title,
 }: {
   children: ReactNode;
   className?: string;
   defaultOpen?: boolean;
   description?: string;
+  lockedOpen?: boolean;
   title: string;
 }) {
   const [open, setOpen] = useState(defaultOpen);
+  const isOpen = lockedOpen ? true : open;
 
   return (
     <Collapsible.Root
       className={
         className ? `console-disclosure ${className}` : "console-disclosure"
       }
-      data-state={open ? "open" : "closed"}
-      onOpenChange={setOpen}
-      open={open}
+      data-state={isOpen ? "open" : "closed"}
+      onOpenChange={lockedOpen ? undefined : setOpen}
+      open={isOpen}
     >
       <Collapsible.Trigger asChild>
-        <button className="console-disclosure-summary" type="button">
+        <button
+          className="console-disclosure-summary"
+          disabled={lockedOpen}
+          type="button"
+        >
           <div className="console-disclosure-heading">
             <div>
               <strong className="console-disclosure-title">{title}</strong>
@@ -37,15 +44,17 @@ export function ConsoleDisclosure({
                 <p className="subtle-text">{description}</p>
               ) : null}
             </div>
-            <ChevronDownIcon
-              aria-hidden="true"
-              className="console-disclosure-toggle"
-            />
+            {lockedOpen ? null : (
+              <ChevronDownIcon
+                aria-hidden="true"
+                className="console-disclosure-toggle"
+              />
+            )}
           </div>
         </button>
       </Collapsible.Trigger>
       <Collapsible.Content asChild forceMount>
-        <div className="console-disclosure-body" hidden={!open}>
+        <div className="console-disclosure-body" hidden={!isOpen}>
           {children}
         </div>
       </Collapsible.Content>
