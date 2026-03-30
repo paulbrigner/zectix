@@ -91,9 +91,8 @@ export default function Home() {
           powered by Zcash.
         </h1>
         <p className="landing-sub">
-          Sell event tickets with shielded Zcash payments.
-          Direct-to-wallet settlement, no middleman,
-          no buyer accounts required.
+          Sell event tickets with shielded Zcash payments. Direct-to-wallet
+          settlement, no middleman, no buyer accounts required.
         </p>
         <div className="landing-hero-actions">
           <Button variant="landing-primary" href="#paths">
@@ -122,8 +121,8 @@ export default function Home() {
             <h3 className="landing-path-title">Zcash-native ticketing</h3>
             <p className="landing-path-desc">
               Create events, set ticket tiers, and sell directly with Zcash.
-              Hosted checkout with QR codes and wallet URIs. No extra
-              platforms in the way.
+              Hosted checkout with QR codes and wallet URIs. No extra platforms
+              in the way.
             </p>
             <span className="landing-path-cta">
               How it works<span aria-hidden="true"> &rarr;</span>
@@ -204,11 +203,8 @@ export default function Home() {
         </div>
 
         <div className="landing-section-actions">
-          <Button
-            variant="landing-primary"
-            href="/luma-integration"
-          >
-            Sign up for the ZecTix Luma integration
+          <Button variant="landing-primary" href="/luma-integration">
+            Get started with the ZecTix Luma integration
           </Button>
           <Button
             variant="landing-ghost"

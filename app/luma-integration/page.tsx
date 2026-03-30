@@ -1,24 +1,24 @@
 import Link from "next/link";
 import { HeroGlow } from "@/components/HeroGlow";
-import { LumaIntegrationInterestForm } from "@/components/LumaIntegrationInterestForm";
+import { LumaIntegrationChecklist } from "@/components/LumaIntegrationChecklist";
 
 export const runtime = "nodejs";
 
 const nextSteps = [
   {
-    label: "Tell us about your setup",
+    label: "Confirm the requirements",
     description:
-      "Share how you use Luma today, the kinds of events you run, and what you want from a Zcash checkout path.",
+      "Review the billing disclosures, technical setup requirements, and supported ticket restrictions for the managed path.",
   },
   {
-    label: "We review fit and logistics",
+    label: "Connect your accounts",
     description:
-      "We’ll look at event shape, ticket structure, and whether the current integration path is a good match.",
+      "Continue into the organizer dashboard to connect CipherPay, add your Luma credentials, and validate the calendar you want to mirror.",
   },
   {
-    label: "We follow up directly",
+    label: "Review and publish",
     description:
-      "If it looks like a fit, we’ll reach out about next steps for the early beta and onboarding timing.",
+      "Mirror eligible events, keep unsupported inventory hidden, and enable public checkout only where it is ready.",
   },
 ] as const;
 
@@ -41,14 +41,14 @@ export default function LumaIntegrationPage() {
       <section className="landing-hero landing-interest-hero">
         <p className="landing-badge">Managed path</p>
         <h1 className="landing-headline">
-          Apply for the
+          Get started with the
           <br />
-          ZecTix Luma integration beta.
+          ZecTix Luma integration.
         </h1>
         <p className="landing-sub">
-          We are opening a limited number of beta spots for organizers who want
-          to keep Luma as their event system of record and add a managed Zcash
-          checkout path where it makes sense.
+          Confirm the managed checkout requirements for your organization, then
+          continue straight into self-serve onboarding for Luma-based Zcash
+          checkout.
         </p>
       </section>
 
@@ -58,13 +58,13 @@ export default function LumaIntegrationPage() {
             <div className="landing-interest-card">
               <p className="landing-label">What happens next</p>
               <h2 className="landing-section-title landing-interest-title">
-                A short application for the initial cohort.
+                Review once, then onboard directly.
               </h2>
               <p className="landing-section-desc">
-                This application sends your details directly to the ZecTix team
-                so we can review fit, prioritize the strongest early matches,
-                and follow up personally. No extra organizer account is required
-                at this stage.
+                This path no longer starts with a waitlist form. If you already
+                have the required accounts and your supported ticket tiers fit
+                the mirrored checkout model, you can confirm the checklist and
+                move straight into dashboard setup.
               </p>
 
               <div className="landing-steps landing-interest-steps">
@@ -81,32 +81,16 @@ export default function LumaIntegrationPage() {
             </div>
 
             <div className="landing-interest-side-note">
-              <p className="landing-path-label">Early beta</p>
+              <p className="landing-path-label">Good fit</p>
               <p className="landing-path-desc">
-                We’re keeping the first beta cohort intentionally small so
-                onboarding can stay hands-on and we can focus on the organizers
-                and event flows that are the best fit for private Zcash
-                payments.
+                This works best for organizers who already run public,
+                fixed-price Luma events and want to add managed Zcash checkout
+                without changing their event pages or guest workflows.
               </p>
             </div>
           </div>
 
-          <div className="landing-interest-card landing-interest-form-card">
-            <p className="landing-label">Inquiry form</p>
-            <h2 className="landing-section-title landing-interest-title">
-              Share a few details.
-            </h2>
-            <p className="landing-section-desc">
-              We only need enough information to understand your use case,
-              evaluate fit for the beta, and follow up.
-            </p>
-            <div className="button-row">
-              <Link className="button button-secondary button-small" href="/dashboard/start">
-                Prefer self-serve onboarding?
-              </Link>
-            </div>
-            <LumaIntegrationInterestForm />
-          </div>
+          <LumaIntegrationChecklist />
         </div>
       </section>
 
