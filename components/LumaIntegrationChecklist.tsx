@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui";
 
 type ChecklistItem = {
+  actionHref?: string;
+  actionLabel?: string;
   id: string;
   label: string;
   detail: string;
@@ -51,24 +53,20 @@ const checklistSections: ChecklistSection[] = [
     items: [
       {
         id: "cipherpay-account",
-        label:
-          "I have a CipherPay merchant account ready for this organization.",
+        label: "I have a CipherPay merchant account.",
         detail:
           "You will connect the merchant account used for Zcash settlement and managed checkout activity.",
+        actionHref: "https://www.cipherpay.app/en/dashboard/login",
+        actionLabel: "Open CipherPay",
       },
       {
         id: "luma-access",
-        label:
-          "I have a Luma API key and access to the calendar I want to mirror.",
+        label: "I have a Luma API key.",
         detail:
           "The dashboard will ask for the Luma API credentials needed to sync eligible events and tickets.",
-      },
-      {
-        id: "webhook-access",
-        label:
-          "I can configure the required Luma webhook or coordination access.",
-        detail:
-          "ZecTix needs update signals so mirrored event and ticket changes stay in sync.",
+        actionHref:
+          "https://docs.luma.com/reference/getting-started-with-your-api",
+        actionLabel: "Luma API docs",
       },
     ],
   },
@@ -131,6 +129,10 @@ export function LumaIntegrationChecklist() {
         the ticket restrictions that apply to managed mirrored checkout. When
         every item is checked, you can go straight into organizer onboarding.
       </p>
+      <p className="landing-interest-help">
+        ZecTix configures the managed Luma webhook for you after you connect a
+        valid API key.
+      </p>
 
       <div aria-live="polite" className="landing-readiness-progress">
         <strong>{`${completedCount}/${totalCount} confirmed`}</strong>
@@ -151,9 +153,10 @@ export function LumaIntegrationChecklist() {
 
             <div className="landing-readiness-list">
               {section.items.map((item) => (
-                <label className="landing-readiness-item" key={item.id}>
+                <div className="landing-readiness-item" key={item.id}>
                   <input
                     checked={checkedItems[item.id] ?? false}
+                    id={item.id}
                     onChange={() =>
                       setCheckedItems((current) => ({
                         ...current,
@@ -163,10 +166,25 @@ export function LumaIntegrationChecklist() {
                     type="checkbox"
                   />
                   <span>
-                    <strong>{item.label}</strong>
+                    <label
+                      className="landing-readiness-item-label"
+                      htmlFor={item.id}
+                    >
+                      {item.label}
+                    </label>
                     <span>{item.detail}</span>
+                    {item.actionHref && item.actionLabel ? (
+                      <a
+                        className="landing-readiness-link"
+                        href={item.actionHref}
+                        rel="noreferrer"
+                        target="_blank"
+                      >
+                        {item.actionLabel}
+                      </a>
+                    ) : null}
                   </span>
-                </label>
+                </div>
               ))}
             </div>
           </section>

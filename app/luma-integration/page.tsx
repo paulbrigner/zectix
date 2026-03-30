@@ -38,7 +38,7 @@ export default function LumaIntegrationPage() {
         </div>
       </nav>
 
-      <section className="landing-hero landing-interest-hero">
+      <section className="landing-hero landing-interest-hero landing-interest-hero-compact">
         <p className="landing-badge">Managed path</p>
         <h1 className="landing-headline">
           Get started with the
