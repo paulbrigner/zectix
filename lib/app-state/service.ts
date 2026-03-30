@@ -109,7 +109,7 @@ export async function createCheckoutSession(input: CreateCheckoutInput) {
     input.event_api_id,
   );
   if (!eventPageData) {
-    throw new Error("That event is not available for managed Zcash checkout.");
+    throw new Error("That event is not available for public Zcash checkout.");
   }
 
   const ticket = await getPublicTicket(
@@ -118,7 +118,7 @@ export async function createCheckoutSession(input: CreateCheckoutInput) {
     input.ticket_type_api_id,
   );
   if (!ticket) {
-    throw new Error("That ticket is not available for managed Zcash checkout.");
+    throw new Error("That ticket is not available for public Zcash checkout.");
   }
 
   const cipherPayClient = await resolveCipherPayClientForCalendar(

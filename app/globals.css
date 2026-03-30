@@ -4436,7 +4436,6 @@ select {
     min-height: 2.85rem;
   }
 
-  .organizer-shell-actions,
   .feed-header .button-row,
   .console-section-header .button-row,
   .tenant-overview-actions,
@@ -4460,6 +4459,22 @@ select {
   .tenant-events-detail-actions .button {
     flex: 1 1 100%;
     width: 100%;
+  }
+
+  .organizer-shell-actions {
+    width: auto;
+    margin-left: auto;
+    justify-content: flex-end;
+  }
+
+  .organizer-shell-actions form {
+    flex: 0 0 auto;
+  }
+
+  .organizer-shell-actions .button {
+    flex: 0 0 auto;
+    width: auto;
+    min-width: 7rem;
   }
 
   .tenant-events-filter-actions {

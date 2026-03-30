@@ -130,7 +130,7 @@ export default async function PublicCalendarPage({
               <h1 className="public-display">Upcoming events</h1>
               <p className="subtle-text">
                 {data.calendar.display_name} events that were mirrored from Luma
-                and enabled for managed Zcash checkout.
+                and enabled for public Zcash checkout.
               </p>
             </div>
           ) : null}
@@ -175,9 +175,7 @@ export default async function PublicCalendarPage({
                         ? ` · ${event.location_label}`
                         : " · Luma event"}
                     </p>
-                    <span className="public-inline-link">
-                      Managed Zcash checkout
-                    </span>
+                    <span className="public-inline-link">Zcash checkout</span>
                   </div>
                   <span className="public-row-action">Get tickets</span>
                 </Link>

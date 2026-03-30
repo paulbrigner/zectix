@@ -51,6 +51,6 @@ export function evaluateEventCheckoutState(
 
   return {
     zcash_enabled: false,
-    zcash_enabled_reason: "No tickets are currently enabled for managed Zcash checkout.",
+    zcash_enabled_reason: "No tickets are currently enabled for public Zcash checkout.",
   };
 }

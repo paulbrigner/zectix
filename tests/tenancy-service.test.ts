@@ -787,7 +787,7 @@ describe("setTicketOperatorAssertions", () => {
       expect.objectContaining({
         event_api_id: event.event_api_id,
         zcash_enabled: false,
-        zcash_enabled_reason: "No tickets are currently enabled for managed Zcash checkout.",
+        zcash_enabled_reason: "No tickets are currently enabled for public Zcash checkout.",
       }),
     );
   });
