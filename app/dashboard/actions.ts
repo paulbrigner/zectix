@@ -9,9 +9,14 @@ import {
 } from "@/lib/app-state/state";
 import { requireTenantPageAccess } from "@/lib/tenant-auth-server";
 import {
+  parseSupportRequestSubmission,
+  sendSupportRequestEmail,
+} from "@/lib/support-request";
+import {
   createCalendarConnection,
   createCipherPayConnection,
   disableCalendarConnection,
+  listSelfServeTenantsForEmail,
   setEventPublicCheckoutRequested,
   setTicketOperatorAssertions,
   syncCalendarEventForOps,
@@ -197,6 +202,46 @@ export async function updateCalendarEmbedSettingsAction(formData: FormData) {
     },
   });
   redirectTo(formData, `/dashboard/${encodeURIComponent(tenant.slug)}/embed`);
+}
+
+export async function submitSupportRequestAction(formData: FormData) {
+  const sessionEmail = await requireTenantPageAccess();
+  const redirectBase = asString(formData.get("redirect_to")) || "/dashboard/help";
+  const params = new URLSearchParams();
+  const allowedTenants = await listSelfServeTenantsForEmail(sessionEmail);
+  const requestedTenantSlug = asString(formData.get("tenant_slug"));
+  const requestedTenant =
+    requestedTenantSlug
+      ? allowedTenants.find((tenant) => tenant.slug === requestedTenantSlug) || null
+      : null;
+
+  const parsed = parseSupportRequestSubmission({
+    email: sessionEmail,
+    organization: requestedTenant?.name || null,
+    subject: String(formData.get("subject") || ""),
+    message: String(formData.get("message") || ""),
+    contextPath: asString(formData.get("context_path")),
+  });
+
+  if (!parsed.ok) {
+    params.set("error", parsed.error);
+    redirectToWithQuery(redirectBase, params);
+    return;
+  }
+
+  try {
+    await sendSupportRequestEmail(parsed.data);
+  } catch (error) {
+    console.error("Failed to send organizer support request.", error);
+    params.set(
+      "error",
+      "We couldn't send your support request right now. Confirm the support email settings are configured.",
+    );
+    redirectToWithQuery(redirectBase, params);
+  }
+
+  params.set("sent", "1");
+  redirectToWithQuery(redirectBase, params);
 }
 
 export async function setTicketAssertionsAction(formData: FormData) {
