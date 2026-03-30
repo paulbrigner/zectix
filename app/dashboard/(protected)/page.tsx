@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireTenantPageAccess } from "@/lib/tenant-auth-server";
-import { listSelfServeTenantsForEmail } from "@/lib/tenancy/service";
+import { getTenantSelfServeDetailBySlug, listSelfServeTenantsForEmail } from "@/lib/tenancy/service";
+import { buildOnboardingChecklist } from "@/lib/tenant-self-serve";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -11,6 +12,17 @@ export default async function TenantHomePage() {
   const tenants = await listSelfServeTenantsForEmail(email);
 
   if (tenants.length === 1) {
+    const detail = await getTenantSelfServeDetailBySlug(tenants[0].slug, email);
+    if (detail) {
+      const checklistComplete = buildOnboardingChecklist(detail).every(
+        (item) => item.complete,
+      );
+      const destination = checklistComplete
+        ? `/dashboard/${encodeURIComponent(tenants[0].slug)}`
+        : `/dashboard/${encodeURIComponent(tenants[0].slug)}/connections`;
+      redirect(destination);
+    }
+
     redirect(`/dashboard/${encodeURIComponent(tenants[0].slug)}`);
   }
 

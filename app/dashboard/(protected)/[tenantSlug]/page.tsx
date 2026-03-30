@@ -1,7 +1,8 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { TenantOverviewWorkspace } from "@/components/TenantOverviewWorkspace";
 import { requireTenantPageAccess } from "@/lib/tenant-auth-server";
 import { getTenantSelfServeDetailBySlug } from "@/lib/tenancy/service";
+import { buildOnboardingChecklist } from "@/lib/tenant-self-serve";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,6 +17,13 @@ export default async function TenantOverviewPage({
   const detail = await getTenantSelfServeDetailBySlug(tenantSlug, email);
   if (!detail) {
     notFound();
+  }
+
+  const checklistComplete = buildOnboardingChecklist(detail).every(
+    (item) => item.complete,
+  );
+  if (!checklistComplete) {
+    redirect(`/dashboard/${encodeURIComponent(detail.tenant.slug)}/connections`);
   }
 
   return (
