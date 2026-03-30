@@ -164,20 +164,20 @@ export function TenantEmbedWorkspace({
                       <span className="console-kpi-label">Public events</span>
                       <strong>{embedExampleEvents.length}</strong>
                       <p className="subtle-text">
-                        upcoming event{embedExampleEvents.length === 1 ? "" : "s"} ready for snippets
+                        Upcoming event{embedExampleEvents.length === 1 ? "" : "s"} ready for snippets.
                       </p>
                     </div>
                     <div className="console-signal-card">
                       <span className="console-kpi-label">Iframe height</span>
                       <strong>{calendar.embed_default_height_px}px</strong>
                       <p className="subtle-text">
-                        hosts can still override this per embed
+                        Hosts can still override this per embed.
                       </p>
                     </div>
                   </div>
 
                   <ConsoleDisclosure
-                    description="Open to edit iframe settings, allowed origins, appearance overrides, and generated embed code."
+                    description="Open this panel to edit iframe settings, allowed origins, appearance overrides, and generated embed code."
                     title="Edit settings and snippets"
                   >
                     <form action={updateCalendarEmbedSettingsAction} className="console-content embed-settings-form">

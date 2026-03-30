@@ -707,20 +707,24 @@ select {
 
 .embed-toggle-card {
   min-height: 100%;
+  align-content: start;
 }
 
-.embed-toggle-card-copy {
+.console-checkbox .embed-toggle-card-copy {
   display: grid;
-  gap: 0.28rem;
+  gap: 0.35rem;
+  min-width: 0;
 }
 
-.embed-toggle-card-copy strong {
+.console-checkbox .embed-toggle-card-copy strong {
+  display: block;
   color: var(--color-gray-900);
   font-size: 1rem;
   line-height: 1.25;
 }
 
-.embed-toggle-card-copy small {
+.console-checkbox .embed-toggle-card-copy small {
+  display: block;
   color: var(--color-gray-600);
   font-size: 0.92rem;
   font-weight: 500;
