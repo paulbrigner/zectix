@@ -19,7 +19,7 @@ import {
   ensureSameOriginMutation,
   getTrustedIpAddress,
 } from "@/lib/request-security";
-import { normalizeEmailAddress, slugify } from "@/lib/app-state/utils";
+import { normalizeEmailAddress } from "@/lib/app-state/utils";
 
 export const runtime = "nodejs";
 
@@ -70,7 +70,6 @@ export async function POST(request: Request) {
   const formData = await request.formData();
   const name = String(formData.get("name") || "").trim();
   const email = normalizeEmailAddress(String(formData.get("email") || ""));
-  const requestedSlug = String(formData.get("slug") || "").trim();
 
   if (!name) {
     return redirectToPath(startRedirectPath("invalid_name"));
@@ -83,15 +82,13 @@ export async function POST(request: Request) {
   const existingTenants = await listTenantsByContactEmail(email);
   const duplicateTenant = existingTenants.find((tenant) => {
     const sameName = tenant.name.trim().toLowerCase() === name.toLowerCase();
-    const sameSlug = requestedSlug ? tenant.slug === slugify(requestedSlug) : false;
-    return tenant.status !== "archived" && (sameName || sameSlug);
+    return tenant.status !== "archived" && sameName;
   });
 
   const tenant =
     duplicateTenant ||
     (await createTenant({
       name,
-      slug: requestedSlug || null,
       contact_email: email,
       onboarding_source: "self_serve",
       onboarding_status: "in_progress",
