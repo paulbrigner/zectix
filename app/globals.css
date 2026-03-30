@@ -3439,6 +3439,20 @@ select {
   font-weight: 800;
 }
 
+.public-home-link {
+  display: inline-flex;
+  align-items: center;
+  color: rgba(92, 103, 125, 0.92);
+  font-size: 0.92rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: color 160ms ease, opacity 160ms ease;
+}
+
+.public-home-link:hover {
+  color: #c66712;
+}
+
 .public-row-action {
   display: inline-flex;
   align-items: center;
@@ -4625,6 +4639,10 @@ select {
   .public-home-topbar {
     flex-wrap: wrap;
     justify-content: space-between;
+  }
+
+  .public-home-link {
+    font-size: 0.88rem;
   }
 
   .public-home-nav-links {
