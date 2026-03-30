@@ -266,11 +266,8 @@ function buildEventsHref(
   }
 
   const query = params.toString();
-  return `${tenantBasePath}/events${query ? `?${query}` : ""}`;
-}
-
-function selectionLabel(selected: boolean) {
-  return selected ? "Hide" : "Details";
+  const href = `${tenantBasePath}/events${query ? `?${query}` : ""}`;
+  return selectedRowId ? `${href}#event-review-details` : href;
 }
 
 function sourceLabel(row: TenantEventWorkspaceRow) {
@@ -707,11 +704,7 @@ export function TenantEventsWorkspace({
               <ConsoleTableBody>
                 {visibleRows.map((row) => {
                   const selected = selectedRow?.row_id === row.row_id;
-                  const rowHref = buildEventsHref(
-                    tenantBasePath,
-                    filters,
-                    selected ? null : row.row_id,
-                  );
+                  const rowHref = buildEventsHref(tenantBasePath, filters, row.row_id);
                   return (
                     <ConsoleTableRow
                       className={
@@ -724,7 +717,7 @@ export function TenantEventsWorkspace({
                           className="button button-secondary button-small"
                           href={rowHref}
                         >
-                          {selectionLabel(selected)}
+                          Details
                         </Link>
                       </ConsoleTableCell>
                       <ConsoleTableCell className="tenant-events-cell-event">
@@ -793,7 +786,10 @@ export function TenantEventsWorkspace({
         </section>
 
         {selectedRow ? (
-          <aside className="console-section tenant-events-detail-panel">
+          <aside
+            className="console-section console-anchor-target tenant-events-detail-panel"
+            id="event-review-details"
+          >
             <>
               <div className="tenant-events-detail-hero">
                 {selectedRow.cover_url ? (
