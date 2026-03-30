@@ -446,7 +446,7 @@ export default async function TenantEventsPage({
             const mirroredTickets = detail.tickets_by_event.get(event.event_api_id) || [];
             const enabledTickets = mirroredTickets.filter((ticket) => ticket.zcash_enabled);
             const publicEventHref =
-              event.sync_status === "active"
+              event.sync_status === "active" && event.zcash_enabled
                 ? `/c/${calendar.slug}/events/${encodeURIComponent(event.event_api_id)}`
                 : null;
 
@@ -521,7 +521,15 @@ export default async function TenantEventsPage({
                         <Link className="button button-secondary button-small" href={publicEventHref}>
                           Open public event
                         </Link>
-                      ) : null}
+                      ) : (
+                        <button
+                          className="button button-secondary button-small"
+                          disabled
+                          type="button"
+                        >
+                          Public event hidden
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>

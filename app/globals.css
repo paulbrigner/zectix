@@ -121,6 +121,12 @@ select {
   box-shadow: none;
 }
 
+.button-secondary:disabled {
+  background: rgba(241, 245, 249, 0.96);
+  border-color: rgba(148, 163, 184, 0.2);
+  color: #64748b;
+}
+
 .button-ghost {
   background: rgba(255, 255, 255, 0.16);
   border-color: rgba(255, 255, 255, 0.22);

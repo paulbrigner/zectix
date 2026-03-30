@@ -502,7 +502,7 @@ export default async function TenantDetailPage({
                       const mirroredEvent = mirroredByEventId.get(event.api_id) || null;
                       const mirroredTickets =
                         detail.tickets_by_event.get(event.api_id) || [];
-                      const publicEventHref = mirroredEvent
+                      const publicEventHref = mirroredEvent?.zcash_enabled
                         ? `/c/${calendar.slug}/events/${encodeURIComponent(event.api_id)}`
                         : null;
 
@@ -527,10 +527,12 @@ export default async function TenantDetailPage({
                                 <h4>{event.name}</h4>
                               </div>
                               <div className="console-mini-pill-row">
-                                <span className="console-mini-pill">
+                                <span className="console-mini-pill console-mini-pill-info">
                                   {mirroredEvent ? "Mirrored" : "Not mirrored yet"}
                                 </span>
-                                <span className="console-mini-pill">
+                                <span
+                                  className={`console-mini-pill ${mirroredEvent?.zcash_enabled ? "console-mini-pill-success" : "console-mini-pill-muted"}`}
+                                >
                                   {mirroredEvent?.zcash_enabled
                                     ? "Public checkout enabled"
                                     : "Public checkout hidden"}
@@ -565,6 +567,14 @@ export default async function TenantDetailPage({
                                 >
                                   Open public event
                                 </Link>
+                              ) : mirroredEvent ? (
+                                <button
+                                  className="button button-secondary button-small"
+                                  disabled
+                                  type="button"
+                                >
+                                  Public event hidden
+                                </button>
                               ) : null}
                             </div>
                           </div>

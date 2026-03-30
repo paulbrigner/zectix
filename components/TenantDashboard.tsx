@@ -367,9 +367,9 @@ export function TenantDashboard({
           <div className="console-card-grid tenant-upcoming-grid">
             {upcomingEvents.map(({ calendar, event, tickets }) => {
               const enabledTicketCount = tickets.filter((ticket) => ticket.zcash_enabled).length;
-              const publicEventUrl = appUrl(
-                `/c/${calendar.slug}/events/${encodeURIComponent(event.event_api_id)}`,
-              );
+              const publicEventUrl = event.zcash_enabled
+                ? appUrl(`/c/${calendar.slug}/events/${encodeURIComponent(event.event_api_id)}`)
+                : null;
 
               return (
                 <article
@@ -393,10 +393,12 @@ export function TenantDashboard({
                         <h4>{event.name}</h4>
                       </div>
                       <div className="console-mini-pill-row tenant-upcoming-pills">
-                        <span className="console-mini-pill">
-                          {event.zcash_enabled ? "Public checkout enabled" : "Hidden"}
+                        <span
+                          className={`console-mini-pill ${event.zcash_enabled ? "console-mini-pill-success" : "console-mini-pill-muted"}`}
+                        >
+                          {event.zcash_enabled ? "Public checkout enabled" : "Public checkout hidden"}
                         </span>
-                        <span className="console-mini-pill">
+                        <span className="console-mini-pill console-mini-pill-info">
                           {enabledTicketCount}/{tickets.length} tickets enabled
                         </span>
                       </div>
@@ -412,9 +414,17 @@ export function TenantDashboard({
                   <div className="button-row tenant-upcoming-actions">
                     {publicEventUrl ? (
                       <Link className="button button-secondary button-small" href={publicEventUrl}>
-                        Open event
+                        Open public event
                       </Link>
-                    ) : null}
+                    ) : (
+                      <button
+                        className="button button-secondary button-small"
+                        disabled
+                        type="button"
+                      >
+                        Public event hidden
+                      </button>
+                    )}
                     <Link
                       className="button button-secondary button-small"
                       href={eventsHref}
