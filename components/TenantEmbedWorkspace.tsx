@@ -2,7 +2,9 @@ import Link from "next/link";
 import { updateCalendarEmbedSettingsAction } from "@/app/dashboard/actions";
 import { ConsoleDisclosure } from "@/components/ConsoleDisclosure";
 import { ConsoleFieldLabel } from "@/components/ConsoleFieldLabel";
+import { ConsoleFormPendingNote } from "@/components/ConsoleFormPendingNote";
 import { ConsoleInfoTip } from "@/components/ConsoleInfoTip";
+import { ConsoleSubmitButton } from "@/components/ConsoleSubmitButton";
 import { ConsoleSwitch } from "@/components/ConsoleSwitch";
 import { appUrl } from "@/lib/app-paths";
 import { selectUpcomingEvents } from "@/lib/embed";
@@ -366,13 +368,13 @@ export function TenantEmbedWorkspace({
                       </section>
 
                       <div className="button-row">
-                        <button
+                        <ConsoleSubmitButton
                           className="button button-secondary button-small"
-                          type="submit"
-                        >
-                          Save embed settings
-                        </button>
+                          label="Save embed settings"
+                          pendingLabel="Saving embed settings..."
+                        />
                       </div>
+                      <ConsoleFormPendingNote pendingLabel="Saving your embed settings..." />
                     </form>
 
                     <div className="console-inline-action">
