@@ -1,7 +1,7 @@
 "use client";
 
 import * as Switch from "@radix-ui/react-switch";
-import { useId, useRef } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 
 export function ConsoleSwitch({
@@ -27,16 +27,24 @@ export function ConsoleSwitch({
   const descriptionId = useId();
   const switchRef = useRef<HTMLButtonElement>(null);
   const { pending } = useFormStatus();
-  const isDisabled = disabled || pending;
+  const [localPending, setLocalPending] = useState(false);
+  const showPending = pending || localPending;
+  const isDisabled = disabled || showPending;
+
+  useEffect(() => {
+    if (!pending) {
+      setLocalPending(false);
+    }
+  }, [pending]);
 
   return (
     <div
       className={
         className
-          ? `console-switch-field${pending ? " console-switch-field-pending" : ""} ${className}`
-          : `console-switch-field${pending ? " console-switch-field-pending" : ""}`
+          ? `console-switch-field${showPending ? " console-switch-field-pending" : ""} ${className}`
+          : `console-switch-field${showPending ? " console-switch-field-pending" : ""}`
       }
-      data-pending={pending ? "true" : "false"}
+      data-pending={showPending ? "true" : "false"}
       onClick={(event) => {
         if (isDisabled) {
           return;
@@ -72,7 +80,7 @@ export function ConsoleSwitch({
             {description}
           </p>
         ) : null}
-        {submitOnChange && pending ? (
+        {submitOnChange && showPending ? (
           <p aria-live="polite" className="console-switch-feedback" role="status">
             {pendingLabel}
           </p>
@@ -81,7 +89,9 @@ export function ConsoleSwitch({
       <Switch.Root
         aria-describedby={description ? descriptionId : undefined}
         aria-labelledby={labelId}
+        aria-busy={showPending || undefined}
         className="console-switch-root"
+        data-pending={showPending ? "true" : "false"}
         defaultChecked={defaultChecked}
         disabled={isDisabled}
         name={name}
@@ -90,6 +100,7 @@ export function ConsoleSwitch({
             return;
           }
 
+          setLocalPending(true);
           queueMicrotask(() => {
             switchRef.current?.form?.requestSubmit();
           });

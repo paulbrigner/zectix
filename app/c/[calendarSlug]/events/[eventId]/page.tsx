@@ -135,7 +135,6 @@ export default async function PublicEventPage({
             ) : null}
 
             <div className="event-page-copy">
-              {!embedMode ? <p className="eyebrow">Managed checkout</p> : null}
               <h1>{data.event.name}</h1>
               <p className="subtle-text">
                 {eventDateLabel(

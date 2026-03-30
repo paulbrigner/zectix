@@ -424,6 +424,12 @@ select {
   box-shadow: 0 10px 22px var(--accent-glow);
 }
 
+.console-switch-root[data-pending="true"] {
+  box-shadow:
+    0 0 0 3px rgba(251, 191, 36, 0.18),
+    0 10px 22px rgba(245, 158, 11, 0.18);
+}
+
 .console-switch-root:focus-visible {
   outline: 2px solid rgba(37, 99, 235, 0.5);
   outline-offset: 2px;
@@ -445,6 +451,10 @@ select {
   transform: translateX(0);
   transition: transform 160ms ease;
   will-change: transform;
+}
+
+.console-switch-root[data-pending="true"] .console-switch-thumb {
+  animation: console-pulse 1s ease-in-out infinite;
 }
 
 .console-switch-root[data-state="checked"] .console-switch-thumb {
