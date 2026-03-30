@@ -11,8 +11,10 @@ import {
 import { ConsoleConfirmDialog } from "@/components/ConsoleConfirmDialog";
 import { ConsoleDisclosure } from "@/components/ConsoleDisclosure";
 import { ConsoleFieldLabel } from "@/components/ConsoleFieldLabel";
+import { ConsoleFormPendingNote } from "@/components/ConsoleFormPendingNote";
 import { ConsoleInfoTip } from "@/components/ConsoleInfoTip";
 import { LocalDateTime } from "@/components/LocalDateTime";
+import { ConsoleSubmitButton } from "@/components/ConsoleSubmitButton";
 import { selectUpcomingEvents } from "@/lib/embed";
 import type { TenantOpsDetail } from "@/lib/tenancy/service";
 import {
@@ -329,9 +331,14 @@ export function TenantConnectionsWorkspace({
                   />
                 </label>
               </div>
-              <button className="button" type="submit">
-                Save calendar connection
-              </button>
+              <div className="button-row">
+                <ConsoleSubmitButton
+                  className="button"
+                  label="Save calendar connection"
+                  pendingLabel="Saving calendar connection..."
+                />
+              </div>
+              <ConsoleFormPendingNote pendingLabel="Saving this calendar connection..." />
             </form>
           </ConsoleDisclosure>
         </div>
@@ -416,18 +423,24 @@ export function TenantConnectionsWorkspace({
                           type="hidden"
                           value={connectionsBasePath}
                         />
-                        <button
+                        <ConsoleSubmitButton
                           className={`button button-small${
                             calendar.last_validated_at
                               ? " button-secondary"
                               : " button-attention"
                           }`}
-                          type="submit"
-                        >
-                          {calendar.last_validated_at
-                            ? "Re-sync now"
-                            : "Connect and sync"}
-                        </button>
+                          label={
+                            calendar.last_validated_at
+                              ? "Re-sync now"
+                              : "Connect and sync"
+                          }
+                          pendingLabel={
+                            calendar.last_validated_at
+                              ? "Re-syncing..."
+                              : "Connecting and syncing..."
+                          }
+                        />
+                        <ConsoleFormPendingNote pendingLabel="Refreshing this calendar and its mirrored inventory..." />
                       </form>
                       <Link
                         className="button button-secondary button-small"
@@ -617,12 +630,14 @@ export function TenantConnectionsWorkspace({
                           type="password"
                         />
                       </label>
-                      <button
-                        className="button button-secondary button-small"
-                        type="submit"
-                      >
-                        Save new Luma API key
-                      </button>
+                      <div className="button-row">
+                        <ConsoleSubmitButton
+                          className="button button-secondary button-small"
+                          label="Save new Luma API key"
+                          pendingLabel="Saving new Luma API key..."
+                        />
+                      </div>
+                      <ConsoleFormPendingNote pendingLabel="Saving the new Luma API key..." />
                     </form>
                   </ConsoleDisclosure>
                 </article>
@@ -746,9 +761,14 @@ export function TenantConnectionsWorkspace({
                 />
               </label>
             </div>
-            <button className="button" type="submit">
-              Save CipherPay connection
-            </button>
+            <div className="button-row">
+              <ConsoleSubmitButton
+                className="button"
+                label="Save CipherPay connection"
+                pendingLabel="Saving CipherPay connection..."
+              />
+            </div>
+            <ConsoleFormPendingNote pendingLabel="Saving and validating your CipherPay connection..." />
           </form>
         </ConsoleDisclosure>
 
@@ -803,12 +823,14 @@ export function TenantConnectionsWorkspace({
                         type="hidden"
                         value={connectionsBasePath}
                       />
-                      <button
-                        className="button button-secondary button-small"
-                        type="submit"
-                      >
-                        Validate connection
-                      </button>
+                      <div className="button-row">
+                        <ConsoleSubmitButton
+                          className="button button-secondary button-small"
+                          label="Validate connection"
+                          pendingLabel="Validating..."
+                        />
+                      </div>
+                      <ConsoleFormPendingNote pendingLabel="Validating this CipherPay connection..." />
                     </form>
                   ) : null}
                 </article>

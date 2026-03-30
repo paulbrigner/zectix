@@ -2,6 +2,7 @@
 
 import * as Switch from "@radix-ui/react-switch";
 import { useId, useRef } from "react";
+import { useFormStatus } from "react-dom";
 
 export function ConsoleSwitch({
   className,
@@ -10,6 +11,7 @@ export function ConsoleSwitch({
   disabled = false,
   label,
   name,
+  pendingLabel = "Saving change...",
   submitOnChange = false,
 }: {
   className?: string;
@@ -18,19 +20,25 @@ export function ConsoleSwitch({
   disabled?: boolean;
   label: string;
   name: string;
+  pendingLabel?: string;
   submitOnChange?: boolean;
 }) {
   const labelId = useId();
   const descriptionId = useId();
   const switchRef = useRef<HTMLButtonElement>(null);
+  const { pending } = useFormStatus();
+  const isDisabled = disabled || pending;
 
   return (
     <div
       className={
-        className ? `console-switch-field ${className}` : "console-switch-field"
+        className
+          ? `console-switch-field${pending ? " console-switch-field-pending" : ""} ${className}`
+          : `console-switch-field${pending ? " console-switch-field-pending" : ""}`
       }
+      data-pending={pending ? "true" : "false"}
       onClick={(event) => {
-        if (disabled) {
+        if (isDisabled) {
           return;
         }
 
@@ -64,13 +72,18 @@ export function ConsoleSwitch({
             {description}
           </p>
         ) : null}
+        {submitOnChange && pending ? (
+          <p aria-live="polite" className="console-switch-feedback" role="status">
+            {pendingLabel}
+          </p>
+        ) : null}
       </div>
       <Switch.Root
         aria-describedby={description ? descriptionId : undefined}
         aria-labelledby={labelId}
         className="console-switch-root"
         defaultChecked={defaultChecked}
-        disabled={disabled}
+        disabled={isDisabled}
         name={name}
         onCheckedChange={() => {
           if (!submitOnChange) {

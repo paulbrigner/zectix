@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { submitSupportRequestAction } from "@/app/dashboard/actions";
+import { ConsoleFormPendingNote } from "@/components/ConsoleFormPendingNote";
+import { ConsoleSubmitButton } from "@/components/ConsoleSubmitButton";
 import { requireTenantPageAccess } from "@/lib/tenant-auth-server";
 import { listSelfServeTenantsForEmail } from "@/lib/tenancy/service";
 
@@ -145,9 +147,11 @@ export default async function TenantHelpPage({
         </label>
 
         <div className="button-row">
-          <button className="button" type="submit">
-            Send support request
-          </button>
+          <ConsoleSubmitButton
+            className="button"
+            label="Send support request"
+            pendingLabel="Sending support request..."
+          />
           <Link
             className="button button-secondary"
             href={
@@ -159,6 +163,7 @@ export default async function TenantHelpPage({
             Cancel
           </Link>
         </div>
+        <ConsoleFormPendingNote pendingLabel="Sending your message..." />
       </form>
     </section>
   );

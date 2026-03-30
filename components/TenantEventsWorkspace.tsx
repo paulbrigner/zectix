@@ -13,7 +13,9 @@ import {
   ConsoleTableHeader,
   ConsoleTableRow,
 } from "@/components/ConsoleTable";
+import { ConsoleFormPendingNote } from "@/components/ConsoleFormPendingNote";
 import { LocalDateTime } from "@/components/LocalDateTime";
+import { ConsoleSubmitButton } from "@/components/ConsoleSubmitButton";
 import { ConsoleSwitch } from "@/components/ConsoleSwitch";
 import { formatFiatAmount } from "@/lib/app-state/utils";
 import type { TicketMirror } from "@/lib/app-state/types";
@@ -569,12 +571,12 @@ export function TenantEventsWorkspace({
                     type="hidden"
                     value={selectedHref}
                   />
-                  <button
+                  <ConsoleSubmitButton
                     className="button button-secondary button-small"
-                    type="submit"
-                  >
-                    Refresh whole calendar
-                  </button>
+                    label="Refresh whole calendar"
+                    pendingLabel="Refreshing whole calendar..."
+                  />
+                  <ConsoleFormPendingNote pendingLabel="Refreshing this calendar..." />
                 </form>
               </article>
             ))}
@@ -937,14 +939,20 @@ export function TenantEventsWorkspace({
                     type="hidden"
                     value={selectedHref}
                   />
-                  <button
+                  <ConsoleSubmitButton
                     className="button button-secondary button-small"
-                    type="submit"
-                  >
-                    {selectedRow.source === "upstream"
-                      ? "Import and refresh event"
-                      : "Sync this event"}
-                  </button>
+                    label={
+                      selectedRow.source === "upstream"
+                        ? "Import and refresh event"
+                        : "Sync this event"
+                    }
+                    pendingLabel={
+                      selectedRow.source === "upstream"
+                        ? "Importing and refreshing..."
+                        : "Syncing this event..."
+                    }
+                  />
+                  <ConsoleFormPendingNote pendingLabel="Refreshing this event from Luma..." />
                 </form>
 
                 <form action={validateAndSyncCalendarAction}>
@@ -963,12 +971,12 @@ export function TenantEventsWorkspace({
                     type="hidden"
                     value={selectedHref}
                   />
-                  <button
+                  <ConsoleSubmitButton
                     className="button button-secondary button-small"
-                    type="submit"
-                  >
-                    Refresh whole calendar
-                  </button>
+                    label="Refresh whole calendar"
+                    pendingLabel="Refreshing whole calendar..."
+                  />
+                  <ConsoleFormPendingNote pendingLabel="Refreshing this calendar..." />
                 </form>
               </div>
 
@@ -1023,6 +1031,7 @@ export function TenantEventsWorkspace({
                       }
                       label="Allow this event on public checkout"
                       name="public_checkout_requested"
+                      pendingLabel="Saving event visibility..."
                       submitOnChange
                     />
 
@@ -1146,6 +1155,7 @@ export function TenantEventsWorkspace({
                               defaultChecked={ticket.public_checkout_requested}
                               label="Allow this ticket"
                               name="public_checkout_requested"
+                              pendingLabel="Saving ticket visibility..."
                               submitOnChange
                             />
                           </form>

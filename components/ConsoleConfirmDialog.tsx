@@ -3,6 +3,8 @@
 import { Cross2Icon } from "@radix-ui/react-icons";
 import * as Dialog from "@radix-ui/react-dialog";
 import type { ReactNode } from "react";
+import { ConsoleFormPendingNote } from "@/components/ConsoleFormPendingNote";
+import { ConsoleSubmitButton } from "@/components/ConsoleSubmitButton";
 
 export function ConsoleConfirmDialog({
   action,
@@ -70,10 +72,13 @@ export function ConsoleConfirmDialog({
                   {cancelLabel}
                 </button>
               </Dialog.Close>
-              <button className={confirmClassName} type="submit">
-                {confirmLabel}
-              </button>
+              <ConsoleSubmitButton
+                className={confirmClassName}
+                label={confirmLabel}
+                pendingLabel={`${confirmLabel}...`}
+              />
             </div>
+            <ConsoleFormPendingNote pendingLabel="Working on that..." />
           </form>
         </Dialog.Content>
       </Dialog.Portal>
