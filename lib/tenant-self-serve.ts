@@ -229,12 +229,12 @@ export function buildOnboardingChecklist(
         : "Validate the current CipherPay connection after saving it.",
     },
     {
-      label: "Activate the tenant for public checkout",
+      label: "Activate public checkout",
       complete: detail.tenant.status === "active",
       description:
         detail.tenant.status === "active"
           ? "Public calendar routes can resolve for active calendars."
-          : "A draft tenant stays dark publicly until it is activated.",
+          : "A draft organization stays dark publicly until it is activated.",
     },
   ];
 }

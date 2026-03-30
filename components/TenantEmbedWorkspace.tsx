@@ -178,7 +178,7 @@ export function TenantEmbedWorkspace({
                     </div>
                   </div>
 
-                  <form action={updateCalendarEmbedSettingsAction} className="console-content">
+                  <form action={updateCalendarEmbedSettingsAction} className="console-content embed-settings-form">
                     <input
                       name="calendar_connection_id"
                       type="hidden"
@@ -187,19 +187,36 @@ export function TenantEmbedWorkspace({
                     <input name="tenant_slug" type="hidden" value={detail.tenant.slug} />
                     <input name="redirect_to" type="hidden" value={embedBasePath} />
 
-                    <div className="public-field-grid">
-                      <label className="console-field">
-                        <ConsoleFieldLabel
-                          info="Turn on iframe rendering for this calendar's event checkout entry pages."
-                          label="Enable embedding"
-                        />
+                    <div className="embed-settings-top-grid">
+                      <label className="console-checkbox embed-toggle-card">
                         <input
                           defaultChecked={calendar.embed_enabled}
                           name="embed_enabled"
                           type="checkbox"
                         />
+                        <span className="embed-toggle-card-copy">
+                          <strong>Enable embedding</strong>
+                          <small>
+                            Turn on iframe rendering for this calendar&apos;s event checkout entry pages.
+                          </small>
+                        </span>
                       </label>
-                      <label className="console-field">
+
+                      <label className="console-checkbox embed-toggle-card">
+                        <input
+                          defaultChecked={calendar.embed_show_branding}
+                          name="embed_show_branding"
+                          type="checkbox"
+                        />
+                        <span className="embed-toggle-card-copy">
+                          <strong>Show branding</strong>
+                          <small>
+                            Keep the compact ZecTix/organizer branding header visible inside the iframe.
+                          </small>
+                        </span>
+                      </label>
+
+                      <label className="console-field embed-settings-height-card">
                         <ConsoleFieldLabel
                           info="Recommended iframe height in pixels for generated snippets. Hosts can still override this."
                           label="Default iframe height"
@@ -212,34 +229,36 @@ export function TenantEmbedWorkspace({
                           type="number"
                         />
                       </label>
-                      <label className="console-field">
-                        <ConsoleFieldLabel
-                          info="Keep the compact ZecTix/organizer branding header visible inside the iframe."
-                          label="Show branding"
-                        />
-                        <input
-                          defaultChecked={calendar.embed_show_branding}
-                          name="embed_show_branding"
-                          type="checkbox"
-                        />
-                      </label>
                     </div>
 
-                    <label className="console-field">
-                      <ConsoleFieldLabel
-                        info="Enter one site origin per line, for example https://events.example.com. Only these origins can host the iframe."
-                        label="Allowed origins"
-                      />
+                    <section className="embed-settings-section">
+                      <div className="embed-settings-section-head">
+                        <h4>Allowed origins</h4>
+                        <p className="subtle-text">
+                          Enter one site origin per line, for example
+                          {" "}
+                          <code>https://events.example.com</code>
+                          . Only these origins can host the iframe.
+                        </p>
+                      </div>
                       <textarea
-                        className="console-input"
+                        className="console-input embed-settings-textarea"
                         defaultValue={calendar.embed_allowed_origins.join("\n")}
                         name="embed_allowed_origins"
                         rows={4}
                       />
-                    </label>
+                    </section>
 
-                    <div className="public-field-grid">
-                      <label className="console-field">
+                    <section className="embed-settings-section">
+                      <div className="embed-settings-section-head">
+                        <h4>Appearance overrides</h4>
+                        <p className="subtle-text">
+                          Optional tweaks for accent, shell colors, and corner radius inside the iframe.
+                        </p>
+                      </div>
+
+                      <div className="public-field-grid embed-theme-grid">
+                        <label className="console-field">
                         <ConsoleFieldLabel
                           info="Optional accent color override for embedded buttons and highlights."
                           label="Accent color"
@@ -252,8 +271,8 @@ export function TenantEmbedWorkspace({
                           placeholder="#d4920a"
                           type="text"
                         />
-                      </label>
-                      <label className="console-field">
+                        </label>
+                        <label className="console-field">
                         <ConsoleFieldLabel
                           info="Optional page background color for the embedded shell."
                           label="Background color"
@@ -266,8 +285,8 @@ export function TenantEmbedWorkspace({
                           placeholder="#fafaf9"
                           type="text"
                         />
-                      </label>
-                      <label className="console-field">
+                        </label>
+                        <label className="console-field">
                         <ConsoleFieldLabel
                           info="Optional card surface color for the embedded shell."
                           label="Surface color"
@@ -280,8 +299,8 @@ export function TenantEmbedWorkspace({
                           placeholder="#ffffff"
                           type="text"
                         />
-                      </label>
-                      <label className="console-field">
+                        </label>
+                        <label className="console-field">
                         <ConsoleFieldLabel
                           info="Optional high-contrast text color override for the embed shell."
                           label="Text color"
@@ -294,8 +313,8 @@ export function TenantEmbedWorkspace({
                           placeholder="#131b2d"
                           type="text"
                         />
-                      </label>
-                      <label className="console-field">
+                        </label>
+                        <label className="console-field">
                         <ConsoleFieldLabel
                           info="Optional border radius for embedded cards, in pixels."
                           label="Corner radius"
@@ -308,12 +327,15 @@ export function TenantEmbedWorkspace({
                           placeholder="22"
                           type="number"
                         />
-                      </label>
-                    </div>
+                        </label>
+                      </div>
+                    </section>
 
-                    <button className="button button-secondary button-small" type="submit">
-                      Save embed settings
-                    </button>
+                    <div className="button-row">
+                      <button className="button button-secondary button-small" type="submit">
+                        Save embed settings
+                      </button>
+                    </div>
                   </form>
 
                   <div className="console-inline-action">
