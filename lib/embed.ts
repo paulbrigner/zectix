@@ -311,11 +311,6 @@ export function resolveEmbedParentOrigin(input: {
     return tokenOrigin;
   }
 
-  const hintedOrigin = normalizeOrigin(input.parentOriginHint || null);
-  if (hintedOrigin && normalizedAllowedOrigins.includes(hintedOrigin)) {
-    return hintedOrigin;
-  }
-
   const refererOrigin = normalizeOrigin(input.requestHeaders.get("referer"));
   if (refererOrigin && normalizedAllowedOrigins.includes(refererOrigin)) {
     return refererOrigin;

@@ -74,6 +74,29 @@ describe("embed helpers", () => {
     ).toBe("https://events.example.com");
   });
 
+  it("does not trust an unsigned parent-origin hint by itself", () => {
+    expect(
+      resolveEmbedParentOrigin({
+        calendarConnectionId: "calendar_123",
+        allowedOrigins: ["https://events.example.com"],
+        requestHeaders: new Headers(),
+        parentOriginHint: "https://events.example.com",
+      }),
+    ).toBeNull();
+  });
+
+  it("resolves embed parent origin from an allowed referer", () => {
+    expect(
+      resolveEmbedParentOrigin({
+        calendarConnectionId: "calendar_123",
+        allowedOrigins: ["https://events.example.com"],
+        requestHeaders: new Headers({
+          referer: "https://events.example.com/embed/calendar",
+        }),
+      }),
+    ).toBe("https://events.example.com");
+  });
+
   it("maps embed theme overrides into CSS variables", () => {
     const style = buildEmbedThemeStyle({
       accent_color: "#f7931a",
