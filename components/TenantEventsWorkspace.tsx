@@ -379,6 +379,34 @@ export function TenantEventsWorkspace({
 
   return (
     <div className="console-page-body">
+      {onboardingCompletionNotice ? (
+        <section className="console-section tenant-onboarding-complete-banner" role="status">
+          <div className="console-section-header">
+            <div>
+              <p className="console-kpi-label">Onboarding complete</p>
+              <h3>Congratulations, your first public checkout is live.</h3>
+              <p className="subtle-text">
+                Every organizer setup step is complete and public checkout is
+                now active for your published event.
+              </p>
+            </div>
+            {onboardingCompletionNotice.eventHref ? (
+              <Link
+                className="button button-small"
+                href={onboardingCompletionNotice.eventHref}
+              >
+                Open public event
+              </Link>
+            ) : null}
+          </div>
+          {onboardingCompletionNotice.eventName ? (
+            <p className="subtle-text">
+              Public event: {onboardingCompletionNotice.eventName}
+            </p>
+          ) : null}
+        </section>
+      ) : null}
+
       <section className="console-section">
         <div className="console-section-header">
           <div>
@@ -424,34 +452,6 @@ export function TenantEventsWorkspace({
           </article>
         </div>
       </section>
-
-      {onboardingCompletionNotice ? (
-        <section className="console-section tenant-onboarding-complete-banner" role="status">
-          <div className="console-section-header">
-            <div>
-              <p className="console-kpi-label">Onboarding complete</p>
-              <h3>Congratulations, your first public checkout is live.</h3>
-              <p className="subtle-text">
-                Every organizer setup step is complete and public checkout is
-                now active for your published event.
-              </p>
-            </div>
-            {onboardingCompletionNotice.eventHref ? (
-              <Link
-                className="button button-small"
-                href={onboardingCompletionNotice.eventHref}
-              >
-                Open public event
-              </Link>
-            ) : null}
-          </div>
-          {onboardingCompletionNotice.eventName ? (
-            <p className="subtle-text">
-              Public event: {onboardingCompletionNotice.eventName}
-            </p>
-          ) : null}
-        </section>
-      ) : null}
 
       {syncNotice ? (
         <section

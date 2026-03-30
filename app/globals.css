@@ -378,6 +378,12 @@ select {
       rgba(248, 250, 252, 0.96)
     );
   box-shadow: inset 0 0 0 1px rgba(251, 191, 36, 0.12);
+  cursor: progress;
+}
+
+.console-switch-field-pending,
+.console-switch-field-pending * {
+  cursor: progress;
 }
 
 .console-switch-copy {
@@ -428,6 +434,7 @@ select {
   box-shadow:
     0 0 0 3px rgba(251, 191, 36, 0.18),
     0 10px 22px rgba(245, 158, 11, 0.18);
+  cursor: progress;
 }
 
 .console-switch-root:focus-visible {
@@ -438,6 +445,10 @@ select {
 .console-switch-root:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.console-switch-root[data-pending="true"]:disabled {
+  cursor: progress;
 }
 
 .console-switch-thumb {
