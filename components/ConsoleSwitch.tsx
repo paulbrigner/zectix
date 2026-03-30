@@ -26,7 +26,9 @@ export function ConsoleSwitch({
   const labelId = useId();
   const descriptionId = useId();
   const switchRef = useRef<HTMLButtonElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const { pending } = useFormStatus();
+  const [checked, setChecked] = useState(defaultChecked);
   const [localPending, setLocalPending] = useState(false);
   const showPending = pending || localPending;
   const isDisabled = disabled || showPending;
@@ -36,6 +38,10 @@ export function ConsoleSwitch({
       setLocalPending(false);
     }
   }, [pending]);
+
+  useEffect(() => {
+    setChecked(defaultChecked);
+  }, [defaultChecked]);
 
   return (
     <div
@@ -86,16 +92,26 @@ export function ConsoleSwitch({
           </p>
         ) : null}
       </div>
+      <input
+        name={name}
+        ref={inputRef}
+        type="hidden"
+        value={checked ? "1" : "0"}
+      />
       <Switch.Root
         aria-describedby={description ? descriptionId : undefined}
         aria-labelledby={labelId}
         aria-busy={showPending || undefined}
+        checked={checked}
         className="console-switch-root"
         data-pending={showPending ? "true" : "false"}
-        defaultChecked={defaultChecked}
         disabled={isDisabled}
-        name={name}
-        onCheckedChange={() => {
+        onCheckedChange={(nextChecked) => {
+          setChecked(nextChecked);
+          if (inputRef.current) {
+            inputRef.current.value = nextChecked ? "1" : "0";
+          }
+
           if (!submitOnChange) {
             return;
           }
