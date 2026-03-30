@@ -358,10 +358,14 @@ export function buildTenantEventWorkspaceRows(
       )
       .sort((left, right) => new Date(left.start_at).getTime() - new Date(right.start_at).getTime());
 
-    const mirroredRows = mirroredEvents.map((event) => {
+    const mirroredRows: TenantEventWorkspaceRow[] = mirroredEvents.map((event) => {
       const tickets = detail.tickets_by_event.get(event.event_api_id) || [];
       const enabledTicketCount = tickets.filter((ticket) => ticket.zcash_enabled).length;
       const needsAttentionCount = tickets.filter(ticketNeedsAttention).length;
+      const publicStatusLabel = event.zcash_enabled ? "Live" : "Hidden";
+      const publicStatusTone: TenantEventWorkspaceTone = event.zcash_enabled
+        ? "success"
+        : "muted";
       return {
         calendar,
         cover_url: event.cover_url,
@@ -379,8 +383,8 @@ export function buildTenantEventWorkspaceRows(
           enabledTicketCount,
           needsAttentionCount,
         ),
-        public_status_label: event.zcash_enabled ? "Live" : "Hidden",
-        public_status_tone: event.zcash_enabled ? "success" : "muted",
+        public_status_label: publicStatusLabel,
+        public_status_tone: publicStatusTone,
         row_id: buildEventWorkspaceRowId(
           "mirrored",
           calendar.calendar_connection_id,
@@ -397,7 +401,7 @@ export function buildTenantEventWorkspaceRows(
       };
     });
 
-    const upstreamRows = upstreamEvents.map((event) => ({
+    const upstreamRows: TenantEventWorkspaceRow[] = upstreamEvents.map((event) => ({
       calendar,
       cover_url: event.cover_url,
       enabled_ticket_count: 0,
