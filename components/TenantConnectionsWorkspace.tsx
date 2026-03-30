@@ -111,10 +111,13 @@ export function TenantConnectionsWorkspace({
           </article>
         </div>
 
-        <article className="console-detail-card tenant-checklist-card">
+        <ConsoleDisclosure
+          className="tenant-checklist-card"
+          description={`${completedSteps}/${onboardingChecklist.length} setup steps are complete. Open the checklist when you want the full sequence.`}
+          title="Setup checklist"
+        >
           <div className="console-section-header">
             <div>
-              <p className="console-kpi-label">Setup checklist</p>
               <h3>What still needs attention</h3>
             </div>
             <div className="button-row">
@@ -140,7 +143,7 @@ export function TenantConnectionsWorkspace({
               </li>
             ))}
           </ol>
-        </article>
+        </ConsoleDisclosure>
       </section>
 
       <section className="console-section">

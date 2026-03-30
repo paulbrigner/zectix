@@ -43,7 +43,7 @@ export default async function TenantScopedLayout({
             <p className="eyebrow">Organization</p>
             <h2>{tenant.name}</h2>
             <p className="subtle-text">
-              A calmer workspace for checkout setup, event readiness, billing, and embeds.
+              One place for checkout setup, event readiness, billing, and embeds.
             </p>
           </div>
           <div className="console-mini-pill-row tenant-workspace-meta">
