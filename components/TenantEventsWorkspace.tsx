@@ -190,7 +190,7 @@ function ticketReviewLabel(ticket: TicketMirror) {
   if (ticket.automatic_eligibility_reasons.length) {
     return "Needs attention";
   }
-  return "Needs confirmation";
+  return "Needs refresh";
 }
 
 function ticketReviewCopy(ticket: TicketMirror) {
@@ -204,7 +204,7 @@ function ticketReviewCopy(ticket: TicketMirror) {
   if (ticket.zcash_enabled) {
     return "This ticket is already available for managed public checkout.";
   }
-  return "Automatic review passed. Confirm the organizer-side requirements below to enable checkout.";
+  return "Automatic review passed. Toggle public checkout once to apply the current organizer defaults.";
 }
 
 function rowSearchText(row: TenantEventWorkspaceRow) {
@@ -1002,67 +1002,46 @@ export function TenantEventsWorkspace({
                     <div>
                       <h2>Ticket review</h2>
                       <p className="subtle-text">
-                        Confirm organizer-side requirements for each mirrored
-                        ticket tier.
+                        Choose which mirrored tickets should appear on public
+                        checkout. Your signup disclosures already cover the
+                        supported checkout restrictions.
                       </p>
                     </div>
                   </div>
 
-                  <div className="console-card-grid console-ticket-review-grid">
+                  <ConsoleTable
+                    className="tenant-ticket-review-table-wrap"
+                    tableClassName="tenant-ticket-review-table"
+                  >
+                    <ConsoleTableHead>
+                      <ConsoleTableRow>
+                        <ConsoleTableHeader>Ticket</ConsoleTableHeader>
+                        <ConsoleTableHeader>Price</ConsoleTableHeader>
+                        <ConsoleTableHeader>Status</ConsoleTableHeader>
+                        <ConsoleTableHeader>Public checkout</ConsoleTableHeader>
+                      </ConsoleTableRow>
+                    </ConsoleTableHead>
+                    <ConsoleTableBody>
                     {selectedRow.tickets.map((ticket) => (
-                      <form
-                        action={setTicketAssertionsAction}
-                        className="console-detail-card console-ticket-review-card tenant-ticket-review-form"
-                        key={ticket.ticket_type_api_id}
-                      >
-                        <input
-                          name="tenant_slug"
-                          type="hidden"
-                          value={detail.tenant.slug}
-                        />
-                        <input
-                          name="calendar_connection_id"
-                          type="hidden"
-                          value={selectedRow.calendar.calendar_connection_id}
-                        />
-                        <input
-                          name="event_api_id"
-                          type="hidden"
-                          value={ticket.event_api_id}
-                        />
-                        <input
-                          name="ticket_type_api_id"
-                          type="hidden"
-                          value={ticket.ticket_type_api_id}
-                        />
-                        <input
-                          name="redirect_to"
-                          type="hidden"
-                          value={selectedHref}
-                        />
-                        <input
-                          name="public_checkout_requested_present"
-                          type="hidden"
-                          value="1"
-                        />
-
-                        <div className="console-ticket-review-head">
-                          <div className="console-ticket-review-topline">
-                            <div className="console-table-cell-stack">
-                              <strong className="console-ticket-review-title">
-                                {ticket.name}
-                              </strong>
-                              {ticket.description ? (
-                                <p className="subtle-text console-table-note">
-                                  {ticket.description}
-                                </p>
-                              ) : null}
-                            </div>
-                            <strong className="console-ticket-review-price">
-                              {formatFiatAmount(ticket.amount, ticket.currency)}
+                      <ConsoleTableRow key={ticket.ticket_type_api_id}>
+                        <ConsoleTableCell>
+                          <div className="console-table-cell-stack">
+                            <strong className="console-ticket-review-title">
+                              {ticket.name}
                             </strong>
+                            {ticket.description ? (
+                              <p className="subtle-text console-table-note">
+                                {ticket.description}
+                              </p>
+                            ) : null}
                           </div>
-
+                        </ConsoleTableCell>
+                        <ConsoleTableCell className="tenant-events-time">
+                          <strong className="console-ticket-review-price">
+                            {formatFiatAmount(ticket.amount, ticket.currency)}
+                          </strong>
+                        </ConsoleTableCell>
+                        <ConsoleTableCell>
                           <div className="console-mini-pill-row console-ticket-review-pills">
                             <span
                               className={pillClassName(
@@ -1072,63 +1051,60 @@ export function TenantEventsWorkspace({
                               {ticketReviewLabel(ticket)}
                             </span>
                           </div>
-
-                          <div className="console-ticket-review-summary">
-                            <p className="subtle-text">
-                              {ticketReviewCopy(ticket)}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="tenant-ticket-review-checks">
-                          <ConsoleSwitch
-                            className="tenant-ticket-review-check"
-                            defaultChecked={ticket.public_checkout_requested}
-                            description="Turn this off to keep the ticket hidden even if the review assertions are complete."
-                            label="Allow this ticket on public checkout"
-                            name="public_checkout_requested"
-                          />
-                          <label className="console-checkbox tenant-ticket-review-check">
-                            <input
-                              defaultChecked={ticket.confirmed_fixed_price}
-                              name="confirmed_fixed_price"
-                              type="checkbox"
-                            />
-                            <span>Fixed price confirmed</span>
-                          </label>
-                          <label className="console-checkbox tenant-ticket-review-check">
-                            <input
-                              defaultChecked={
-                                ticket.confirmed_no_approval_required
-                              }
-                              name="confirmed_no_approval_required"
-                              type="checkbox"
-                            />
-                            <span>No approval required</span>
-                          </label>
-                          <label className="console-checkbox tenant-ticket-review-check">
-                            <input
-                              defaultChecked={
-                                ticket.confirmed_no_extra_required_questions
-                              }
-                              name="confirmed_no_extra_required_questions"
-                              type="checkbox"
-                            />
-                            <span>No extra required questions</span>
-                          </label>
-                        </div>
-
-                        <div className="console-ticket-review-actions">
-                          <button
-                            className="button button-secondary button-small"
-                            type="submit"
+                          <p className="subtle-text console-table-note">
+                            {ticketReviewCopy(ticket)}
+                          </p>
+                        </ConsoleTableCell>
+                        <ConsoleTableCell className="tenant-ticket-review-control">
+                          <form
+                            action={setTicketAssertionsAction}
+                            className="tenant-ticket-review-inline-form"
                           >
-                            Save ticket review
-                          </button>
-                        </div>
-                      </form>
+                            <input
+                              name="tenant_slug"
+                              type="hidden"
+                              value={detail.tenant.slug}
+                            />
+                            <input
+                              name="calendar_connection_id"
+                              type="hidden"
+                              value={selectedRow.calendar.calendar_connection_id}
+                            />
+                            <input
+                              name="event_api_id"
+                              type="hidden"
+                              value={ticket.event_api_id}
+                            />
+                            <input
+                              name="ticket_type_api_id"
+                              type="hidden"
+                              value={ticket.ticket_type_api_id}
+                            />
+                            <input
+                              name="redirect_to"
+                              type="hidden"
+                              value={selectedHref}
+                            />
+                            <input
+                              name="public_checkout_requested_present"
+                              type="hidden"
+                              value="1"
+                            />
+
+                            <ConsoleSwitch
+                              className="tenant-ticket-review-check tenant-ticket-review-inline-switch"
+                              defaultChecked={ticket.public_checkout_requested}
+                              description="Saves immediately."
+                              label="Allow this ticket"
+                              name="public_checkout_requested"
+                              submitOnChange
+                            />
+                          </form>
+                        </ConsoleTableCell>
+                      </ConsoleTableRow>
                     ))}
-                  </div>
+                    </ConsoleTableBody>
+                  </ConsoleTable>
                 </section>
               ) : (
                 <div className="console-preview-empty">

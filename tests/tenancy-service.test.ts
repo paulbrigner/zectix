@@ -95,6 +95,7 @@ const {
   getTenantSelfServeDetailBySlug,
   listSelfServeTenantsForEmail,
   setEventPublicCheckoutRequested,
+  setTenantStatus,
   setTicketOperatorAssertions,
   syncCalendarEventForOps,
   updateCalendarEmbedSettings,
@@ -239,6 +240,48 @@ describe("createCalendarConnection", () => {
     expect(result.luma_webhook_id).toBeNull();
     expect(result.luma_webhook_secret_ref).toBeNull();
     expect(result.luma_webhook_token_ref).toBeNull();
+  });
+});
+
+describe("setTenantStatus", () => {
+  it("marks onboarding completed when organizer public checkout is activated", async () => {
+    const tenant = makeTenant({
+      status: "draft",
+      onboarding_source: "self_serve",
+      onboarding_status: "in_progress",
+      onboarding_completed_at: null,
+    });
+
+    mockGetTenant
+      .mockResolvedValueOnce(tenant)
+      .mockResolvedValueOnce({
+        ...tenant,
+        status: "active",
+        updated_at: "2026-03-30T13:00:00.000Z",
+      });
+
+    const result = await setTenantStatus(tenant.tenant_id, "active");
+
+    expect(mockPutTenant).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenant_id: tenant.tenant_id,
+        status: "active",
+      }),
+    );
+    expect(mockPutTenant).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        tenant_id: tenant.tenant_id,
+        status: "active",
+        onboarding_status: "completed",
+      }),
+    );
+    expect(result).toEqual(
+      expect.objectContaining({
+        tenant_id: tenant.tenant_id,
+        status: "active",
+        onboarding_status: "completed",
+      }),
+    );
   });
 });
 

@@ -25,9 +25,8 @@ function overviewDestination(label: string) {
     case "Validate and sync Luma":
     case "Attach a CipherPay account":
     case "Validate CipherPay":
-      return "connections" as const;
     case "Activate public checkout":
-      return "events" as const;
+      return "connections" as const;
     default:
       return "connections" as const;
   }

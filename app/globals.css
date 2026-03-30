@@ -668,6 +668,20 @@ select {
   color: #166534;
 }
 
+.tenant-checklist-action {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.05rem 0;
+  border-top: 1px solid rgba(17, 24, 39, 0.08);
+}
+
+.tenant-checklist-action p {
+  margin: 0.35rem 0 0;
+}
+
 .tenant-events-workspace {
   display: grid;
   grid-template-columns: 1fr;
@@ -801,6 +815,18 @@ select {
   gap: 0.85rem;
 }
 
+.tenant-ticket-review-table-wrap {
+  min-width: 0;
+}
+
+.tenant-ticket-review-table {
+  min-width: 0;
+}
+
+.tenant-ticket-review-inline-form {
+  min-width: 15rem;
+}
+
 .tenant-ticket-review-checks {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -809,6 +835,22 @@ select {
 
 .tenant-ticket-review-check {
   padding: 0.65rem 0.75rem;
+}
+
+.tenant-ticket-review-inline-switch {
+  min-width: 0;
+}
+
+.tenant-ticket-review-inline-switch .console-switch-copy {
+  gap: 0.18rem;
+}
+
+.tenant-ticket-review-inline-switch .console-switch-label {
+  font-size: 0.96rem;
+}
+
+.tenant-ticket-review-inline-switch .console-switch-description {
+  font-size: 0.84rem;
 }
 
 .console-ticket-review-grid,

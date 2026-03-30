@@ -12,11 +12,14 @@ import {
   parseSupportRequestSubmission,
   sendSupportRequestEmail,
 } from "@/lib/support-request";
+import { buildOnboardingChecklist } from "@/lib/tenant-self-serve";
 import {
+  getTenantSelfServeDetailBySlug,
   createCalendarConnection,
   createCipherPayConnection,
   disableCalendarConnection,
   listSelfServeTenantsForEmail,
+  setTenantStatus,
   setEventPublicCheckoutRequested,
   setTicketOperatorAssertions,
   syncCalendarEventForOps,
@@ -155,6 +158,26 @@ export async function disableCalendarConnectionAction(formData: FormData) {
   redirectTo(formData, `/dashboard/${encodeURIComponent(tenant.slug)}/connections`);
 }
 
+export async function activatePublicCheckoutAction(formData: FormData) {
+  const tenantSlug = String(formData.get("tenant_slug") || "");
+  const sessionEmail = await requireTenantPageAccess();
+  const tenant = await requireTenantSlugAccess(tenantSlug);
+  const detail = await getTenantSelfServeDetailBySlug(tenant.slug, sessionEmail);
+  if (!detail) {
+    redirect("/dashboard");
+  }
+
+  const prerequisitesReady = buildOnboardingChecklist(detail)
+    .slice(0, -1)
+    .every((item) => item.complete);
+
+  if (prerequisitesReady && detail.tenant.status !== "active") {
+    await setTenantStatus(tenant.tenant_id, "active");
+  }
+
+  redirectTo(formData, `/dashboard/${encodeURIComponent(tenant.slug)}/connections`);
+}
+
 export async function createCipherPayConnectionAction(formData: FormData) {
   const tenantSlug = String(formData.get("tenant_slug") || "");
   const tenant = await requireTenantSlugAccess(tenantSlug);
@@ -252,13 +275,9 @@ export async function setTicketAssertionsAction(formData: FormData) {
   await setTicketOperatorAssertions({
     event_api_id: String(formData.get("event_api_id") || ""),
     ticket_type_api_id: String(formData.get("ticket_type_api_id") || ""),
-    confirmed_fixed_price: asBoolean(formData.get("confirmed_fixed_price")),
-    confirmed_no_approval_required: asBoolean(
-      formData.get("confirmed_no_approval_required"),
-    ),
-    confirmed_no_extra_required_questions: asBoolean(
-      formData.get("confirmed_no_extra_required_questions"),
-    ),
+    confirmed_fixed_price: true,
+    confirmed_no_approval_required: true,
+    confirmed_no_extra_required_questions: true,
     public_checkout_requested:
       formData.get("public_checkout_requested_present") != null
         ? asBoolean(formData.get("public_checkout_requested"))
