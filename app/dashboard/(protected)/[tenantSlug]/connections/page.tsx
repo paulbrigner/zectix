@@ -1,12 +1,12 @@
 import { notFound } from "next/navigation";
-import { TenantOverviewWorkspace } from "@/components/TenantOverviewWorkspace";
+import { TenantConnectionsWorkspace } from "@/components/TenantConnectionsWorkspace";
 import { requireTenantPageAccess } from "@/lib/tenant-auth-server";
 import { getTenantSelfServeDetailBySlug } from "@/lib/tenancy/service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export default async function TenantOverviewPage({
+export default async function TenantConnectionsPage({
   params,
 }: {
   params: Promise<{ tenantSlug: string }>;
@@ -19,7 +19,7 @@ export default async function TenantOverviewPage({
   }
 
   return (
-    <TenantOverviewWorkspace
+    <TenantConnectionsWorkspace
       detail={detail}
       tenantBasePath={`/dashboard/${encodeURIComponent(detail.tenant.slug)}`}
     />

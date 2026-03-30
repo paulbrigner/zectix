@@ -72,7 +72,7 @@ export async function createCalendarConnectionAction(formData: FormData) {
     luma_api_key: String(formData.get("luma_api_key") || ""),
   });
 
-  redirectTo(formData, `/dashboard/${encodeURIComponent(tenant.slug)}/settings`);
+  redirectTo(formData, `/dashboard/${encodeURIComponent(tenant.slug)}/connections`);
 }
 
 export async function validateAndSyncCalendarAction(formData: FormData) {
@@ -81,7 +81,7 @@ export async function validateAndSyncCalendarAction(formData: FormData) {
   const calendarConnectionId = String(formData.get("calendar_connection_id") || "");
   await requireCalendarTenantAccess(tenant.tenant_id, calendarConnectionId);
   await validateAndSyncCalendar(calendarConnectionId);
-  redirectTo(formData, `/dashboard/${encodeURIComponent(tenant.slug)}/settings`);
+  redirectTo(formData, `/dashboard/${encodeURIComponent(tenant.slug)}/connections`);
 }
 
 export async function syncCalendarEventAction(formData: FormData) {
@@ -137,7 +137,7 @@ export async function updateCalendarConnectionLumaKeyAction(formData: FormData) 
     calendarConnectionId,
     String(formData.get("luma_api_key") || ""),
   );
-  redirectTo(formData, `/dashboard/${encodeURIComponent(tenant.slug)}/settings`);
+  redirectTo(formData, `/dashboard/${encodeURIComponent(tenant.slug)}/connections`);
 }
 
 export async function disableCalendarConnectionAction(formData: FormData) {
@@ -146,7 +146,7 @@ export async function disableCalendarConnectionAction(formData: FormData) {
   const calendarConnectionId = String(formData.get("calendar_connection_id") || "");
   await requireCalendarTenantAccess(tenant.tenant_id, calendarConnectionId);
   await disableCalendarConnection(calendarConnectionId);
-  redirectTo(formData, `/dashboard/${encodeURIComponent(tenant.slug)}/settings`);
+  redirectTo(formData, `/dashboard/${encodeURIComponent(tenant.slug)}/connections`);
 }
 
 export async function createCipherPayConnectionAction(formData: FormData) {
@@ -164,7 +164,7 @@ export async function createCipherPayConnectionAction(formData: FormData) {
     cipherpay_webhook_secret: String(formData.get("cipherpay_webhook_secret") || ""),
   });
 
-  redirectTo(formData, `/dashboard/${encodeURIComponent(tenant.slug)}/settings`);
+  redirectTo(formData, `/dashboard/${encodeURIComponent(tenant.slug)}/connections`);
 }
 
 export async function validateCipherPayConnectionAction(formData: FormData) {
@@ -173,7 +173,7 @@ export async function validateCipherPayConnectionAction(formData: FormData) {
   const cipherpayConnectionId = String(formData.get("cipherpay_connection_id") || "");
   await requireCipherPayTenantAccess(tenant.tenant_id, cipherpayConnectionId);
   await validateCipherPayConnection(cipherpayConnectionId);
-  redirectTo(formData, `/dashboard/${encodeURIComponent(tenant.slug)}/settings`);
+  redirectTo(formData, `/dashboard/${encodeURIComponent(tenant.slug)}/connections`);
 }
 
 export async function updateCalendarEmbedSettingsAction(formData: FormData) {
@@ -195,7 +195,7 @@ export async function updateCalendarEmbedSettingsAction(formData: FormData) {
       radius_px: asString(formData.get("embed_radius_px")),
     },
   });
-  redirectTo(formData, `/dashboard/${encodeURIComponent(tenant.slug)}/settings`);
+  redirectTo(formData, `/dashboard/${encodeURIComponent(tenant.slug)}/embed`);
 }
 
 export async function setTicketAssertionsAction(formData: FormData) {
