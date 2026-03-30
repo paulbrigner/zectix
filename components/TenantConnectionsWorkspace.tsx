@@ -20,7 +20,6 @@ import type { TenantOpsDetail } from "@/lib/tenancy/service";
 import {
   buildOnboardingChecklist,
   calendarConnectionHealthLabel,
-  humanizeOnboardingStatus,
   summarizeCalendarInventory,
 } from "@/lib/tenant-self-serve";
 
@@ -115,55 +114,6 @@ export function TenantConnectionsWorkspace({
               setup and connectivity, not day-to-day event review.
             </p>
           </div>
-        </div>
-
-        <div className="console-kpi-grid">
-          <article className="console-kpi-card">
-            <p className="console-kpi-label">Onboarding progress</p>
-            <p className="console-kpi-value">
-              {completedSteps}/{onboardingChecklist.length}
-            </p>
-            <p className="subtle-text console-kpi-detail">
-              {humanizeOnboardingStatus(detail.tenant.onboarding_status)}
-            </p>
-          </article>
-          <article className="console-kpi-card">
-            <p className="console-kpi-label">Calendars</p>
-            <p className="console-kpi-value">{detail.calendars.length}</p>
-            <p className="subtle-text console-kpi-detail">
-              {
-                detail.calendars.filter(
-                  (calendar) => calendar.last_validated_at,
-                ).length
-              }{" "}
-              validated
-            </p>
-          </article>
-          <article className="console-kpi-card">
-            <p className="console-kpi-label">CipherPay</p>
-            <p className="console-kpi-value">
-              {currentCipherPayConnections.length}
-            </p>
-            <p className="subtle-text console-kpi-detail">
-              live checkout connection
-              {currentCipherPayConnections.length === 1 ? "" : "s"}
-            </p>
-          </article>
-          <article className="console-kpi-card">
-            <p className="console-kpi-label">Embed-ready calendars</p>
-            <p className="console-kpi-value">
-              {
-                detail.calendars.filter(
-                  (calendar) =>
-                    calendar.embed_enabled &&
-                    calendar.embed_allowed_origins.length > 0,
-                ).length
-              }
-            </p>
-            <p className="subtle-text console-kpi-detail">
-              Continue in the Embed workspace once checkout is live
-            </p>
-          </article>
         </div>
 
         <ConsoleDisclosure

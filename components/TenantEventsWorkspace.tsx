@@ -355,18 +355,6 @@ export function TenantEventsWorkspace({
     filters,
     selectedRow?.row_id || null,
   );
-  const mirroredEventCount = rows.filter(
-    (row) => row.source === "mirrored",
-  ).length;
-  const liveEventCount = rows.filter(
-    (row) => row.public_status_label === "Live",
-  ).length;
-  const needsAttentionCount = rows.filter((row) =>
-    matchesTenantEventWorkspaceFilter(row, "needs_attention"),
-  ).length;
-  const importCandidateCount = rows.filter(
-    (row) => row.source === "upstream",
-  ).length;
   const feedIssues = detail.calendars
     .map((calendar) => ({
       calendar,
@@ -417,39 +405,6 @@ export function TenantEventsWorkspace({
               place.
             </p>
           </div>
-        </div>
-
-        <div className="console-kpi-grid">
-          <article className="console-kpi-card">
-            <p className="console-kpi-label">Mirrored events</p>
-            <p className="console-kpi-value">{mirroredEventCount}</p>
-            <p className="subtle-text console-kpi-detail">
-              future event{mirroredEventCount === 1 ? "" : "s"} already in the
-              workspace
-            </p>
-          </article>
-          <article className="console-kpi-card">
-            <p className="console-kpi-label">Public checkout live</p>
-            <p className="console-kpi-value">{liveEventCount}</p>
-            <p className="subtle-text console-kpi-detail">
-              event{liveEventCount === 1 ? "" : "s"} currently visible publicly
-            </p>
-          </article>
-          <article className="console-kpi-card">
-            <p className="console-kpi-label">Needs attention</p>
-            <p className="console-kpi-value">{needsAttentionCount}</p>
-            <p className="subtle-text console-kpi-detail">
-              event{needsAttentionCount === 1 ? "" : "s"} worth reviewing next
-            </p>
-          </article>
-          <article className="console-kpi-card">
-            <p className="console-kpi-label">Import candidates</p>
-            <p className="console-kpi-value">{importCandidateCount}</p>
-            <p className="subtle-text console-kpi-detail">
-              upstream Luma event{importCandidateCount === 1 ? "" : "s"} not yet
-              mirrored
-            </p>
-          </article>
         </div>
       </section>
 

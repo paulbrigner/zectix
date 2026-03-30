@@ -358,6 +358,7 @@ select {
 }
 
 .console-switch-field {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 1rem;
@@ -381,12 +382,23 @@ select {
   cursor: progress;
 }
 
+.console-switch-field-pending::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+  cursor: progress;
+}
+
 .console-switch-field-pending,
 .console-switch-field-pending * {
   cursor: progress;
 }
 
 .console-switch-copy {
+  position: relative;
+  z-index: 2;
   min-width: 0;
   display: grid;
   gap: 0.35rem;
@@ -413,6 +425,7 @@ select {
 
 .console-switch-root {
   position: relative;
+  z-index: 2;
   flex: none;
   width: 3rem;
   height: 1.8rem;

@@ -43,6 +43,25 @@ export function ConsoleSwitch({
     setChecked(defaultChecked);
   }, [defaultChecked]);
 
+  useEffect(() => {
+    if (!showPending) {
+      return;
+    }
+
+    const html = document.documentElement;
+    const body = document.body;
+    const previousHtmlCursor = html.style.cursor;
+    const previousBodyCursor = body.style.cursor;
+
+    html.style.cursor = "progress";
+    body.style.cursor = "progress";
+
+    return () => {
+      html.style.cursor = previousHtmlCursor;
+      body.style.cursor = previousBodyCursor;
+    };
+  }, [showPending]);
+
   return (
     <div
       className={
@@ -51,6 +70,7 @@ export function ConsoleSwitch({
           : `console-switch-field${showPending ? " console-switch-field-pending" : ""}`
       }
       data-pending={showPending ? "true" : "false"}
+      style={showPending ? { cursor: "progress" } : undefined}
       onClick={(event) => {
         if (isDisabled) {
           return;
@@ -106,6 +126,7 @@ export function ConsoleSwitch({
         className="console-switch-root"
         data-pending={showPending ? "true" : "false"}
         disabled={isDisabled}
+        style={showPending ? { cursor: "progress" } : undefined}
         onCheckedChange={(nextChecked) => {
           setChecked(nextChecked);
           if (inputRef.current) {
