@@ -265,6 +265,150 @@ select {
   pointer-events: none;
 }
 
+.tenant-workspace-header {
+  gap: 1.25rem;
+}
+
+.tenant-workspace-header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.tenant-workspace-meta {
+  justify-content: flex-end;
+}
+
+.tenant-workspace-nav {
+  margin: 0;
+}
+
+.tenant-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.tenant-overview-card {
+  display: grid;
+  gap: 0.8rem;
+  align-content: start;
+}
+
+.tenant-overview-card h3 {
+  margin: 0;
+  color: var(--color-gray-900);
+  font-size: 1.35rem;
+}
+
+.tenant-overview-card-accent {
+  border-color: var(--accent-border);
+  background:
+    linear-gradient(180deg, rgba(255, 251, 235, 0.98), rgba(255, 255, 255, 0.94));
+}
+
+.tenant-overview-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-top: auto;
+}
+
+.tenant-summary-card {
+  display: grid;
+  gap: 1rem;
+}
+
+.tenant-summary-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.tenant-summary-list {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+}
+
+.tenant-summary-list div {
+  display: grid;
+  gap: 0.18rem;
+}
+
+.tenant-summary-list dt {
+  margin: 0;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-gray-500);
+}
+
+.tenant-summary-list dd {
+  margin: 0;
+  color: var(--color-gray-800);
+  line-height: 1.5;
+}
+
+.tenant-checklist-card {
+  gap: 1rem;
+}
+
+.tenant-checklist {
+  display: grid;
+  gap: 0.85rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tenant-checklist-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.8rem;
+  align-items: flex-start;
+  padding: 0.9rem 1rem;
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  border-radius: 16px;
+  background: rgba(248, 250, 252, 0.72);
+}
+
+.tenant-checklist-item strong {
+  display: block;
+  margin-bottom: 0.2rem;
+  color: var(--color-gray-900);
+}
+
+.tenant-checklist-item p {
+  margin: 0;
+}
+
+.tenant-checklist-item-complete {
+  border-color: rgba(22, 101, 52, 0.12);
+  background: rgba(240, 253, 244, 0.84);
+}
+
+.tenant-checklist-marker {
+  display: grid;
+  place-items: center;
+  width: 1.7rem;
+  height: 1.7rem;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.07);
+  color: var(--color-gray-700);
+  font-size: 0.78rem;
+  font-weight: 800;
+  flex: 0 0 auto;
+}
+
+.tenant-checklist-item-complete .tenant-checklist-marker {
+  background: rgba(22, 101, 52, 0.14);
+  color: #166534;
+}
+
 .console-section {
   display: grid;
   gap: 1rem;
@@ -3285,6 +3429,11 @@ select {
     grid-template-columns: 1fr;
   }
 
+  .tenant-workspace-header-top,
+  .tenant-summary-card-head {
+    flex-direction: column;
+  }
+
   .event-page-media {
     width: 3.25rem;
   }
@@ -3382,6 +3531,7 @@ select {
   }
 
   .feed-header,
+  .tenant-workspace-header-top,
   .checkout-hero-header,
   .checkout-page-header,
   .console-section-header,
@@ -3439,12 +3589,17 @@ select {
   }
 
   .tenant-event-hero,
-  .tenant-ticket-grid {
+  .tenant-ticket-grid,
+  .tenant-checklist-item {
     grid-template-columns: 1fr;
   }
 
   .tenant-event-media {
     min-height: 11rem;
+  }
+
+  .tenant-workspace-meta {
+    justify-content: flex-start;
   }
 
   .console-table {

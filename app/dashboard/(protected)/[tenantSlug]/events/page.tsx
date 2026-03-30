@@ -281,6 +281,34 @@ export default async function TenantEventsPage({
       ({ events, upstreamEvents, upstreamError }) =>
         events.length > 0 || upstreamEvents.length > 0 || Boolean(upstreamError),
     );
+  const mirroredEventCount = eventGroups.reduce((count, group) => count + group.events.length, 0);
+  const importCandidateCount = eventGroups.reduce(
+    (count, group) => count + group.upstreamEvents.length,
+    0,
+  );
+  const liveEventCount = eventGroups.reduce(
+    (count, group) => count + group.events.filter((event) => event.zcash_enabled).length,
+    0,
+  );
+  const ticketsNeedingReview = eventGroups.reduce((count, group) => {
+    return (
+      count +
+      group.events.reduce((eventCount, event) => {
+        const mirroredTickets = detail.tickets_by_event.get(event.event_api_id) || [];
+        return (
+          eventCount +
+          mirroredTickets.filter(
+            (ticket) =>
+              !ticket.zcash_enabled &&
+              (ticket.automatic_eligibility_reasons.length > 0 ||
+                !ticket.confirmed_fixed_price ||
+                !ticket.confirmed_no_approval_required ||
+                !ticket.confirmed_no_extra_required_questions),
+          ).length
+        );
+      }, 0)
+    );
+  }, 0);
 
   const basePath = `/dashboard/${encodeURIComponent(detail.tenant.slug)}`;
 
@@ -290,10 +318,41 @@ export default async function TenantEventsPage({
         <div>
           <h2>Events and tickets</h2>
           <p className="subtle-text">
-            Review upcoming events, refresh one event when something changes, and open ticket
-            settings only when you want to make a checkout decision.
+            Scan what is live, what still needs review, and what is waiting to be imported from
+            Luma.
           </p>
         </div>
+      </div>
+
+      <div className="console-kpi-grid">
+        <article className="console-kpi-card">
+          <p className="console-kpi-label">Mirrored events</p>
+          <p className="console-kpi-value">{mirroredEventCount}</p>
+          <p className="subtle-text console-kpi-detail">
+            future event{mirroredEventCount === 1 ? "" : "s"} in this workspace
+          </p>
+        </article>
+        <article className="console-kpi-card">
+          <p className="console-kpi-label">Public checkout live</p>
+          <p className="console-kpi-value">{liveEventCount}</p>
+          <p className="subtle-text console-kpi-detail">
+            event{liveEventCount === 1 ? "" : "s"} currently visible publicly
+          </p>
+        </article>
+        <article className="console-kpi-card">
+          <p className="console-kpi-label">Ticket review</p>
+          <p className="console-kpi-value">{ticketsNeedingReview}</p>
+          <p className="subtle-text console-kpi-detail">
+            ticket{ticketsNeedingReview === 1 ? "" : "s"} still need organizer confirmation
+          </p>
+        </article>
+        <article className="console-kpi-card">
+          <p className="console-kpi-label">Import candidates</p>
+          <p className="console-kpi-value">{importCandidateCount}</p>
+          <p className="subtle-text console-kpi-detail">
+            upcoming Luma event{importCandidateCount === 1 ? "" : "s"} not yet mirrored
+          </p>
+        </article>
       </div>
 
       {syncNotice ? (
@@ -399,18 +458,11 @@ export default async function TenantEventsPage({
           ) : null}
 
           {upstreamEvents.length ? (
-            <div className="console-detail-card">
-              <div className="console-section-header">
-                <div>
-                  <p className="console-kpi-label">Available from Luma but not yet mirrored</p>
-                  <h3>Available to import</h3>
-                  <p className="subtle-text">
-                    Bring in one event when you are ready to start reviewing its tickets. Public
-                    checkout stays hidden until eligibility review is complete.
-                  </p>
-                </div>
-              </div>
-
+            <ConsoleDisclosure
+              defaultOpen={syncNotice?.focus === "upstream" || events.length === 0}
+              description={`${upstreamEvents.length} upcoming Luma event${upstreamEvents.length === 1 ? "" : "s"} available to import when you are ready.`}
+              title="Available to import"
+            >
               <div className="tenant-event-list">
                 {upstreamEvents.map((event) => (
                   <article className="console-detail-card tenant-event-card" key={event.api_id}>
@@ -489,7 +541,7 @@ export default async function TenantEventsPage({
                   </article>
                 ))}
               </div>
-            </div>
+            </ConsoleDisclosure>
           ) : null}
 
           <div className="tenant-event-list">

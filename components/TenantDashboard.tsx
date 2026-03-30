@@ -97,7 +97,7 @@ export function TenantDashboard({
   const activeCalendars = detail.calendars.filter(
     (calendar) => calendar.status === "active",
   ).length;
-  const settingsHref = isTenantAudience ? `${tenantBasePath}/settings` : tenantBasePath;
+  const settingsHref = isTenantAudience ? `${tenantBasePath}/connections` : tenantBasePath;
   const eventsHref = `${tenantBasePath}/events`;
   const billingHref = isTenantAudience ? `${tenantBasePath}/billing` : "/ops/reports";
 
@@ -118,7 +118,7 @@ export function TenantDashboard({
           </div>
           <div className="button-row">
             <Link className="button button-secondary button-small" href={settingsHref}>
-              {isTenantAudience ? "Settings" : "Tenant settings"}
+              {isTenantAudience ? "Connections" : "Tenant settings"}
             </Link>
             <Link className="button button-secondary button-small" href={billingHref}>
               Billing

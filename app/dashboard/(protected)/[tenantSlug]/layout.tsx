@@ -1,11 +1,23 @@
 import type { ReactNode } from "react";
-import Link from "next/link";
 import { notFound } from "next/navigation";
+import { TenantWorkspaceNav } from "@/components/TenantWorkspaceNav";
 import { getTenantBySlug } from "@/lib/app-state/state";
 import { normalizeEmailAddress } from "@/lib/app-state/utils";
 import { requireTenantPageAccess } from "@/lib/tenant-auth-server";
 
 export const runtime = "nodejs";
+
+function badgeTone(value: "active" | "draft" | "approved" | "started" | "pending_review" | string) {
+  if (value === "active" || value === "approved") {
+    return "success";
+  }
+
+  if (value === "draft" || value === "started") {
+    return "warning";
+  }
+
+  return "muted";
+}
 
 export default async function TenantScopedLayout({
   children,
@@ -25,31 +37,33 @@ export default async function TenantScopedLayout({
 
   return (
     <>
-      <header className="console-section">
-        <div className="console-section-header">
+      <header className="console-section tenant-workspace-header">
+        <div className="tenant-workspace-header-top">
           <div>
             <p className="eyebrow">Organization</p>
             <h2>{tenant.name}</h2>
             <p className="subtle-text">
-              Manage calendar setup, mirrored events, and checkout readiness for your organization.
+              A calmer workspace for checkout setup, event readiness, billing, and embeds.
             </p>
+          </div>
+          <div className="console-mini-pill-row tenant-workspace-meta">
+            <span className={`console-mini-pill console-mini-pill-${badgeTone(tenant.status)}`}>
+              tenant {tenant.status}
+            </span>
+            <span
+              className={`console-mini-pill console-mini-pill-${badgeTone(
+                tenant.onboarding_status,
+              )}`}
+            >
+              onboarding {tenant.onboarding_status.replaceAll("_", " ")}
+            </span>
+            <span className="console-mini-pill console-mini-pill-info">
+              billing {tenant.billing_status}
+            </span>
           </div>
         </div>
 
-        <nav className="console-nav">
-          <Link className="console-nav-link" href={basePath}>
-            Overview
-          </Link>
-          <Link className="console-nav-link" href={`${basePath}/billing`}>
-            Billing
-          </Link>
-          <Link className="console-nav-link" href={`${basePath}/events`}>
-            Events
-          </Link>
-          <Link className="console-nav-link" href={`${basePath}/settings`}>
-            Settings
-          </Link>
-        </nav>
+        <TenantWorkspaceNav basePath={basePath} />
       </header>
 
       {children}
