@@ -85,7 +85,7 @@ export function TenantEmbedWorkspace({
               }
             </p>
             <p className="subtle-text console-kpi-detail">
-              calendars currently keeping the compact header visible
+              calendars currently showing the compact footer
             </p>
           </article>
         </div>
@@ -233,7 +233,7 @@ export function TenantEmbedWorkspace({
                         <ConsoleSwitch
                           className="embed-toggle-card"
                           defaultChecked={calendar.embed_show_branding}
-                          description="Keep the compact ZecTix/organizer branding header visible inside the iframe."
+                          description="Keep the compact ZecTix and CipherPay branding footer visible inside the iframe."
                           label="Show branding"
                           name="embed_show_branding"
                         />

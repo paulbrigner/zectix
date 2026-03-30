@@ -3414,6 +3414,32 @@ select {
   padding-bottom: 0.2rem;
 }
 
+.embed-branding-footer {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+  padding: 0.95rem 1rem 0;
+  border-top: 1px solid rgba(17, 24, 39, 0.08);
+}
+
+.embed-branding-copy {
+  margin: 0;
+  color: var(--color-gray-600);
+  font-size: 0.9rem;
+  line-height: 1.55;
+  text-align: center;
+}
+
+.embed-branding-link {
+  color: var(--accent-text);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.embed-branding-link:hover {
+  text-decoration: underline;
+}
+
 .embed-page-shell .public-section-card,
 .embed-page-shell .public-ticket-card,
 .embed-page-shell .status-card,
@@ -4432,6 +4458,10 @@ select {
   .event-page-actions .button {
     flex: 0 0 auto;
     white-space: nowrap;
+  }
+
+  .embed-branding-footer {
+    padding-inline: 0;
   }
 
   .public-home-copy h1 {

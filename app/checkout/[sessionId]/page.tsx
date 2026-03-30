@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { CSSProperties } from "react";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
+import { EmbedBrandingFooter } from "@/components/EmbedBrandingFooter";
 import { EmbedFrameBridge } from "@/components/EmbedFrameBridge";
 import { CheckoutStatusCard } from "@/components/CheckoutStatusCard";
 import {
@@ -95,7 +96,7 @@ export default async function CheckoutPage({
       <section
         className={`card event-page-card${embedMode ? " embed-page-card" : ""}`}
       >
-        {!embedMode || calendar?.embed_show_branding ? (
+        {!embedMode ? (
           <div
             className={`event-page-topbar${embedMode ? " embed-page-topbar" : ""}`}
           >
@@ -139,6 +140,10 @@ export default async function CheckoutPage({
           initialSession={session}
           viewerToken={t || null}
         />
+
+        {embedMode && calendar?.embed_show_branding ? (
+          <EmbedBrandingFooter />
+        ) : null}
       </section>
     </main>
   );

@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { CSSProperties } from "react";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
+import { EmbedBrandingFooter } from "@/components/EmbedBrandingFooter";
 import { EmbedFrameBridge } from "@/components/EmbedFrameBridge";
 import { EventCheckoutForm } from "@/components/EventCheckoutForm";
 import {
@@ -88,7 +89,7 @@ export default async function PublicEventPage({
       <section
         className={`card event-page-card${embedMode ? " embed-page-card" : ""}`}
       >
-        {!embedMode || data.calendar.embed_show_branding ? (
+        {!embedMode ? (
           <div
             className={`event-page-topbar${embedMode ? " embed-page-topbar" : ""}`}
           >
@@ -164,6 +165,10 @@ export default async function PublicEventPage({
             ticketTypes={data.tickets}
           />
         </section>
+
+        {embedMode && data.calendar.embed_show_branding ? (
+          <EmbedBrandingFooter />
+        ) : null}
       </section>
     </main>
   );
