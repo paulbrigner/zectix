@@ -1,4 +1,8 @@
-import type { ReactNode } from "react";
+"use client";
+
+import { ChevronDownIcon } from "@radix-ui/react-icons";
+import * as Collapsible from "@radix-ui/react-collapsible";
+import { useState, type ReactNode } from "react";
 
 export function ConsoleDisclosure({
   children,
@@ -13,21 +17,38 @@ export function ConsoleDisclosure({
   description?: string;
   title: string;
 }) {
+  const [open, setOpen] = useState(defaultOpen);
+
   return (
-    <details
-      className={className ? `console-disclosure ${className}` : "console-disclosure"}
-      open={defaultOpen}
+    <Collapsible.Root
+      className={
+        className ? `console-disclosure ${className}` : "console-disclosure"
+      }
+      data-state={open ? "open" : "closed"}
+      onOpenChange={setOpen}
+      open={open}
     >
-      <summary className="console-disclosure-summary">
-        <div className="console-disclosure-heading">
-          <div>
-            <strong className="console-disclosure-title">{title}</strong>
-            {description ? <p className="subtle-text">{description}</p> : null}
+      <Collapsible.Trigger asChild>
+        <button className="console-disclosure-summary" type="button">
+          <div className="console-disclosure-heading">
+            <div>
+              <strong className="console-disclosure-title">{title}</strong>
+              {description ? (
+                <p className="subtle-text">{description}</p>
+              ) : null}
+            </div>
+            <ChevronDownIcon
+              aria-hidden="true"
+              className="console-disclosure-toggle"
+            />
           </div>
-          <span aria-hidden="true" className="console-disclosure-toggle" />
+        </button>
+      </Collapsible.Trigger>
+      <Collapsible.Content asChild forceMount>
+        <div className="console-disclosure-body" hidden={!open}>
+          {children}
         </div>
-      </summary>
-      <div className="console-disclosure-body">{children}</div>
-    </details>
+      </Collapsible.Content>
+    </Collapsible.Root>
   );
 }

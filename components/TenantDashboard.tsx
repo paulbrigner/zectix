@@ -1,4 +1,12 @@
 import Link from "next/link";
+import {
+  ConsoleTable,
+  ConsoleTableBody,
+  ConsoleTableCell,
+  ConsoleTableHead,
+  ConsoleTableHeader,
+  ConsoleTableRow,
+} from "@/components/ConsoleTable";
 import { LocalDateTime } from "@/components/LocalDateTime";
 import { ConsoleStatusPill } from "@/components/ConsoleStatusPill";
 import { appUrl } from "@/lib/app-paths";
@@ -35,14 +43,19 @@ function isFutureEvent(startAt: string) {
   return Number.isFinite(startAtMs) && startAtMs >= Date.now();
 }
 
-function usesCallbackTokenFallback(delivery: TenantOpsDetail["webhooks"][number]) {
+function usesCallbackTokenFallback(
+  delivery: TenantOpsDetail["webhooks"][number],
+) {
   return (
     delivery.validation_error === "accepted_via_callback_token" &&
     delivery.apply_status !== "ignored"
   );
 }
 
-function summarizeCalendar(detail: TenantOpsDetail, calendarConnectionId: string) {
+function summarizeCalendar(
+  detail: TenantOpsDetail,
+  calendarConnectionId: string,
+) {
   const mirroredEvents =
     detail.events.find(
       (entry) => entry.calendar.calendar_connection_id === calendarConnectionId,
@@ -54,7 +67,9 @@ function summarizeCalendar(detail: TenantOpsDetail, calendarConnectionId: string
   return {
     mirroredEvents,
     tickets,
-    futureMirroredEvents: mirroredEvents.filter((event) => isFutureEvent(event.start_at)),
+    futureMirroredEvents: mirroredEvents.filter((event) =>
+      isFutureEvent(event.start_at),
+    ),
     enabledEvents: mirroredEvents.filter((event) => event.zcash_enabled),
     enabledTickets: tickets.filter((ticket) => ticket.zcash_enabled),
   };
@@ -83,7 +98,8 @@ export function TenantDashboard({
     (session) => session.registration_status === "registered",
   ).length;
   const invalidWebhooks = detail.webhooks.filter(
-    (delivery) => !delivery.signature_valid && !usesCallbackTokenFallback(delivery),
+    (delivery) =>
+      !delivery.signature_valid && !usesCallbackTokenFallback(delivery),
   ).length;
   const upcomingEvents = detail.events.flatMap(({ calendar, events }) =>
     events
@@ -97,9 +113,13 @@ export function TenantDashboard({
   const activeCalendars = detail.calendars.filter(
     (calendar) => calendar.status === "active",
   ).length;
-  const settingsHref = isTenantAudience ? `${tenantBasePath}/connections` : tenantBasePath;
+  const settingsHref = isTenantAudience
+    ? `${tenantBasePath}/connections`
+    : tenantBasePath;
   const eventsHref = `${tenantBasePath}/events`;
-  const billingHref = isTenantAudience ? `${tenantBasePath}/billing` : "/ops/reports";
+  const billingHref = isTenantAudience
+    ? `${tenantBasePath}/billing`
+    : "/ops/reports";
 
   return (
     <div className="console-page-body">
@@ -117,10 +137,16 @@ export function TenantDashboard({
             </p>
           </div>
           <div className="button-row">
-            <Link className="button button-secondary button-small" href={settingsHref}>
+            <Link
+              className="button button-secondary button-small"
+              href={settingsHref}
+            >
               {isTenantAudience ? "Connections" : "Organization settings"}
             </Link>
-            <Link className="button button-secondary button-small" href={billingHref}>
+            <Link
+              className="button button-secondary button-small"
+              href={billingHref}
+            >
               Billing
             </Link>
             <Link
@@ -175,8 +201,8 @@ export function TenantDashboard({
               {webhookUrl || "/api/cipherpay/webhook"}
             </p>
             <p className="subtle-text">
-              All organizer accounts post to the same callback URL. The app resolves the
-              correct secret from the invoice id.
+              All organizer accounts post to the same callback URL. The app
+              resolves the correct secret from the invoice id.
             </p>
           </article>
 
@@ -184,13 +210,18 @@ export function TenantDashboard({
             <article className="console-detail-card">
               <h3>Billing</h3>
               <p className="subtle-text">
-                Status {detail.tenant.billing_status} · fee {detail.tenant.service_fee_bps} bps
+                Status {detail.tenant.billing_status} · fee{" "}
+                {detail.tenant.service_fee_bps} bps
               </p>
               <p className="subtle-text">
-                Current outstanding {formatZecAmount(detail.billing?.current_cycle?.outstanding_zatoshis || 0)}
+                Current outstanding{" "}
+                {formatZecAmount(
+                  detail.billing?.current_cycle?.outstanding_zatoshis || 0,
+                )}
               </p>
               <p className="subtle-text">
-                Review cycle history, credits, and settlement notes from the billing tab.
+                Review cycle history, credits, and settlement notes from the
+                billing tab.
               </p>
             </article>
           ) : (
@@ -200,10 +231,13 @@ export function TenantDashboard({
                 Service fee {detail.tenant.service_fee_bps} bps
               </p>
               <p className="subtle-text">
-                Billing {detail.tenant.billing_status} · grace {detail.tenant.billing_grace_days} days
+                Billing {detail.tenant.billing_status} · grace{" "}
+                {detail.tenant.billing_grace_days} days
               </p>
               <p className="subtle-text">
-                Threshold {formatZecAmount(detail.tenant.settlement_threshold_zatoshis)} · contact {detail.tenant.contact_email}
+                Threshold{" "}
+                {formatZecAmount(detail.tenant.settlement_threshold_zatoshis)} ·
+                contact {detail.tenant.contact_email}
               </p>
             </article>
           )}
@@ -217,7 +251,9 @@ export function TenantDashboard({
                 calendar.calendar_connection_id,
               ) || null;
             const calendarPreviews =
-              detail.calendar_secret_previews.get(calendar.calendar_connection_id) || null;
+              detail.calendar_secret_previews.get(
+                calendar.calendar_connection_id,
+              ) || null;
             const livePreview =
               detail.upstream_luma_events_by_calendar.get(
                 calendar.calendar_connection_id,
@@ -229,7 +265,9 @@ export function TenantDashboard({
               enabledTickets,
             } = summarizeCalendar(detail, calendar.calendar_connection_id);
             const liveUpcomingEvents =
-              livePreview?.events.filter((event) => isFutureEvent(event.start_at)).slice(0, 3) ||
+              livePreview?.events
+                .filter((event) => isFutureEvent(event.start_at))
+                .slice(0, 3) ||
               livePreview?.events.slice(0, 3) ||
               [];
             const webhookConfigured =
@@ -265,7 +303,9 @@ export function TenantDashboard({
                       className="button button-secondary button-small"
                       href={eventsHref}
                     >
-                      {isTenantAudience ? "Events and tickets" : "Review tickets"}
+                      {isTenantAudience
+                        ? "Events and tickets"
+                        : "Review tickets"}
                     </Link>
                   </div>
                 </div>
@@ -274,10 +314,14 @@ export function TenantDashboard({
                   <div className="console-signal-card">
                     <span className="console-kpi-label">Luma</span>
                     <strong>
-                      {calendarPreviews?.luma.has_value ? "Key saved" : "Missing key"}
+                      {calendarPreviews?.luma.has_value
+                        ? "Key saved"
+                        : "Missing key"}
                     </strong>
                     <p className="subtle-text">
-                      {webhookConfigured ? "Webhook configured" : "Webhook pending"}
+                      {webhookConfigured
+                        ? "Webhook configured"
+                        : "Webhook pending"}
                     </p>
                   </div>
                   <div className="console-signal-card">
@@ -310,7 +354,9 @@ export function TenantDashboard({
                 </div>
 
                 {calendar.last_sync_error ? (
-                  <p className="console-error-text">{calendar.last_sync_error}</p>
+                  <p className="console-error-text">
+                    {calendar.last_sync_error}
+                  </p>
                 ) : null}
 
                 <div className="console-preview-list console-preview-list-compact">
@@ -321,17 +367,24 @@ export function TenantDashboard({
                     </div>
                   ) : liveUpcomingEvents.length ? (
                     liveUpcomingEvents.map((event) => (
-                      <article className="console-preview-card console-preview-card-compact" key={event.api_id}>
+                      <article
+                        className="console-preview-card console-preview-card-compact"
+                        key={event.api_id}
+                      >
                         <div className="console-preview-body">
                           <div className="console-preview-body-head">
                             <div>
-                              <p className="console-kpi-label">Live Luma feed</p>
+                              <p className="console-kpi-label">
+                                Live Luma feed
+                              </p>
                               <h4>{event.name}</h4>
                             </div>
                           </div>
                           <p className="subtle-text">
                             <LocalDateTime iso={event.start_at} />
-                            {event.location_label ? ` · ${event.location_label}` : ""}
+                            {event.location_label
+                              ? ` · ${event.location_label}`
+                              : ""}
                           </p>
                         </div>
                       </article>
@@ -340,7 +393,8 @@ export function TenantDashboard({
                     <div className="console-preview-empty">
                       <strong>No Luma events available yet</strong>
                       <p className="subtle-text">
-                        Save and validate the Luma key to start mirroring this calendar.
+                        Save and validate the Luma key to start mirroring this
+                        calendar.
                       </p>
                     </div>
                   )}
@@ -356,19 +410,26 @@ export function TenantDashboard({
           <div>
             <h2>Upcoming mirrored events</h2>
             <p className="subtle-text">
-              Future events only, with quick visibility into whether managed Zcash checkout is enabled.
+              Future events only, with quick visibility into whether managed
+              Zcash checkout is enabled.
             </p>
           </div>
         </div>
 
         {!upcomingEvents.length ? (
-          <p className="subtle-text">No future mirrored events are available yet.</p>
+          <p className="subtle-text">
+            No future mirrored events are available yet.
+          </p>
         ) : (
           <div className="console-card-grid tenant-upcoming-grid">
             {upcomingEvents.map(({ calendar, event, tickets }) => {
-              const enabledTicketCount = tickets.filter((ticket) => ticket.zcash_enabled).length;
+              const enabledTicketCount = tickets.filter(
+                (ticket) => ticket.zcash_enabled,
+              ).length;
               const publicEventUrl = event.zcash_enabled
-                ? appUrl(`/c/${calendar.slug}/events/${encodeURIComponent(event.event_api_id)}`)
+                ? appUrl(
+                    `/c/${calendar.slug}/events/${encodeURIComponent(event.event_api_id)}`,
+                  )
                 : null;
 
               return (
@@ -389,14 +450,18 @@ export function TenantDashboard({
                   <div className="console-preview-body tenant-upcoming-body">
                     <div className="tenant-upcoming-head">
                       <div>
-                        <p className="console-kpi-label">{calendar.display_name}</p>
+                        <p className="console-kpi-label">
+                          {calendar.display_name}
+                        </p>
                         <h4>{event.name}</h4>
                       </div>
                       <div className="console-mini-pill-row tenant-upcoming-pills">
                         <span
                           className={`console-mini-pill ${event.zcash_enabled ? "console-mini-pill-success" : "console-mini-pill-muted"}`}
                         >
-                          {event.zcash_enabled ? "Public checkout enabled" : "Public checkout hidden"}
+                          {event.zcash_enabled
+                            ? "Public checkout enabled"
+                            : "Public checkout hidden"}
                         </span>
                         <span className="console-mini-pill console-mini-pill-info">
                           {enabledTicketCount}/{tickets.length} tickets enabled
@@ -413,7 +478,10 @@ export function TenantDashboard({
                   </div>
                   <div className="button-row tenant-upcoming-actions">
                     {publicEventUrl ? (
-                      <Link className="button button-secondary button-small" href={publicEventUrl}>
+                      <Link
+                        className="button button-secondary button-small"
+                        href={publicEventUrl}
+                      >
                         Open public event
                       </Link>
                     ) : (
@@ -429,7 +497,9 @@ export function TenantDashboard({
                       className="button button-secondary button-small"
                       href={eventsHref}
                     >
-                      {isTenantAudience ? "Events and tickets" : "Ticket controls"}
+                      {isTenantAudience
+                        ? "Events and tickets"
+                        : "Ticket controls"}
                     </Link>
                   </div>
                 </article>
@@ -444,7 +514,8 @@ export function TenantDashboard({
           <div>
             <h2>Recent checkouts</h2>
             <p className="subtle-text">
-              Latest checkout sessions created through public event pages for this organization.
+              Latest checkout sessions created through public event pages for
+              this organization.
             </p>
           </div>
         </div>
@@ -452,83 +523,83 @@ export function TenantDashboard({
         {!detail.sessions.length ? (
           <p className="subtle-text">No checkout sessions yet.</p>
         ) : (
-          <div className="console-table-wrap">
-            <table className="console-table">
-              <thead>
-                <tr>
-                  <th>Event</th>
-                  <th>Attendee</th>
-                  <th>Payment</th>
-                  <th>Registration</th>
-                  <th>Amount</th>
-                  <th>Updated</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {detail.sessions.slice(0, 20).map((session) => {
-                  const viewerToken = createSessionViewerToken(
-                    session.session_id,
-                    session.attendee_email,
-                  );
+          <ConsoleTable>
+            <ConsoleTableHead>
+              <ConsoleTableRow>
+                <ConsoleTableHeader>Event</ConsoleTableHeader>
+                <ConsoleTableHeader>Attendee</ConsoleTableHeader>
+                <ConsoleTableHeader>Payment</ConsoleTableHeader>
+                <ConsoleTableHeader>Registration</ConsoleTableHeader>
+                <ConsoleTableHeader>Amount</ConsoleTableHeader>
+                <ConsoleTableHeader>Updated</ConsoleTableHeader>
+                <ConsoleTableHeader>Action</ConsoleTableHeader>
+              </ConsoleTableRow>
+            </ConsoleTableHead>
+            <ConsoleTableBody>
+              {detail.sessions.slice(0, 20).map((session) => {
+                const viewerToken = createSessionViewerToken(
+                  session.session_id,
+                  session.attendee_email,
+                );
 
-                  return (
-                    <tr key={session.session_id}>
-                      <td>
-                        <strong>{session.event_name}</strong>
-                        <p className="subtle-text console-table-note">
-                          {session.ticket_type_name || "No ticket label"}
-                        </p>
-                      </td>
-                      <td>
-                        <strong>{session.attendee_name}</strong>
-                        <p className="subtle-text console-table-note">
-                          {session.attendee_email}
-                        </p>
-                      </td>
-                      <td>
-                        <ConsoleStatusPill status={session.status} />
-                      </td>
-                      <td>
-                        <span
-                          className={registrationStatusClassName(
-                            session.registration_status,
-                          )}
-                        >
-                          {session.registration_status}
-                        </span>
-                        {session.registration_error ? (
-                          <p className="subtle-text console-table-note">
-                            {session.registration_error}
-                          </p>
-                        ) : null}
-                      </td>
-                      <td>{formatFiatAmount(session.amount, session.currency)}</td>
-                      <td>
-                        {session.updated_at ? (
-                          <LocalDateTime iso={session.updated_at} />
-                        ) : (
-                          "n/a"
+                return (
+                  <ConsoleTableRow key={session.session_id}>
+                    <ConsoleTableCell>
+                      <strong>{session.event_name}</strong>
+                      <p className="subtle-text console-table-note">
+                        {session.ticket_type_name || "No ticket label"}
+                      </p>
+                    </ConsoleTableCell>
+                    <ConsoleTableCell>
+                      <strong>{session.attendee_name}</strong>
+                      <p className="subtle-text console-table-note">
+                        {session.attendee_email}
+                      </p>
+                    </ConsoleTableCell>
+                    <ConsoleTableCell>
+                      <ConsoleStatusPill status={session.status} />
+                    </ConsoleTableCell>
+                    <ConsoleTableCell>
+                      <span
+                        className={registrationStatusClassName(
+                          session.registration_status,
                         )}
-                      </td>
-                      <td>
-                        <Link
-                          className="button button-secondary button-small"
-                          href={
-                            viewerToken
-                              ? `/checkout/${encodeURIComponent(session.session_id)}?t=${encodeURIComponent(viewerToken)}`
-                              : `/checkout/${encodeURIComponent(session.session_id)}`
-                          }
-                        >
-                          Open
-                        </Link>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                      >
+                        {session.registration_status}
+                      </span>
+                      {session.registration_error ? (
+                        <p className="subtle-text console-table-note">
+                          {session.registration_error}
+                        </p>
+                      ) : null}
+                    </ConsoleTableCell>
+                    <ConsoleTableCell>
+                      {formatFiatAmount(session.amount, session.currency)}
+                    </ConsoleTableCell>
+                    <ConsoleTableCell>
+                      {session.updated_at ? (
+                        <LocalDateTime iso={session.updated_at} />
+                      ) : (
+                        "n/a"
+                      )}
+                    </ConsoleTableCell>
+                    <ConsoleTableCell>
+                      <Link
+                        className="button button-secondary button-small"
+                        href={
+                          viewerToken
+                            ? `/checkout/${encodeURIComponent(session.session_id)}?t=${encodeURIComponent(viewerToken)}`
+                            : `/checkout/${encodeURIComponent(session.session_id)}`
+                        }
+                      >
+                        Open
+                      </Link>
+                    </ConsoleTableCell>
+                  </ConsoleTableRow>
+                );
+              })}
+            </ConsoleTableBody>
+          </ConsoleTable>
         )}
       </section>
 
@@ -547,43 +618,45 @@ export function TenantDashboard({
         {!detail.webhooks.length ? (
           <p className="subtle-text">No webhook deliveries recorded yet.</p>
         ) : (
-          <div className="console-table-wrap">
-            <table className="console-table">
-              <thead>
-                <tr>
-                  <th>Received</th>
-                  <th>Provider</th>
-                  <th>Event</th>
-                  <th>Invoice</th>
-                  <th>Auth</th>
-                  <th>Apply</th>
-                </tr>
-              </thead>
-              <tbody>
-                {detail.webhooks.slice(0, 20).map((delivery) => {
-                  const acceptedViaCallbackToken = usesCallbackTokenFallback(delivery);
+          <ConsoleTable>
+            <ConsoleTableHead>
+              <ConsoleTableRow>
+                <ConsoleTableHeader>Received</ConsoleTableHeader>
+                <ConsoleTableHeader>Provider</ConsoleTableHeader>
+                <ConsoleTableHeader>Event</ConsoleTableHeader>
+                <ConsoleTableHeader>Invoice</ConsoleTableHeader>
+                <ConsoleTableHeader>Auth</ConsoleTableHeader>
+                <ConsoleTableHeader>Apply</ConsoleTableHeader>
+              </ConsoleTableRow>
+            </ConsoleTableHead>
+            <ConsoleTableBody>
+              {detail.webhooks.slice(0, 20).map((delivery) => {
+                const acceptedViaCallbackToken =
+                  usesCallbackTokenFallback(delivery);
 
-                  return (
-                  <tr key={delivery.webhook_delivery_id}>
-                    <td>
+                return (
+                  <ConsoleTableRow key={delivery.webhook_delivery_id}>
+                    <ConsoleTableCell>
                       <LocalDateTime iso={delivery.received_at} />
-                    </td>
-                    <td>{delivery.provider}</td>
-                    <td>
+                    </ConsoleTableCell>
+                    <ConsoleTableCell>{delivery.provider}</ConsoleTableCell>
+                    <ConsoleTableCell>
                       <strong>{delivery.event_type || "unknown"}</strong>
                       {delivery.event_api_id ? (
                         <p className="subtle-text console-table-note">
                           Event {delivery.event_api_id}
                         </p>
                       ) : null}
-                    </td>
-                    <td className="console-mono-cell">
+                    </ConsoleTableCell>
+                    <ConsoleTableCell className="console-mono-cell">
                       {delivery.cipherpay_invoice_id || "n/a"}
-                    </td>
-                    <td>
+                    </ConsoleTableCell>
+                    <ConsoleTableCell>
                       {acceptedViaCallbackToken ? (
                         <>
-                          <span className="console-valid-text">callback token</span>
+                          <span className="console-valid-text">
+                            callback token
+                          </span>
                           <p className="subtle-text console-table-note">
                             accepted via callback token
                           </p>
@@ -605,14 +678,13 @@ export function TenantDashboard({
                           {delivery.validation_error}
                         </p>
                       ) : null}
-                    </td>
-                    <td>{delivery.apply_status}</td>
-                  </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                    </ConsoleTableCell>
+                    <ConsoleTableCell>{delivery.apply_status}</ConsoleTableCell>
+                  </ConsoleTableRow>
+                );
+              })}
+            </ConsoleTableBody>
+          </ConsoleTable>
         )}
       </section>
     </div>

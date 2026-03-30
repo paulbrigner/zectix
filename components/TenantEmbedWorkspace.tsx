@@ -3,6 +3,7 @@ import { updateCalendarEmbedSettingsAction } from "@/app/dashboard/actions";
 import { ConsoleDisclosure } from "@/components/ConsoleDisclosure";
 import { ConsoleFieldLabel } from "@/components/ConsoleFieldLabel";
 import { ConsoleInfoTip } from "@/components/ConsoleInfoTip";
+import { ConsoleSwitch } from "@/components/ConsoleSwitch";
 import { appUrl } from "@/lib/app-paths";
 import { selectUpcomingEvents } from "@/lib/embed";
 import type { TenantOpsDetail } from "@/lib/tenancy/service";
@@ -21,7 +22,9 @@ export function TenantEmbedWorkspace({
   tenantBasePath: string;
 }) {
   const embedBasePath = `${tenantBasePath}/embed`;
-  const calendarsWithEmbed = detail.calendars.filter((calendar) => calendar.embed_enabled);
+  const calendarsWithEmbed = detail.calendars.filter(
+    (calendar) => calendar.embed_enabled,
+  );
   const snippetReadyCalendars = detail.calendars.filter((calendar) => {
     const inventory = summarizeCalendarInventory(detail, calendar);
     return (
@@ -38,13 +41,10 @@ export function TenantEmbedWorkspace({
           <div>
             <h2>Embed</h2>
             <p className="subtle-text">
-              Generate iframe snippets, set allowlists, and tune the embedded checkout appearance
-              without changing your public hosted flow.
+              Generate iframe snippets, set allowlists, and tune the embedded
+              checkout appearance without changing your public hosted flow.
             </p>
           </div>
-          <Link className="button button-secondary button-small" href={`${tenantBasePath}/events`}>
-            Review events first
-          </Link>
         </div>
 
         <div className="console-kpi-grid">
@@ -66,7 +66,8 @@ export function TenantEmbedWorkspace({
             <p className="console-kpi-label">Allowed origins</p>
             <p className="console-kpi-value">
               {detail.calendars.reduce(
-                (count, calendar) => count + calendar.embed_allowed_origins.length,
+                (count, calendar) =>
+                  count + calendar.embed_allowed_origins.length,
                 0,
               )}
             </p>
@@ -78,7 +79,9 @@ export function TenantEmbedWorkspace({
             <p className="console-kpi-label">Branding mode</p>
             <p className="console-kpi-value">
               {
-                detail.calendars.filter((calendar) => calendar.embed_show_branding).length
+                detail.calendars.filter(
+                  (calendar) => calendar.embed_show_branding,
+                ).length
               }
             </p>
             <p className="subtle-text console-kpi-detail">
@@ -93,8 +96,8 @@ export function TenantEmbedWorkspace({
           <div className="console-preview-empty">
             <strong>No calendars connected yet</strong>
             <p className="subtle-text">
-              Set up a Luma calendar and a live checkout connection before generating embed
-              snippets.
+              Set up a Luma calendar and a live checkout connection before
+              generating embed snippets.
             </p>
           </div>
         </section>
@@ -104,8 +107,8 @@ export function TenantEmbedWorkspace({
             <div>
               <h2>Per-calendar embed settings</h2>
               <p className="subtle-text">
-                Embedding is configured at the calendar level. The generated snippets use upcoming
-                public events from that calendar.
+                Embedding is configured at the calendar level. The generated
+                snippets use upcoming public events from that calendar.
               </p>
             </div>
           </div>
@@ -113,10 +116,14 @@ export function TenantEmbedWorkspace({
           <div className="console-luma-card-stack">
             {detail.calendars.map((calendar) => {
               const inventory = summarizeCalendarInventory(detail, calendar);
-              const embedExampleEvents = selectUpcomingEvents(inventory.enabledEvents);
+              const embedExampleEvents = selectUpcomingEvents(
+                inventory.enabledEvents,
+              );
               const calendarSnippetReady =
-                calendar.embed_enabled && calendar.embed_allowed_origins.length > 0;
-              const embedReady = calendarSnippetReady && embedExampleEvents.length > 0;
+                calendar.embed_enabled &&
+                calendar.embed_allowed_origins.length > 0;
+              const embedReady =
+                calendarSnippetReady && embedExampleEvents.length > 0;
 
               return (
                 <article
@@ -125,9 +132,13 @@ export function TenantEmbedWorkspace({
                 >
                   <div className="console-luma-card-head">
                     <div>
-                      <p className="console-kpi-label">{calendar.display_name}</p>
+                      <p className="console-kpi-label">
+                        {calendar.display_name}
+                      </p>
                       <h3>
-                        {embedReady ? "Ready to publish" : "Needs a few more things"}
+                        {embedReady
+                          ? "Ready to publish"
+                          : "Needs a few more things"}
                       </h3>
                       <p className="subtle-text">
                         {calendar.embed_enabled
@@ -136,10 +147,16 @@ export function TenantEmbedWorkspace({
                       </p>
                     </div>
                     <div className="button-row">
-                      <Link className="button button-secondary button-small" href={`${tenantBasePath}/connections`}>
+                      <Link
+                        className="button button-secondary button-small"
+                        href={`${tenantBasePath}/connections`}
+                      >
                         Connections
                       </Link>
-                      <Link className="button button-secondary button-small" href={`${tenantBasePath}/events`}>
+                      <Link
+                        className="button button-secondary button-small"
+                        href={`${tenantBasePath}/events`}
+                      >
                         Events
                       </Link>
                     </div>
@@ -148,7 +165,9 @@ export function TenantEmbedWorkspace({
                   <div className="console-signal-grid">
                     <div className="console-signal-card">
                       <span className="console-kpi-label">Embed mode</span>
-                      <strong>{calendar.embed_enabled ? "Enabled" : "Disabled"}</strong>
+                      <strong>
+                        {calendar.embed_enabled ? "Enabled" : "Disabled"}
+                      </strong>
                       <p className="subtle-text">
                         Turn this on to allow compact iframe rendering.
                       </p>
@@ -164,7 +183,9 @@ export function TenantEmbedWorkspace({
                       <span className="console-kpi-label">Public events</span>
                       <strong>{embedExampleEvents.length}</strong>
                       <p className="subtle-text">
-                        Upcoming event{embedExampleEvents.length === 1 ? "" : "s"} ready for snippets.
+                        Upcoming event
+                        {embedExampleEvents.length === 1 ? "" : "s"} ready for
+                        snippets.
                       </p>
                     </div>
                     <div className="console-signal-card">
@@ -180,43 +201,42 @@ export function TenantEmbedWorkspace({
                     description="Open this panel to edit iframe settings, allowed origins, appearance overrides, and generated embed code."
                     title="Edit settings and snippets"
                   >
-                    <form action={updateCalendarEmbedSettingsAction} className="console-content embed-settings-form">
+                    <form
+                      action={updateCalendarEmbedSettingsAction}
+                      className="console-content embed-settings-form"
+                    >
                       <input
                         name="calendar_connection_id"
                         type="hidden"
                         value={calendar.calendar_connection_id}
                       />
-                      <input name="tenant_slug" type="hidden" value={detail.tenant.slug} />
-                      <input name="redirect_to" type="hidden" value={embedBasePath} />
+                      <input
+                        name="tenant_slug"
+                        type="hidden"
+                        value={detail.tenant.slug}
+                      />
+                      <input
+                        name="redirect_to"
+                        type="hidden"
+                        value={embedBasePath}
+                      />
 
                       <div className="embed-settings-top-grid">
-                        <label className="console-checkbox embed-toggle-card">
-                          <input
-                            defaultChecked={calendar.embed_enabled}
-                            name="embed_enabled"
-                            type="checkbox"
-                          />
-                          <span className="embed-toggle-card-copy">
-                            <strong>Enable embedding</strong>
-                            <small>
-                              Turn on iframe rendering for this calendar&apos;s event checkout entry pages.
-                            </small>
-                          </span>
-                        </label>
+                        <ConsoleSwitch
+                          className="embed-toggle-card"
+                          defaultChecked={calendar.embed_enabled}
+                          description="Turn on iframe rendering for this calendar's event checkout entry pages."
+                          label="Enable embedding"
+                          name="embed_enabled"
+                        />
 
-                        <label className="console-checkbox embed-toggle-card">
-                          <input
-                            defaultChecked={calendar.embed_show_branding}
-                            name="embed_show_branding"
-                            type="checkbox"
-                          />
-                          <span className="embed-toggle-card-copy">
-                            <strong>Show branding</strong>
-                            <small>
-                              Keep the compact ZecTix/organizer branding header visible inside the iframe.
-                            </small>
-                          </span>
-                        </label>
+                        <ConsoleSwitch
+                          className="embed-toggle-card"
+                          defaultChecked={calendar.embed_show_branding}
+                          description="Keep the compact ZecTix/organizer branding header visible inside the iframe."
+                          label="Show branding"
+                          name="embed_show_branding"
+                        />
 
                         <label className="console-field embed-settings-height-card">
                           <ConsoleFieldLabel
@@ -237,15 +257,16 @@ export function TenantEmbedWorkspace({
                         <div className="embed-settings-section-head">
                           <h4>Allowed origins</h4>
                           <p className="subtle-text">
-                            Enter one site origin per line, for example
-                            {" "}
-                            <code>https://events.example.com</code>
-                            . Only these origins can host the iframe.
+                            Enter one site origin per line, for example{" "}
+                            <code>https://events.example.com</code>. Only these
+                            origins can host the iframe.
                           </p>
                         </div>
                         <textarea
                           className="console-input embed-settings-textarea"
-                          defaultValue={calendar.embed_allowed_origins.join("\n")}
+                          defaultValue={calendar.embed_allowed_origins.join(
+                            "\n",
+                          )}
                           name="embed_allowed_origins"
                           rows={4}
                         />
@@ -255,86 +276,100 @@ export function TenantEmbedWorkspace({
                         <div className="embed-settings-section-head">
                           <h4>Appearance overrides</h4>
                           <p className="subtle-text">
-                            Optional tweaks for accent, shell colors, and corner radius inside the iframe.
+                            Optional tweaks for accent, shell colors, and corner
+                            radius inside the iframe.
                           </p>
                         </div>
 
                         <div className="public-field-grid embed-theme-grid">
                           <label className="console-field">
-                          <ConsoleFieldLabel
-                            info="Optional accent color override for embedded buttons and highlights."
-                            label="Accent color"
-                            optional
-                          />
-                          <input
-                            className="console-input"
-                            defaultValue={calendar.embed_theme.accent_color || ""}
-                            name="embed_accent_color"
-                            placeholder="#d4920a"
-                            type="text"
-                          />
+                            <ConsoleFieldLabel
+                              info="Optional accent color override for embedded buttons and highlights."
+                              label="Accent color"
+                              optional
+                            />
+                            <input
+                              className="console-input"
+                              defaultValue={
+                                calendar.embed_theme.accent_color || ""
+                              }
+                              name="embed_accent_color"
+                              placeholder="#d4920a"
+                              type="text"
+                            />
                           </label>
                           <label className="console-field">
-                          <ConsoleFieldLabel
-                            info="Optional page background color for the embedded shell."
-                            label="Background color"
-                            optional
-                          />
-                          <input
-                            className="console-input"
-                            defaultValue={calendar.embed_theme.background_color || ""}
-                            name="embed_background_color"
-                            placeholder="#fafaf9"
-                            type="text"
-                          />
+                            <ConsoleFieldLabel
+                              info="Optional page background color for the embedded shell."
+                              label="Background color"
+                              optional
+                            />
+                            <input
+                              className="console-input"
+                              defaultValue={
+                                calendar.embed_theme.background_color || ""
+                              }
+                              name="embed_background_color"
+                              placeholder="#fafaf9"
+                              type="text"
+                            />
                           </label>
                           <label className="console-field">
-                          <ConsoleFieldLabel
-                            info="Optional card surface color for the embedded shell."
-                            label="Surface color"
-                            optional
-                          />
-                          <input
-                            className="console-input"
-                            defaultValue={calendar.embed_theme.surface_color || ""}
-                            name="embed_surface_color"
-                            placeholder="#ffffff"
-                            type="text"
-                          />
+                            <ConsoleFieldLabel
+                              info="Optional card surface color for the embedded shell."
+                              label="Surface color"
+                              optional
+                            />
+                            <input
+                              className="console-input"
+                              defaultValue={
+                                calendar.embed_theme.surface_color || ""
+                              }
+                              name="embed_surface_color"
+                              placeholder="#ffffff"
+                              type="text"
+                            />
                           </label>
                           <label className="console-field">
-                          <ConsoleFieldLabel
-                            info="Optional high-contrast text color override for the embed shell."
-                            label="Text color"
-                            optional
-                          />
-                          <input
-                            className="console-input"
-                            defaultValue={calendar.embed_theme.text_color || ""}
-                            name="embed_text_color"
-                            placeholder="#131b2d"
-                            type="text"
-                          />
+                            <ConsoleFieldLabel
+                              info="Optional high-contrast text color override for the embed shell."
+                              label="Text color"
+                              optional
+                            />
+                            <input
+                              className="console-input"
+                              defaultValue={
+                                calendar.embed_theme.text_color || ""
+                              }
+                              name="embed_text_color"
+                              placeholder="#131b2d"
+                              type="text"
+                            />
                           </label>
                           <label className="console-field">
-                          <ConsoleFieldLabel
-                            info="Optional border radius for embedded cards, in pixels."
-                            label="Corner radius"
-                            optional
-                          />
-                          <input
-                            className="console-input"
-                            defaultValue={calendar.embed_theme.radius_px || ""}
-                            name="embed_radius_px"
-                            placeholder="22"
-                            type="number"
-                          />
+                            <ConsoleFieldLabel
+                              info="Optional border radius for embedded cards, in pixels."
+                              label="Corner radius"
+                              optional
+                            />
+                            <input
+                              className="console-input"
+                              defaultValue={
+                                calendar.embed_theme.radius_px || ""
+                              }
+                              name="embed_radius_px"
+                              placeholder="22"
+                              type="number"
+                            />
                           </label>
                         </div>
                       </section>
 
                       <div className="button-row">
-                        <button className="button button-secondary button-small" type="submit">
+                        <button
+                          className="button button-secondary button-small"
+                          type="submit"
+                        >
                           Save embed settings
                         </button>
                       </div>
@@ -342,13 +377,17 @@ export function TenantEmbedWorkspace({
 
                     <div className="console-inline-action">
                       <p className="subtle-text">
-                        Embed status: {embedReady ? "ready to publish" : "needs allowed origins and at least one public upcoming event"}
+                        Embed status:{" "}
+                        {embedReady
+                          ? "ready to publish"
+                          : "needs allowed origins and at least one public upcoming event"}
                       </p>
                       <ConsoleInfoTip label="How embed mode works">
                         <p>
-                          The iframe uses the same mirrored event pages as public checkout, but
-                          renders in a compact embedded shell and emits resize and status events to
-                          the parent window.
+                          The iframe uses the same mirrored event pages as
+                          public checkout, but renders in a compact embedded
+                          shell and emits resize and status events to the parent
+                          window.
                         </p>
                       </ConsoleInfoTip>
                     </div>
@@ -384,7 +423,10 @@ export function TenantEmbedWorkspace({
                             );
                             const url = appUrl(relativeUrl) || relativeUrl;
                             return (
-                              <label className="console-field" key={event.event_api_id}>
+                              <label
+                                className="console-field"
+                                key={event.event_api_id}
+                              >
                                 <ConsoleFieldLabel
                                   info="Use this iframe tag in your app or CMS. The host page controls final width."
                                   label={`Event embed · ${event.name}`}
@@ -405,15 +447,16 @@ export function TenantEmbedWorkspace({
 
                           {!embedExampleEvents.length ? (
                             <p className="subtle-text">
-                              Calendar embed is ready. Event-specific snippets will appear once this
-                              calendar has at least one upcoming public event.
+                              Calendar embed is ready. Event-specific snippets
+                              will appear once this calendar has at least one
+                              upcoming public event.
                             </p>
                           ) : null}
                         </div>
                       ) : (
                         <p className="subtle-text">
-                          Turn on embedding and add at least one allowed origin to generate
-                          ready-to-paste iframe snippets here.
+                          Turn on embedding and add at least one allowed origin
+                          to generate ready-to-paste iframe snippets here.
                         </p>
                       )}
                     </ConsoleDisclosure>
