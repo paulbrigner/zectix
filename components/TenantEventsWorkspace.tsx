@@ -228,8 +228,8 @@ function buildEventsHref(
   return `${tenantBasePath}/events${query ? `?${query}` : ""}`;
 }
 
-function selectionLabel() {
-  return "Open";
+function selectionLabel(selected: boolean) {
+  return selected ? "Hide" : "Details";
 }
 
 function sourceLabel(row: TenantEventWorkspaceRow) {
@@ -309,7 +309,6 @@ export function TenantEventsWorkspace({
   const selectedRow =
     visibleRows.find((row) => row.row_id === selectedParam) ||
     selectedRowFromSyncNotice(visibleRows, syncNotice) ||
-    visibleRows[0] ||
     null;
   const selectedHref = buildEventsHref(
     tenantBasePath,
@@ -474,7 +473,9 @@ export function TenantEventsWorkspace({
         </section>
       ) : null}
 
-      <div className="tenant-events-workspace">
+      <div
+        className={`tenant-events-workspace${selectedRow ? " tenant-events-workspace-detail-open" : ""}`}
+      >
         <section className="console-section tenant-events-table-panel">
           <div className="console-section-header">
             <div>
@@ -546,6 +547,7 @@ export function TenantEventsWorkspace({
               <table className="console-table tenant-events-table">
                 <thead>
                   <tr>
+                    <th className="tenant-events-cell-action">Action</th>
                     <th className="tenant-events-cell-event">Event</th>
                     <th className="tenant-events-cell-calendar">Calendar</th>
                     <th className="tenant-events-cell-when">When</th>
@@ -554,18 +556,26 @@ export function TenantEventsWorkspace({
                     <th className="tenant-events-cell-tickets">Tickets</th>
                     <th className="tenant-events-cell-blocker">Main blocker</th>
                     <th className="tenant-events-cell-sync">Last sync</th>
-                    <th className="tenant-events-cell-action">Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {visibleRows.map((row) => {
-                    const rowHref = buildEventsHref(tenantBasePath, filters, row.row_id);
                     const selected = selectedRow?.row_id === row.row_id;
+                    const rowHref = buildEventsHref(
+                      tenantBasePath,
+                      filters,
+                      selected ? null : row.row_id,
+                    );
                     return (
                       <tr
                         className={selected ? "tenant-events-table-row-active" : undefined}
                         key={row.row_id}
                       >
+                        <td className="tenant-events-cell-action">
+                          <Link className="button button-secondary button-small" href={rowHref}>
+                            {selectionLabel(selected)}
+                          </Link>
+                        </td>
                         <td className="tenant-events-cell-event">
                           <div className="console-table-cell-stack">
                             <strong>{row.event_name}</strong>
@@ -616,11 +626,6 @@ export function TenantEventsWorkspace({
                             </span>
                           )}
                         </td>
-                        <td className="tenant-events-cell-action">
-                          <Link className="button button-secondary button-small" href={rowHref}>
-                            {selectionLabel()}
-                          </Link>
-                        </td>
                       </tr>
                     );
                   })}
@@ -630,16 +635,8 @@ export function TenantEventsWorkspace({
           )}
         </section>
 
-        <aside className="console-section tenant-events-detail-panel">
-          {!selectedRow ? (
-            <div className="console-preview-empty">
-              <strong>Select an event to review details</strong>
-              <p className="subtle-text">
-                Pick a row from the review queue to inspect its sync state, actions, and ticket
-                review controls.
-              </p>
-            </div>
-          ) : (
+        {selectedRow ? (
+          <aside className="console-section tenant-events-detail-panel">
             <>
               <div className="tenant-events-detail-hero">
                 {selectedRow.cover_url ? (
@@ -954,8 +951,8 @@ export function TenantEventsWorkspace({
                 </div>
               )}
             </>
-          )}
-        </aside>
+          </aside>
+        ) : null}
       </div>
     </div>
   );

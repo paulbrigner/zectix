@@ -246,6 +246,10 @@ export function buildEmbedEventUrl(calendarSlug: string, eventApiId: string) {
   );
 }
 
+export function buildEmbedCalendarUrl(calendarSlug: string) {
+  return `/c/${encodeURIComponent(calendarSlug)}?embed=1`;
+}
+
 export function buildEmbedSnippet(url: string, title: string, height: number) {
   const safeTitle = title.replaceAll('"', "&quot;");
   return `<iframe src="${url}" title="${safeTitle}" style="width:100%;height:${height}px;border:0;" loading="lazy"></iframe>`;
