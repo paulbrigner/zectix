@@ -411,8 +411,8 @@ select {
 
 .tenant-events-workspace {
   display: grid;
-  grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.95fr);
-  gap: 1rem;
+  grid-template-columns: minmax(0, 1.7fr) minmax(320px, 0.82fr);
+  gap: 1.25rem;
   align-items: start;
 }
 
@@ -420,6 +420,7 @@ select {
 .tenant-events-detail-panel,
 .tenant-events-ticket-section {
   gap: 1rem;
+  min-width: 0;
 }
 
 .tenant-events-detail-panel {
@@ -430,6 +431,10 @@ select {
 .tenant-events-filter-form {
   display: grid;
   gap: 0.85rem;
+}
+
+.tenant-events-filter-actions {
+  justify-content: flex-end;
 }
 
 .tenant-events-filter-grid {
@@ -450,19 +455,76 @@ select {
 
 .tenant-events-detail-hero {
   display: grid;
+  grid-template-columns: minmax(112px, 152px) minmax(0, 1fr);
   gap: 1rem;
+  align-items: start;
 }
 
 .tenant-events-detail-media {
-  min-height: 12rem;
+  min-height: 0;
+  aspect-ratio: 1 / 1;
+}
+
+.tenant-events-detail-copy {
+  gap: 0.4rem;
+}
+
+.tenant-events-detail-copy h3 {
+  margin: 0;
+  color: var(--color-gray-900);
+  font-size: clamp(1.2rem, 1.5vw, 1.55rem);
+  line-height: 1.12;
 }
 
 .tenant-events-detail-pills {
   justify-content: flex-start;
 }
 
+.tenant-events-detail-signals {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .tenant-events-detail-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   gap: 0.65rem;
+}
+
+.tenant-events-table {
+  min-width: 940px;
+}
+
+.tenant-events-ticket-table {
+  min-width: 720px;
+}
+
+.tenant-events-cell-event {
+  min-width: 12.5rem;
+}
+
+.tenant-events-cell-calendar,
+.tenant-events-cell-blocker {
+  min-width: 10.5rem;
+}
+
+.tenant-events-cell-blocker {
+  min-width: 13rem;
+}
+
+.tenant-events-cell-when,
+.tenant-events-cell-source,
+.tenant-events-cell-checkout,
+.tenant-events-cell-sync,
+.tenant-events-cell-action {
+  white-space: nowrap;
+}
+
+.tenant-events-cell-tickets {
+  min-width: 8.5rem;
+}
+
+.tenant-events-time {
+  white-space: nowrap;
 }
 
 .tenant-ticket-review-form {
@@ -3592,6 +3654,14 @@ select {
   .marketing-proof-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .tenant-events-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .tenant-events-detail-panel {
+    position: static;
+  }
 }
 
 @media (max-width: 720px) {
@@ -3676,8 +3746,16 @@ select {
     justify-content: flex-start;
   }
 
-  .tenant-events-detail-panel {
-    position: static;
+  .tenant-events-filter-actions {
+    justify-content: flex-start;
+  }
+
+  .tenant-events-detail-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .tenant-events-detail-signals {
+    grid-template-columns: 1fr;
   }
 
   .console-table {

@@ -215,8 +215,8 @@ function buildEventsHref(
   return `${tenantBasePath}/events${query ? `?${query}` : ""}`;
 }
 
-function selectionLabel(row: TenantEventWorkspaceRow) {
-  return row.source === "upstream" ? "Inspect import" : "Review";
+function selectionLabel() {
+  return "Open";
 }
 
 function sourceLabel(row: TenantEventWorkspaceRow) {
@@ -471,9 +471,6 @@ export function TenantEventsWorkspace({
                 {rows.length === 1 ? "" : "s"}.
               </p>
             </div>
-            <Link className="button button-secondary button-small" href={eventsPath}>
-              Clear filters
-            </Link>
           </div>
 
           <form className="tenant-events-filter-form" method="get">
@@ -514,7 +511,7 @@ export function TenantEventsWorkspace({
               </label>
             </div>
 
-            <div className="button-row">
+            <div className="button-row tenant-events-filter-actions">
               <button className="button button-secondary button-small" type="submit">
                 Apply filters
               </button>
@@ -533,18 +530,18 @@ export function TenantEventsWorkspace({
             </div>
           ) : (
             <div className="console-table-wrap">
-              <table className="console-table">
+              <table className="console-table tenant-events-table">
                 <thead>
                   <tr>
-                    <th>Event</th>
-                    <th>Calendar</th>
-                    <th>When</th>
-                    <th>Source</th>
-                    <th>Checkout</th>
-                    <th>Tickets</th>
-                    <th>Main blocker</th>
-                    <th>Last sync</th>
-                    <th>Action</th>
+                    <th className="tenant-events-cell-event">Event</th>
+                    <th className="tenant-events-cell-calendar">Calendar</th>
+                    <th className="tenant-events-cell-when">When</th>
+                    <th className="tenant-events-cell-source">Source</th>
+                    <th className="tenant-events-cell-checkout">Checkout</th>
+                    <th className="tenant-events-cell-tickets">Tickets</th>
+                    <th className="tenant-events-cell-blocker">Main blocker</th>
+                    <th className="tenant-events-cell-sync">Last sync</th>
+                    <th className="tenant-events-cell-action">Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -556,7 +553,7 @@ export function TenantEventsWorkspace({
                         className={selected ? "tenant-events-table-row-active" : undefined}
                         key={row.row_id}
                       >
-                        <td>
+                        <td className="tenant-events-cell-event">
                           <div className="console-table-cell-stack">
                             <strong>{row.event_name}</strong>
                             <p className="subtle-text console-table-note">
@@ -564,21 +561,23 @@ export function TenantEventsWorkspace({
                             </p>
                           </div>
                         </td>
-                        <td>{row.calendar.display_name}</td>
-                        <td>
-                          <LocalDateTime iso={row.start_at} />
+                        <td className="tenant-events-cell-calendar">{row.calendar.display_name}</td>
+                        <td className="tenant-events-cell-when">
+                          <span className="tenant-events-time">
+                            <LocalDateTime iso={row.start_at} />
+                          </span>
                         </td>
-                        <td>
+                        <td className="tenant-events-cell-source">
                           <span className={pillClassName(sourceTone(row))}>
                             {sourceLabel(row)}
                           </span>
                         </td>
-                        <td>
+                        <td className="tenant-events-cell-checkout">
                           <span className={pillClassName(row.public_status_tone)}>
                             {row.public_status_label}
                           </span>
                         </td>
-                        <td>
+                        <td className="tenant-events-cell-tickets">
                           {row.source === "mirrored" ? (
                             <div className="console-table-cell-stack">
                               <strong>
@@ -592,19 +591,21 @@ export function TenantEventsWorkspace({
                             <span className="subtle-text">Import first</span>
                           )}
                         </td>
-                        <td>{row.primary_blocker}</td>
-                        <td>
+                        <td className="tenant-events-cell-blocker">{row.primary_blocker}</td>
+                        <td className="tenant-events-cell-sync">
                           {row.last_synced_at ? (
-                            <LocalDateTime iso={row.last_synced_at} />
+                            <span className="tenant-events-time">
+                              <LocalDateTime iso={row.last_synced_at} />
+                            </span>
                           ) : (
                             <span className="subtle-text">
                               {row.source === "upstream" ? "Upstream only" : "Not yet synced"}
                             </span>
                           )}
                         </td>
-                        <td>
+                        <td className="tenant-events-cell-action">
                           <Link className="button button-secondary button-small" href={rowHref}>
-                            {selectionLabel(row)}
+                            {selectionLabel()}
                           </Link>
                         </td>
                       </tr>
@@ -638,7 +639,7 @@ export function TenantEventsWorkspace({
                     <span>{selectedRow.event_name.slice(0, 2).toUpperCase()}</span>
                   </div>
                 )}
-                <div className="tenant-event-copy">
+                <div className="tenant-event-copy tenant-events-detail-copy">
                   <div className="console-mini-pill-row tenant-events-detail-pills">
                     <span className={pillClassName(sourceTone(selectedRow))}>
                       {sourceLabel(selectedRow)}
@@ -661,7 +662,7 @@ export function TenantEventsWorkspace({
                 </div>
               </div>
 
-              <div className="console-signal-grid">
+              <div className="console-signal-grid tenant-events-detail-signals">
                 <div className="console-signal-card">
                   <span className="console-kpi-label">Checkout</span>
                   <strong>{selectedRow.public_status_label}</strong>
@@ -772,7 +773,7 @@ export function TenantEventsWorkspace({
                   </div>
 
                   <div className="console-table-wrap">
-                    <table className="console-table">
+                    <table className="console-table tenant-events-ticket-table">
                       <thead>
                         <tr>
                           <th>Ticket</th>
