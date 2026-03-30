@@ -1,0 +1,71 @@
+"use client";
+
+import * as Switch from "@radix-ui/react-switch";
+import { useId, useRef } from "react";
+
+export function ConsoleSwitch({
+  className,
+  defaultChecked = false,
+  description,
+  disabled = false,
+  label,
+  name,
+}: {
+  className?: string;
+  defaultChecked?: boolean;
+  description?: string;
+  disabled?: boolean;
+  label: string;
+  name: string;
+}) {
+  const labelId = useId();
+  const descriptionId = useId();
+  const switchRef = useRef<HTMLButtonElement>(null);
+
+  return (
+    <div
+      className={
+        className ? `console-switch-field ${className}` : "console-switch-field"
+      }
+      onClick={(event) => {
+        if (disabled) {
+          return;
+        }
+
+        if (
+          event.target instanceof HTMLElement &&
+          event.target.closest(".console-switch-root")
+        ) {
+          return;
+        }
+
+        switchRef.current?.click();
+      }}
+    >
+      <div className="console-switch-copy">
+        <strong className="console-switch-label" id={labelId}>
+          {label}
+        </strong>
+        {description ? (
+          <p
+            className="console-switch-description subtle-text"
+            id={descriptionId}
+          >
+            {description}
+          </p>
+        ) : null}
+      </div>
+      <Switch.Root
+        aria-describedby={description ? descriptionId : undefined}
+        aria-labelledby={labelId}
+        className="console-switch-root"
+        defaultChecked={defaultChecked}
+        disabled={disabled}
+        name={name}
+        ref={switchRef}
+      >
+        <Switch.Thumb className="console-switch-thumb" />
+      </Switch.Root>
+    </div>
+  );
+}

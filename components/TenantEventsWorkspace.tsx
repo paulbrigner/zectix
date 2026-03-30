@@ -5,7 +5,16 @@ import {
   syncCalendarEventAction,
   validateAndSyncCalendarAction,
 } from "@/app/dashboard/actions";
+import {
+  ConsoleTable,
+  ConsoleTableBody,
+  ConsoleTableCell,
+  ConsoleTableHead,
+  ConsoleTableHeader,
+  ConsoleTableRow,
+} from "@/components/ConsoleTable";
 import { LocalDateTime } from "@/components/LocalDateTime";
+import { ConsoleSwitch } from "@/components/ConsoleSwitch";
 import { formatFiatAmount } from "@/lib/app-state/utils";
 import type { TicketMirror } from "@/lib/app-state/types";
 import type { TenantOpsDetail } from "@/lib/tenancy/service";
@@ -49,7 +58,9 @@ function readIntSearchValue(value: SearchParamValue) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function readWorkspaceFilter(value: SearchParamValue): TenantEventWorkspaceFilter {
+function readWorkspaceFilter(
+  value: SearchParamValue,
+): TenantEventWorkspaceFilter {
   const normalized = readSearchValue(value);
   switch (normalized) {
     case "needs_attention":
@@ -63,10 +74,13 @@ function readWorkspaceFilter(value: SearchParamValue): TenantEventWorkspaceFilte
   }
 }
 
-function readSyncNotice(searchParams: Record<string, SearchParamValue>): SyncNotice | null {
+function readSyncNotice(
+  searchParams: Record<string, SearchParamValue>,
+): SyncNotice | null {
   const error = readSearchValue(searchParams.sync_error) || null;
   const eventId = readSearchValue(searchParams.sync_event_id) || null;
-  const eventName = readSearchValue(searchParams.sync_event_name) || "Selected event";
+  const eventName =
+    readSearchValue(searchParams.sync_event_name) || "Selected event";
   if (!error && !eventId) {
     return null;
   }
@@ -77,7 +91,10 @@ function readSyncNotice(searchParams: Record<string, SearchParamValue>): SyncNot
     error,
     eventId,
     eventName,
-    focus: readSearchValue(searchParams.sync_focus) === "upstream" ? "upstream" : "mirrored",
+    focus:
+      readSearchValue(searchParams.sync_focus) === "upstream"
+        ? "upstream"
+        : "mirrored",
     mirroredTicketCount: readIntSearchValue(searchParams.sync_mirrored),
     outcome:
       outcome === "imported" ||
@@ -315,17 +332,25 @@ export function TenantEventsWorkspace({
     filters,
     selectedRow?.row_id || null,
   );
-  const mirroredEventCount = rows.filter((row) => row.source === "mirrored").length;
-  const liveEventCount = rows.filter((row) => row.public_status_label === "Live").length;
+  const mirroredEventCount = rows.filter(
+    (row) => row.source === "mirrored",
+  ).length;
+  const liveEventCount = rows.filter(
+    (row) => row.public_status_label === "Live",
+  ).length;
   const needsAttentionCount = rows.filter((row) =>
     matchesTenantEventWorkspaceFilter(row, "needs_attention"),
   ).length;
-  const importCandidateCount = rows.filter((row) => row.source === "upstream").length;
+  const importCandidateCount = rows.filter(
+    (row) => row.source === "upstream",
+  ).length;
   const feedIssues = detail.calendars
     .map((calendar) => ({
       calendar,
       error:
-        detail.upstream_luma_events_by_calendar.get(calendar.calendar_connection_id)?.error || null,
+        detail.upstream_luma_events_by_calendar.get(
+          calendar.calendar_connection_id,
+        )?.error || null,
     }))
     .filter((entry) => entry.error);
 
@@ -336,8 +361,9 @@ export function TenantEventsWorkspace({
           <div>
             <h2>Events and tickets</h2>
             <p className="subtle-text">
-              Use this review queue to scan upcoming events, filter for blockers, and handle sync,
-              import, and ticket decisions from one place.
+              Use this review queue to scan upcoming events, filter for
+              blockers, and handle sync, import, and ticket decisions from one
+              place.
             </p>
           </div>
         </div>
@@ -347,7 +373,8 @@ export function TenantEventsWorkspace({
             <p className="console-kpi-label">Mirrored events</p>
             <p className="console-kpi-value">{mirroredEventCount}</p>
             <p className="subtle-text console-kpi-detail">
-              future event{mirroredEventCount === 1 ? "" : "s"} already in the workspace
+              future event{mirroredEventCount === 1 ? "" : "s"} already in the
+              workspace
             </p>
           </article>
           <article className="console-kpi-card">
@@ -368,7 +395,8 @@ export function TenantEventsWorkspace({
             <p className="console-kpi-label">Import candidates</p>
             <p className="console-kpi-value">{importCandidateCount}</p>
             <p className="subtle-text console-kpi-detail">
-              upstream Luma event{importCandidateCount === 1 ? "" : "s"} not yet mirrored
+              upstream Luma event{importCandidateCount === 1 ? "" : "s"} not yet
+              mirrored
             </p>
           </article>
         </div>
@@ -380,7 +408,9 @@ export function TenantEventsWorkspace({
         >
           <div className="console-section-header">
             <div>
-              <p className="console-kpi-label">{focusLabel(syncNotice.focus)}</p>
+              <p className="console-kpi-label">
+                {focusLabel(syncNotice.focus)}
+              </p>
               <h3>{syncNoticeTitle(syncNotice)}</h3>
               <p className="subtle-text">{syncNoticeCopy(syncNotice)}</p>
             </div>
@@ -393,7 +423,9 @@ export function TenantEventsWorkspace({
                 {focusLabel(syncNotice.focus)}
               </span>
               {syncNotice.syncStatus ? (
-                <span className={pillClassName("info")}>{syncNotice.syncStatus}</span>
+                <span className={pillClassName("info")}>
+                  {syncNotice.syncStatus}
+                </span>
               ) : null}
               <span
                 className={pillClassName(
@@ -412,26 +444,37 @@ export function TenantEventsWorkspace({
               <div className="console-signal-card">
                 <span className="console-kpi-label">Ticket tiers added</span>
                 <strong>{syncNotice.ticketsAdded}</strong>
-                <p className="subtle-text">Active tiers newly mirrored after refresh</p>
+                <p className="subtle-text">
+                  Active tiers newly mirrored after refresh
+                </p>
               </div>
               <div className="console-signal-card">
                 <span className="console-kpi-label">Ticket tiers removed</span>
                 <strong>{syncNotice.ticketsRemoved}</strong>
-                <p className="subtle-text">Previously active tiers no longer in the current feed</p>
+                <p className="subtle-text">
+                  Previously active tiers no longer in the current feed
+                </p>
               </div>
               <div className="console-signal-card">
                 <span className="console-kpi-label">Mirrored tiers now</span>
                 <strong>{syncNotice.mirroredTicketCount}</strong>
                 <p className="subtle-text">
-                  {syncNotice.enabledTicketCount} currently eligible for public checkout
+                  {syncNotice.enabledTicketCount} currently eligible for public
+                  checkout
                 </p>
               </div>
               <div className="console-signal-card">
                 <span className="console-kpi-label">Synced at</span>
                 <strong>
-                  {syncNotice.syncedAt ? <LocalDateTime iso={syncNotice.syncedAt} /> : "n/a"}
+                  {syncNotice.syncedAt ? (
+                    <LocalDateTime iso={syncNotice.syncedAt} />
+                  ) : (
+                    "n/a"
+                  )}
                 </strong>
-                <p className="subtle-text">Full-calendar refresh, event-focused summary</p>
+                <p className="subtle-text">
+                  Full-calendar refresh, event-focused summary
+                </p>
               </div>
             </div>
           ) : null}
@@ -444,14 +487,17 @@ export function TenantEventsWorkspace({
             <div>
               <h2>Feed issues</h2>
               <p className="subtle-text">
-                These calendars need attention before the event workspace can reflect the latest
-                upstream state.
+                These calendars need attention before the event workspace can
+                reflect the latest upstream state.
               </p>
             </div>
           </div>
           <div className="console-card-grid">
             {feedIssues.map(({ calendar, error }) => (
-              <article className="console-detail-card" key={calendar.calendar_connection_id}>
+              <article
+                className="console-detail-card"
+                key={calendar.calendar_connection_id}
+              >
                 <p className="console-kpi-label">{calendar.display_name}</p>
                 <h3>Could not load current Luma events</h3>
                 <p className="subtle-text">{error}</p>
@@ -461,9 +507,20 @@ export function TenantEventsWorkspace({
                     type="hidden"
                     value={calendar.calendar_connection_id}
                   />
-                  <input name="tenant_slug" type="hidden" value={detail.tenant.slug} />
-                  <input name="redirect_to" type="hidden" value={selectedHref} />
-                  <button className="button button-secondary button-small" type="submit">
+                  <input
+                    name="tenant_slug"
+                    type="hidden"
+                    value={detail.tenant.slug}
+                  />
+                  <input
+                    name="redirect_to"
+                    type="hidden"
+                    value={selectedHref}
+                  />
+                  <button
+                    className="button button-secondary button-small"
+                    type="submit"
+                  >
                     Refresh whole calendar
                   </button>
                 </form>
@@ -501,7 +558,11 @@ export function TenantEventsWorkspace({
               </label>
               <label className="console-field">
                 <span>Status</span>
-                <select className="console-input" defaultValue={stateFilter} name="state">
+                <select
+                  className="console-input"
+                  defaultValue={stateFilter}
+                  name="state"
+                >
                   <option value="all">All upcoming events</option>
                   <option value="needs_attention">Needs attention</option>
                   <option value="live">Live publicly</option>
@@ -511,7 +572,11 @@ export function TenantEventsWorkspace({
               </label>
               <label className="console-field">
                 <span>Calendar</span>
-                <select className="console-input" defaultValue={calendarFilter} name="calendar">
+                <select
+                  className="console-input"
+                  defaultValue={calendarFilter}
+                  name="calendar"
+                >
                   <option value="all">All calendars</option>
                   {detail.calendars.map((calendar) => (
                     <option
@@ -526,10 +591,16 @@ export function TenantEventsWorkspace({
             </div>
 
             <div className="button-row tenant-events-filter-actions">
-              <button className="button button-secondary button-small" type="submit">
+              <button
+                className="button button-secondary button-small"
+                type="submit"
+              >
                 Apply filters
               </button>
-              <Link className="button button-secondary button-small" href={eventsPath}>
+              <Link
+                className="button button-secondary button-small"
+                href={eventsPath}
+              >
                 Reset
               </Link>
             </div>
@@ -539,99 +610,128 @@ export function TenantEventsWorkspace({
             <div className="console-preview-empty">
               <strong>No events match the current filters</strong>
               <p className="subtle-text">
-                Try clearing a filter or broadening the search to bring more events back into view.
+                Try clearing a filter or broadening the search to bring more
+                events back into view.
               </p>
             </div>
           ) : (
-            <div className="console-table-wrap">
-              <table className="console-table tenant-events-table">
-                <thead>
-                  <tr>
-                    <th className="tenant-events-cell-action">Action</th>
-                    <th className="tenant-events-cell-event">Event</th>
-                    <th className="tenant-events-cell-calendar">Calendar</th>
-                    <th className="tenant-events-cell-when">When</th>
-                    <th className="tenant-events-cell-source">Source</th>
-                    <th className="tenant-events-cell-checkout">Checkout</th>
-                    <th className="tenant-events-cell-tickets">Tickets</th>
-                    <th className="tenant-events-cell-blocker">Main blocker</th>
-                    <th className="tenant-events-cell-sync">Last sync</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {visibleRows.map((row) => {
-                    const selected = selectedRow?.row_id === row.row_id;
-                    const rowHref = buildEventsHref(
-                      tenantBasePath,
-                      filters,
-                      selected ? null : row.row_id,
-                    );
-                    return (
-                      <tr
-                        className={selected ? "tenant-events-table-row-active" : undefined}
-                        key={row.row_id}
-                      >
-                        <td className="tenant-events-cell-action">
-                          <Link className="button button-secondary button-small" href={rowHref}>
-                            {selectionLabel(selected)}
-                          </Link>
-                        </td>
-                        <td className="tenant-events-cell-event">
+            <ConsoleTable tableClassName="tenant-events-table">
+              <ConsoleTableHead>
+                <ConsoleTableRow>
+                  <ConsoleTableHeader className="tenant-events-cell-action">
+                    Action
+                  </ConsoleTableHeader>
+                  <ConsoleTableHeader className="tenant-events-cell-event">
+                    Event
+                  </ConsoleTableHeader>
+                  <ConsoleTableHeader className="tenant-events-cell-calendar">
+                    Calendar
+                  </ConsoleTableHeader>
+                  <ConsoleTableHeader className="tenant-events-cell-when">
+                    When
+                  </ConsoleTableHeader>
+                  <ConsoleTableHeader className="tenant-events-cell-source">
+                    Source
+                  </ConsoleTableHeader>
+                  <ConsoleTableHeader className="tenant-events-cell-checkout">
+                    Checkout
+                  </ConsoleTableHeader>
+                  <ConsoleTableHeader className="tenant-events-cell-tickets">
+                    Tickets
+                  </ConsoleTableHeader>
+                  <ConsoleTableHeader className="tenant-events-cell-blocker">
+                    Main blocker
+                  </ConsoleTableHeader>
+                  <ConsoleTableHeader className="tenant-events-cell-sync">
+                    Last sync
+                  </ConsoleTableHeader>
+                </ConsoleTableRow>
+              </ConsoleTableHead>
+              <ConsoleTableBody>
+                {visibleRows.map((row) => {
+                  const selected = selectedRow?.row_id === row.row_id;
+                  const rowHref = buildEventsHref(
+                    tenantBasePath,
+                    filters,
+                    selected ? null : row.row_id,
+                  );
+                  return (
+                    <ConsoleTableRow
+                      className={
+                        selected ? "tenant-events-table-row-active" : undefined
+                      }
+                      key={row.row_id}
+                    >
+                      <ConsoleTableCell className="tenant-events-cell-action">
+                        <Link
+                          className="button button-secondary button-small"
+                          href={rowHref}
+                        >
+                          {selectionLabel(selected)}
+                        </Link>
+                      </ConsoleTableCell>
+                      <ConsoleTableCell className="tenant-events-cell-event">
+                        <div className="console-table-cell-stack">
+                          <strong>{row.event_name}</strong>
+                          <p className="subtle-text console-table-note">
+                            {row.location_label || "Location not specified"}
+                          </p>
+                        </div>
+                      </ConsoleTableCell>
+                      <ConsoleTableCell className="tenant-events-cell-calendar">
+                        {row.calendar.display_name}
+                      </ConsoleTableCell>
+                      <ConsoleTableCell className="tenant-events-cell-when">
+                        <span className="tenant-events-time">
+                          <LocalDateTime iso={row.start_at} />
+                        </span>
+                      </ConsoleTableCell>
+                      <ConsoleTableCell className="tenant-events-cell-source">
+                        <span className={pillClassName(sourceTone(row))}>
+                          {sourceLabel(row)}
+                        </span>
+                      </ConsoleTableCell>
+                      <ConsoleTableCell className="tenant-events-cell-checkout">
+                        <span className={pillClassName(row.public_status_tone)}>
+                          {row.public_status_label}
+                        </span>
+                      </ConsoleTableCell>
+                      <ConsoleTableCell className="tenant-events-cell-tickets">
+                        {row.source === "mirrored" ? (
                           <div className="console-table-cell-stack">
-                            <strong>{row.event_name}</strong>
+                            <strong>
+                              {row.enabled_ticket_count}/{row.ticket_count}{" "}
+                              ready
+                            </strong>
                             <p className="subtle-text console-table-note">
-                              {row.location_label || "Location not specified"}
+                              {row.needs_attention_count} needing review
                             </p>
                           </div>
-                        </td>
-                        <td className="tenant-events-cell-calendar">{row.calendar.display_name}</td>
-                        <td className="tenant-events-cell-when">
+                        ) : (
+                          <span className="subtle-text">Import first</span>
+                        )}
+                      </ConsoleTableCell>
+                      <ConsoleTableCell className="tenant-events-cell-blocker">
+                        {row.primary_blocker}
+                      </ConsoleTableCell>
+                      <ConsoleTableCell className="tenant-events-cell-sync">
+                        {row.last_synced_at ? (
                           <span className="tenant-events-time">
-                            <LocalDateTime iso={row.start_at} />
+                            <LocalDateTime iso={row.last_synced_at} />
                           </span>
-                        </td>
-                        <td className="tenant-events-cell-source">
-                          <span className={pillClassName(sourceTone(row))}>
-                            {sourceLabel(row)}
+                        ) : (
+                          <span className="subtle-text">
+                            {row.source === "upstream"
+                              ? "Upstream only"
+                              : "Not yet synced"}
                           </span>
-                        </td>
-                        <td className="tenant-events-cell-checkout">
-                          <span className={pillClassName(row.public_status_tone)}>
-                            {row.public_status_label}
-                          </span>
-                        </td>
-                        <td className="tenant-events-cell-tickets">
-                          {row.source === "mirrored" ? (
-                            <div className="console-table-cell-stack">
-                              <strong>
-                                {row.enabled_ticket_count}/{row.ticket_count} ready
-                              </strong>
-                              <p className="subtle-text console-table-note">
-                                {row.needs_attention_count} needing review
-                              </p>
-                            </div>
-                          ) : (
-                            <span className="subtle-text">Import first</span>
-                          )}
-                        </td>
-                        <td className="tenant-events-cell-blocker">{row.primary_blocker}</td>
-                        <td className="tenant-events-cell-sync">
-                          {row.last_synced_at ? (
-                            <span className="tenant-events-time">
-                              <LocalDateTime iso={row.last_synced_at} />
-                            </span>
-                          ) : (
-                            <span className="subtle-text">
-                              {row.source === "upstream" ? "Upstream only" : "Not yet synced"}
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                        )}
+                      </ConsoleTableCell>
+                    </ConsoleTableRow>
+                  );
+                })}
+              </ConsoleTableBody>
+            </ConsoleTable>
           )}
         </section>
 
@@ -642,11 +742,16 @@ export function TenantEventsWorkspace({
                 {selectedRow.cover_url ? (
                   <div className="tenant-event-media tenant-events-detail-media">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img alt={selectedRow.event_name} src={selectedRow.cover_url} />
+                    <img
+                      alt={selectedRow.event_name}
+                      src={selectedRow.cover_url}
+                    />
                   </div>
                 ) : (
                   <div className="tenant-event-media tenant-event-media-fallback tenant-events-detail-media">
-                    <span>{selectedRow.event_name.slice(0, 2).toUpperCase()}</span>
+                    <span>
+                      {selectedRow.event_name.slice(0, 2).toUpperCase()}
+                    </span>
                   </div>
                 )}
                 <div className="tenant-event-copy tenant-events-detail-copy">
@@ -654,20 +759,27 @@ export function TenantEventsWorkspace({
                     <span className={pillClassName(sourceTone(selectedRow))}>
                       {sourceLabel(selectedRow)}
                     </span>
-                    <span className={pillClassName(selectedRow.public_status_tone)}>
+                    <span
+                      className={pillClassName(selectedRow.public_status_tone)}
+                    >
                       {selectedRow.public_status_label}
                     </span>
-                    <span className={pillClassName(selectedRow.sync_status_tone)}>
+                    <span
+                      className={pillClassName(selectedRow.sync_status_tone)}
+                    >
                       {selectedRow.sync_status_label}
                     </span>
                   </div>
                   <h3>{selectedRow.event_name}</h3>
                   <p className="subtle-text">
                     <LocalDateTime iso={selectedRow.start_at} />
-                    {selectedRow.location_label ? ` · ${selectedRow.location_label}` : ""}
+                    {selectedRow.location_label
+                      ? ` · ${selectedRow.location_label}`
+                      : ""}
                   </p>
                   <p className="subtle-text">
-                    Calendar {selectedRow.calendar.display_name} · {selectedRow.primary_blocker}
+                    Calendar {selectedRow.calendar.display_name} ·{" "}
+                    {selectedRow.primary_blocker}
                   </p>
                 </div>
               </div>
@@ -741,16 +853,39 @@ export function TenantEventsWorkspace({
                     type="hidden"
                     value={selectedRow.calendar.calendar_connection_id}
                   />
-                  <input name="tenant_slug" type="hidden" value={detail.tenant.slug} />
-                  <input name="event_api_id" type="hidden" value={selectedRow.event_id} />
-                  <input name="event_name" type="hidden" value={selectedRow.event_name} />
+                  <input
+                    name="tenant_slug"
+                    type="hidden"
+                    value={detail.tenant.slug}
+                  />
+                  <input
+                    name="event_api_id"
+                    type="hidden"
+                    value={selectedRow.event_id}
+                  />
+                  <input
+                    name="event_name"
+                    type="hidden"
+                    value={selectedRow.event_name}
+                  />
                   <input
                     name="focus"
                     type="hidden"
-                    value={selectedRow.source === "upstream" ? "upstream" : "mirrored"}
+                    value={
+                      selectedRow.source === "upstream"
+                        ? "upstream"
+                        : "mirrored"
+                    }
                   />
-                  <input name="redirect_to" type="hidden" value={selectedHref} />
-                  <button className="button button-secondary button-small" type="submit">
+                  <input
+                    name="redirect_to"
+                    type="hidden"
+                    value={selectedHref}
+                  />
+                  <button
+                    className="button button-secondary button-small"
+                    type="submit"
+                  >
                     {selectedRow.source === "upstream"
                       ? "Import and refresh event"
                       : "Sync this event"}
@@ -763,49 +898,78 @@ export function TenantEventsWorkspace({
                     type="hidden"
                     value={selectedRow.calendar.calendar_connection_id}
                   />
-                  <input name="tenant_slug" type="hidden" value={detail.tenant.slug} />
-                  <input name="redirect_to" type="hidden" value={selectedHref} />
-                  <button className="button button-secondary button-small" type="submit">
+                  <input
+                    name="tenant_slug"
+                    type="hidden"
+                    value={detail.tenant.slug}
+                  />
+                  <input
+                    name="redirect_to"
+                    type="hidden"
+                    value={selectedHref}
+                  />
+                  <button
+                    className="button button-secondary button-small"
+                    type="submit"
+                  >
                     Refresh whole calendar
                   </button>
                 </form>
               </div>
 
-              {selectedRow.source === "mirrored" && selectedRow.mirrored_event ? (
+              {selectedRow.source === "mirrored" &&
+              selectedRow.mirrored_event ? (
                 <section className="tenant-events-publish-section">
                   <div className="console-section-header">
                     <div>
                       <h2>Event visibility</h2>
                       <p className="subtle-text">
-                        Decide whether this event should appear on public checkout at all. Ticket
-                        assertions only matter when this event toggle is on.
+                        Decide whether this event should appear on public
+                        checkout at all. Ticket assertions only matter when this
+                        event toggle is on.
                       </p>
                     </div>
                   </div>
 
-                  <form action={setEventPublicCheckoutAction} className="tenant-event-publish-form">
+                  <form
+                    action={setEventPublicCheckoutAction}
+                    className="tenant-event-publish-form"
+                  >
                     <input
                       name="calendar_connection_id"
                       type="hidden"
                       value={selectedRow.calendar.calendar_connection_id}
                     />
-                    <input name="tenant_slug" type="hidden" value={detail.tenant.slug} />
-                    <input name="event_api_id" type="hidden" value={selectedRow.event_id} />
-                    <input name="redirect_to" type="hidden" value={selectedHref} />
+                    <input
+                      name="tenant_slug"
+                      type="hidden"
+                      value={detail.tenant.slug}
+                    />
+                    <input
+                      name="event_api_id"
+                      type="hidden"
+                      value={selectedRow.event_id}
+                    />
+                    <input
+                      name="redirect_to"
+                      type="hidden"
+                      value={selectedHref}
+                    />
                     <input
                       name="public_checkout_requested_present"
                       type="hidden"
                       value="1"
                     />
 
-                    <label className="console-checkbox tenant-ticket-review-check">
-                      <input
-                        defaultChecked={selectedRow.mirrored_event.public_checkout_requested}
-                        name="public_checkout_requested"
-                        type="checkbox"
-                      />
-                      <span>Allow this event on public checkout</span>
-                    </label>
+                    <ConsoleSwitch
+                      className="tenant-ticket-review-check"
+                      defaultChecked={
+                        selectedRow.mirrored_event.public_checkout_requested
+                      }
+                      description="Keep this on only when the event itself should be available on public checkout."
+                      label="Allow this event on public checkout"
+                      name="public_checkout_requested"
+                    />
 
                     <p className="subtle-text">
                       {selectedRow.mirrored_event.public_checkout_requested
@@ -813,7 +977,10 @@ export function TenantEventsWorkspace({
                         : "This event will stay hidden even if tickets are individually ready."}
                     </p>
 
-                    <button className="button button-secondary button-small" type="submit">
+                    <button
+                      className="button button-secondary button-small"
+                      type="submit"
+                    >
                       Save event visibility
                     </button>
                   </form>
@@ -824,9 +991,9 @@ export function TenantEventsWorkspace({
                 <div className="console-preview-empty">
                   <strong>Import to start ticket review</strong>
                   <p className="subtle-text">
-                    This event is visible from the saved Luma key but is not yet part of your
-                    mirrored checkout workspace. Import it first, then review its mirrored ticket
-                    tiers here.
+                    This event is visible from the saved Luma key but is not yet
+                    part of your mirrored checkout workspace. Import it first,
+                    then review its mirrored ticket tiers here.
                   </p>
                 </div>
               ) : selectedRow.tickets.length ? (
@@ -835,7 +1002,8 @@ export function TenantEventsWorkspace({
                     <div>
                       <h2>Ticket review</h2>
                       <p className="subtle-text">
-                        Confirm organizer-side requirements for each mirrored ticket tier.
+                        Confirm organizer-side requirements for each mirrored
+                        ticket tier.
                       </p>
                     </div>
                   </div>
@@ -847,19 +1015,31 @@ export function TenantEventsWorkspace({
                         className="console-detail-card console-ticket-review-card tenant-ticket-review-form"
                         key={ticket.ticket_type_api_id}
                       >
-                        <input name="tenant_slug" type="hidden" value={detail.tenant.slug} />
+                        <input
+                          name="tenant_slug"
+                          type="hidden"
+                          value={detail.tenant.slug}
+                        />
                         <input
                           name="calendar_connection_id"
                           type="hidden"
                           value={selectedRow.calendar.calendar_connection_id}
                         />
-                        <input name="event_api_id" type="hidden" value={ticket.event_api_id} />
+                        <input
+                          name="event_api_id"
+                          type="hidden"
+                          value={ticket.event_api_id}
+                        />
                         <input
                           name="ticket_type_api_id"
                           type="hidden"
                           value={ticket.ticket_type_api_id}
                         />
-                        <input name="redirect_to" type="hidden" value={selectedHref} />
+                        <input
+                          name="redirect_to"
+                          type="hidden"
+                          value={selectedHref}
+                        />
                         <input
                           name="public_checkout_requested_present"
                           type="hidden"
@@ -884,25 +1064,30 @@ export function TenantEventsWorkspace({
                           </div>
 
                           <div className="console-mini-pill-row console-ticket-review-pills">
-                            <span className={pillClassName(ticketReviewTone(ticket))}>
+                            <span
+                              className={pillClassName(
+                                ticketReviewTone(ticket),
+                              )}
+                            >
                               {ticketReviewLabel(ticket)}
                             </span>
                           </div>
 
                           <div className="console-ticket-review-summary">
-                            <p className="subtle-text">{ticketReviewCopy(ticket)}</p>
+                            <p className="subtle-text">
+                              {ticketReviewCopy(ticket)}
+                            </p>
                           </div>
                         </div>
 
                         <div className="tenant-ticket-review-checks">
-                          <label className="console-checkbox tenant-ticket-review-check">
-                            <input
-                              defaultChecked={ticket.public_checkout_requested}
-                              name="public_checkout_requested"
-                              type="checkbox"
-                            />
-                            <span>Allow this ticket on public checkout</span>
-                          </label>
+                          <ConsoleSwitch
+                            className="tenant-ticket-review-check"
+                            defaultChecked={ticket.public_checkout_requested}
+                            description="Turn this off to keep the ticket hidden even if the review assertions are complete."
+                            label="Allow this ticket on public checkout"
+                            name="public_checkout_requested"
+                          />
                           <label className="console-checkbox tenant-ticket-review-check">
                             <input
                               defaultChecked={ticket.confirmed_fixed_price}
@@ -913,7 +1098,9 @@ export function TenantEventsWorkspace({
                           </label>
                           <label className="console-checkbox tenant-ticket-review-check">
                             <input
-                              defaultChecked={ticket.confirmed_no_approval_required}
+                              defaultChecked={
+                                ticket.confirmed_no_approval_required
+                              }
                               name="confirmed_no_approval_required"
                               type="checkbox"
                             />
@@ -921,7 +1108,9 @@ export function TenantEventsWorkspace({
                           </label>
                           <label className="console-checkbox tenant-ticket-review-check">
                             <input
-                              defaultChecked={ticket.confirmed_no_extra_required_questions}
+                              defaultChecked={
+                                ticket.confirmed_no_extra_required_questions
+                              }
                               name="confirmed_no_extra_required_questions"
                               type="checkbox"
                             />
@@ -945,8 +1134,8 @@ export function TenantEventsWorkspace({
                 <div className="console-preview-empty">
                   <strong>No mirrored ticket tiers are available yet</strong>
                   <p className="subtle-text">
-                    Re-sync this event after making ticket changes in Luma to refresh the mirrored
-                    checkout inventory.
+                    Re-sync this event after making ticket changes in Luma to
+                    refresh the mirrored checkout inventory.
                   </p>
                 </div>
               )}
