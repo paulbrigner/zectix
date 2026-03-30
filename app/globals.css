@@ -409,6 +409,76 @@ select {
   color: #166534;
 }
 
+.tenant-events-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.95fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.tenant-events-table-panel,
+.tenant-events-detail-panel,
+.tenant-events-ticket-section {
+  gap: 1rem;
+}
+
+.tenant-events-detail-panel {
+  position: sticky;
+  top: 1rem;
+}
+
+.tenant-events-filter-form {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.tenant-events-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.85rem;
+}
+
+.console-table-cell-stack {
+  display: grid;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.tenant-events-table-row-active td {
+  background: rgba(255, 251, 235, 0.92);
+}
+
+.tenant-events-detail-hero {
+  display: grid;
+  gap: 1rem;
+}
+
+.tenant-events-detail-media {
+  min-height: 12rem;
+}
+
+.tenant-events-detail-pills {
+  justify-content: flex-start;
+}
+
+.tenant-events-detail-actions {
+  gap: 0.65rem;
+}
+
+.tenant-ticket-review-form {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.tenant-ticket-review-checks {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.tenant-ticket-review-check {
+  padding: 0.65rem 0.75rem;
+}
+
 .console-section {
   display: grid;
   gap: 1rem;
@@ -3434,6 +3504,10 @@ select {
     flex-direction: column;
   }
 
+  .tenant-events-workspace {
+    grid-template-columns: 1fr;
+  }
+
   .event-page-media {
     width: 3.25rem;
   }
@@ -3600,6 +3674,10 @@ select {
 
   .tenant-workspace-meta {
     justify-content: flex-start;
+  }
+
+  .tenant-events-detail-panel {
+    position: static;
   }
 
   .console-table {
