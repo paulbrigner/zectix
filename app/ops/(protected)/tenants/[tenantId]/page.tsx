@@ -142,8 +142,8 @@ export default async function TenantDetailPage({
           <div className="public-field-grid">
             <label className="console-field">
               <ConsoleFieldLabel
-                info="Only active tenants resolve public calendar pages."
-                label="Tenant status"
+                info="Only active organizations resolve public calendar pages."
+                label="Organization status"
               />
               <select
                 className="console-input"
@@ -158,10 +158,10 @@ export default async function TenantDetailPage({
             </label>
           </div>
           <p className="subtle-text">
-            Public calendar pages only resolve for tenants whose status is <code>active</code>.
+            Public calendar pages only resolve for organizations whose status is <code>active</code>.
           </p>
           <button className="button button-secondary button-small" type="submit">
-            Save tenant status
+            Save organization status
           </button>
         </form>
       </section>
@@ -611,7 +611,7 @@ export default async function TenantDetailPage({
 
         <ConsoleDisclosure
           defaultOpen={detail.calendars.length > 0 && !detail.cipherpay_connections.length}
-          description="Leave the base URLs blank unless this tenant uses custom CipherPay endpoints."
+          description="Leave the base URLs blank unless this organization uses custom CipherPay endpoints."
           title="CipherPay setup"
         >
           <form action={createCipherPayConnectionAction} className="console-content">

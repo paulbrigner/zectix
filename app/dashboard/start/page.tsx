@@ -51,10 +51,10 @@ export default async function TenantStartPage({
             <p className="subtle-text">
               We&apos;ll create a draft organizer account, then email a one-time
               sign-in link so you can connect Luma, validate your calendar, and
-              configure CipherPay from the tenant dashboard.
+              configure CipherPay from the organizer dashboard.
             </p>
             <p className="subtle-text">
-              Public checkout stays dark until the tenant is activated.
+              Public checkout stays dark until the organization is activated.
             </p>
 
             {resolvedSearchParams.email_sent === "1" ? (

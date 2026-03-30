@@ -48,7 +48,7 @@ export default async function TenantScopedLayout({
           </div>
           <div className="console-mini-pill-row tenant-workspace-meta">
             <span className={`console-mini-pill console-mini-pill-${badgeTone(tenant.status)}`}>
-              tenant {tenant.status}
+              organization {tenant.status}
             </span>
             <span
               className={`console-mini-pill console-mini-pill-${badgeTone(

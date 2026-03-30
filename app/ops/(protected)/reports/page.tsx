@@ -27,7 +27,7 @@ export default async function ReportsPage({
       <div className="console-section-header">
         <div>
           <h2>Billing cycles</h2>
-          <p className="subtle-text">Monthly ZEC billing by tenant, including outstanding balances, cycle state, and manual adjustments.</p>
+          <p className="subtle-text">Monthly ZEC billing by organization, including outstanding balances, cycle state, and manual adjustments.</p>
         </div>
         <a className="button button-secondary button-small" href={`/api/ops/reports?billing_period=${encodeURIComponent(billingPeriod)}&format=csv`}>
           Export CSV
@@ -123,7 +123,7 @@ export default async function ReportsPage({
           <article className="console-detail-card">
             <h3>No billing cycles for this period</h3>
             <p className="subtle-text">
-              Cycles appear once a tenant has recognized ZEC-billable registrations in the selected month.
+              Cycles appear once an organization has recognized ZEC-billable registrations in the selected month.
             </p>
           </article>
         )}
