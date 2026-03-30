@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+  setEventPublicCheckoutAction,
   setTicketAssertionsAction,
   syncCalendarEventAction,
   validateAndSyncCalendarAction,
@@ -148,6 +149,10 @@ function syncNoticeCopy(notice: SyncNotice) {
 }
 
 function ticketReviewTone(ticket: TicketMirror): TenantEventWorkspaceTone {
+  if (!ticket.public_checkout_requested) {
+    return "muted";
+  }
+
   if (ticket.zcash_enabled) {
     return "success";
   }
@@ -158,6 +163,10 @@ function ticketReviewTone(ticket: TicketMirror): TenantEventWorkspaceTone {
 }
 
 function ticketReviewLabel(ticket: TicketMirror) {
+  if (!ticket.public_checkout_requested) {
+    return "Hidden by choice";
+  }
+
   if (ticket.zcash_enabled) {
     return "Ready for checkout";
   }
@@ -168,6 +177,10 @@ function ticketReviewLabel(ticket: TicketMirror) {
 }
 
 function ticketReviewCopy(ticket: TicketMirror) {
+  if (!ticket.public_checkout_requested) {
+    return "This ticket is intentionally hidden from public checkout.";
+  }
+
   if (ticket.automatic_eligibility_reasons.length) {
     return `Automatic review: ${ticket.automatic_eligibility_reasons.join(" · ")}`;
   }
@@ -706,14 +719,23 @@ export function TenantEventsWorkspace({
                   </a>
                 ) : null}
 
-                {selectedRow.source === "mirrored" &&
-                selectedRow.mirrored_event?.zcash_enabled ? (
-                  <Link
-                    className="button button-secondary button-small"
-                    href={`/c/${selectedRow.calendar.slug}/events/${encodeURIComponent(selectedRow.event_id)}`}
-                  >
-                    Open public event
-                  </Link>
+                {selectedRow.source === "mirrored" ? (
+                  selectedRow.mirrored_event?.zcash_enabled ? (
+                    <Link
+                      className="button button-secondary button-small"
+                      href={`/c/${selectedRow.calendar.slug}/events/${encodeURIComponent(selectedRow.event_id)}`}
+                    >
+                      Open public event
+                    </Link>
+                  ) : (
+                    <button
+                      className="button button-secondary button-small"
+                      disabled
+                      type="button"
+                    >
+                      Public event hidden
+                    </button>
+                  )
                 ) : null}
 
                 <form action={syncCalendarEventAction}>
@@ -751,6 +773,55 @@ export function TenantEventsWorkspace({
                   </button>
                 </form>
               </div>
+
+              {selectedRow.source === "mirrored" && selectedRow.mirrored_event ? (
+                <section className="tenant-events-publish-section">
+                  <div className="console-section-header">
+                    <div>
+                      <h2>Event visibility</h2>
+                      <p className="subtle-text">
+                        Decide whether this event should appear on public checkout at all. Ticket
+                        assertions only matter when this event toggle is on.
+                      </p>
+                    </div>
+                  </div>
+
+                  <form action={setEventPublicCheckoutAction} className="tenant-event-publish-form">
+                    <input
+                      name="calendar_connection_id"
+                      type="hidden"
+                      value={selectedRow.calendar.calendar_connection_id}
+                    />
+                    <input name="tenant_slug" type="hidden" value={detail.tenant.slug} />
+                    <input name="event_api_id" type="hidden" value={selectedRow.event_id} />
+                    <input name="redirect_to" type="hidden" value={selectedHref} />
+                    <input
+                      name="public_checkout_requested_present"
+                      type="hidden"
+                      value="1"
+                    />
+
+                    <label className="console-checkbox tenant-ticket-review-check">
+                      <input
+                        defaultChecked={selectedRow.mirrored_event.public_checkout_requested}
+                        name="public_checkout_requested"
+                        type="checkbox"
+                      />
+                      <span>Allow this event on public checkout</span>
+                    </label>
+
+                    <p className="subtle-text">
+                      {selectedRow.mirrored_event.public_checkout_requested
+                        ? "This event can go live once at least one ticket is also allowed and passes review."
+                        : "This event will stay hidden even if tickets are individually ready."}
+                    </p>
+
+                    <button className="button button-secondary button-small" type="submit">
+                      Save event visibility
+                    </button>
+                  </form>
+                </section>
+              ) : null}
 
               {selectedRow.source === "upstream" ? (
                 <div className="console-preview-empty">
@@ -824,8 +895,21 @@ export function TenantEventsWorkspace({
                                   value={ticket.ticket_type_api_id}
                                 />
                                 <input name="redirect_to" type="hidden" value={selectedHref} />
+                                <input
+                                  name="public_checkout_requested_present"
+                                  type="hidden"
+                                  value="1"
+                                />
 
                                 <div className="tenant-ticket-review-checks">
+                                  <label className="console-checkbox tenant-ticket-review-check">
+                                    <input
+                                      defaultChecked={ticket.public_checkout_requested}
+                                      name="public_checkout_requested"
+                                      type="checkbox"
+                                    />
+                                    <span>Allow this ticket on public checkout</span>
+                                  </label>
                                   <label className="console-checkbox tenant-ticket-review-check">
                                     <input
                                       defaultChecked={ticket.confirmed_fixed_price}

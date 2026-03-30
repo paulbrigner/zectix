@@ -10,6 +10,7 @@ import {
 import type { EventMirror, TicketMirror } from "@/lib/app-state/types";
 import { nowIso } from "@/lib/app-state/utils";
 import { appUrl } from "@/lib/app-paths";
+import { evaluateEventCheckoutState } from "@/lib/eligibility/event-checkout";
 import { evaluateTicketEligibility } from "@/lib/eligibility/ticket-eligibility";
 import {
   createLumaWebhook,
@@ -111,6 +112,7 @@ function baseTicketMirror(
     description: input.description,
     active: input.active,
     price_source: input.price_source,
+    public_checkout_requested: existing?.public_checkout_requested ?? true,
     confirmed_fixed_price: existing?.confirmed_fixed_price || false,
     confirmed_no_approval_required: existing?.confirmed_no_approval_required || false,
     confirmed_no_extra_required_questions:
@@ -356,7 +358,12 @@ export async function syncCalendarConnection(calendarConnectionId: string) {
         event_api_id: event.api_id,
         luma_api_key: lumaApiKey,
       });
-      const zcashEnabled = tickets.some((ticket) => ticket.zcash_enabled);
+      const publicCheckoutRequested = existing?.public_checkout_requested ?? true;
+      const eventCheckoutState = evaluateEventCheckoutState({
+        enabled_ticket_count: tickets.filter((ticket) => ticket.zcash_enabled).length,
+        public_checkout_requested: publicCheckoutRequested,
+        sync_status: "active",
+      });
       const nextEvent: EventMirror = {
         event_mirror_id:
           existing?.event_mirror_id || `${connection.calendar_connection_id}:${event.api_id}`,
@@ -373,10 +380,9 @@ export async function syncCalendarConnection(calendarConnectionId: string) {
         location_label: event.location_label,
         location_note: event.location_note,
         sync_status: "active",
-        zcash_enabled: zcashEnabled,
-        zcash_enabled_reason: zcashEnabled
-          ? "At least one ticket is enabled for Zcash checkout."
-          : "No tickets are currently enabled for managed Zcash checkout.",
+        public_checkout_requested: publicCheckoutRequested,
+        zcash_enabled: eventCheckoutState.zcash_enabled,
+        zcash_enabled_reason: eventCheckoutState.zcash_enabled_reason,
         last_synced_at: timestamp,
         last_sync_hash: safeJsonHash({
           event,
@@ -401,8 +407,11 @@ export async function syncCalendarConnection(calendarConnectionId: string) {
         await putEventMirror({
           ...existing,
           sync_status: "hidden",
-          zcash_enabled: false,
-          zcash_enabled_reason: "Event no longer appears in the latest Luma sync.",
+          ...evaluateEventCheckoutState({
+            enabled_ticket_count: 0,
+            public_checkout_requested: existing.public_checkout_requested,
+            sync_status: "hidden",
+          }),
           last_synced_at: timestamp,
           updated_at: timestamp,
         }),

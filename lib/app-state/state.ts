@@ -474,6 +474,7 @@ function normalizeEventMirror(value: unknown): EventMirror | null {
       item?.sync_status === "error"
         ? item.sync_status
         : "active",
+    public_checkout_requested: asBoolean(item?.public_checkout_requested, true),
     zcash_enabled: asBoolean(item?.zcash_enabled),
     zcash_enabled_reason: asString(item?.zcash_enabled_reason),
     last_synced_at: asIsoTimestamp(item?.last_synced_at),
@@ -517,6 +518,7 @@ function normalizeTicketMirror(value: unknown): TicketMirror | null {
     description: asString(item?.description),
     active: asBoolean(item?.active, true),
     price_source: item?.price_source === "fallback" ? "fallback" : "amount",
+    public_checkout_requested: asBoolean(item?.public_checkout_requested, true),
     zcash_enabled: asBoolean(item?.zcash_enabled),
     zcash_enabled_reason: asString(item?.zcash_enabled_reason),
     confirmed_fixed_price: asBoolean(item?.confirmed_fixed_price),

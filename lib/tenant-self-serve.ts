@@ -109,6 +109,10 @@ function primaryBlockerForMirroredEvent(
     return "No ticket tiers mirrored";
   }
 
+  if (!event.public_checkout_requested) {
+    return event.zcash_enabled_reason || "Public checkout is turned off for this event.";
+  }
+
   if (needsAttentionCount > 0) {
     return `${needsAttentionCount} ticket${needsAttentionCount === 1 ? "" : "s"} need review`;
   }
@@ -320,6 +324,10 @@ export function recentSessionsForDashboard(sessions: CheckoutSession[], limit = 
 }
 
 export function ticketNeedsAttention(ticket: TicketMirror) {
+  if (!ticket.public_checkout_requested) {
+    return false;
+  }
+
   if (ticket.zcash_enabled) {
     return false;
   }
@@ -337,6 +345,22 @@ export function ticketNeedsAttention(ticket: TicketMirror) {
 
 export function upcomingEnabledEvents(events: EventMirror[]) {
   return selectUpcomingEvents(events.filter((event) => event.zcash_enabled));
+}
+
+function eventNeedsAttention(row: TenantEventWorkspaceRow) {
+  if (row.source === "upstream") {
+    return true;
+  }
+
+  if (row.sync_status === "error" || row.sync_status === "canceled") {
+    return true;
+  }
+
+  if (!row.mirrored_event?.public_checkout_requested) {
+    return false;
+  }
+
+  return row.needs_attention_count > 0 || row.public_status_label !== "Live";
 }
 
 export function buildTenantEventWorkspaceRows(
@@ -456,13 +480,7 @@ export function matchesTenantEventWorkspaceFilter(
 ) {
   switch (filter) {
     case "needs_attention":
-      return (
-        row.source === "upstream" ||
-        row.sync_status === "error" ||
-        row.sync_status === "canceled" ||
-        row.needs_attention_count > 0 ||
-        row.public_status_label !== "Live"
-      );
+      return eventNeedsAttention(row);
     case "live":
       return row.source === "mirrored" && row.public_status_label === "Live";
     case "hidden":

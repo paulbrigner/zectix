@@ -267,10 +267,12 @@ export function TenantOverviewWorkspace({
                         <h4>{event.name}</h4>
                       </div>
                       <div className="console-mini-pill-row tenant-upcoming-pills">
-                        <span className="console-mini-pill">
+                        <span
+                          className={`console-mini-pill ${event.zcash_enabled ? "console-mini-pill-success" : "console-mini-pill-muted"}`}
+                        >
                           {event.zcash_enabled ? "Live" : "Hidden"}
                         </span>
-                        <span className="console-mini-pill">
+                        <span className="console-mini-pill console-mini-pill-info">
                           {enabledTicketCount}/{tickets.length} tickets ready
                         </span>
                       </div>
@@ -288,7 +290,15 @@ export function TenantOverviewWorkspace({
                       <Link className="button button-secondary button-small" href={publicEventHref}>
                         Open public event
                       </Link>
-                    ) : null}
+                    ) : (
+                      <button
+                        className="button button-secondary button-small"
+                        disabled
+                        type="button"
+                      >
+                        Public event hidden
+                      </button>
+                    )}
                     <Link className="button button-secondary button-small" href={`${tenantBasePath}/events`}>
                       Review in workspace
                     </Link>

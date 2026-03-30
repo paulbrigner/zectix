@@ -132,6 +132,7 @@ export type EventMirror = {
   location_label: string | null;
   location_note: string | null;
   sync_status: EventMirrorStatus;
+  public_checkout_requested: boolean;
   zcash_enabled: boolean;
   zcash_enabled_reason: string | null;
   last_synced_at: string | null;
@@ -152,6 +153,7 @@ export type TicketMirror = {
   description: string | null;
   active: boolean;
   price_source: "amount" | "fallback";
+  public_checkout_requested: boolean;
   zcash_enabled: boolean;
   zcash_enabled_reason: string | null;
   confirmed_fixed_price: boolean;

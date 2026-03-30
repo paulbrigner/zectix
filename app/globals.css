@@ -490,6 +490,12 @@ select {
   gap: 0.65rem;
 }
 
+.tenant-events-publish-section,
+.tenant-event-publish-form {
+  display: grid;
+  gap: 0.85rem;
+}
+
 .tenant-events-table {
   min-width: 940px;
 }
