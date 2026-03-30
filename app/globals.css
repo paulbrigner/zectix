@@ -371,6 +371,84 @@ select {
   list-style: none;
 }
 
+.billing-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.billing-summary-card {
+  display: grid;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.billing-summary-card-accent {
+  background:
+    radial-gradient(circle at top right, rgba(247, 147, 26, 0.16), transparent 14rem),
+    linear-gradient(180deg, rgba(255, 251, 235, 0.98), rgba(255, 255, 255, 0.98));
+}
+
+.billing-cycle-detail-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  gap: 1rem;
+}
+
+.billing-breakdown-list {
+  display: grid;
+  gap: 0.7rem;
+  margin: 0;
+}
+
+.billing-breakdown-list div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.billing-breakdown-list dt {
+  color: var(--color-gray-500);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.billing-breakdown-list dd {
+  margin: 0;
+  color: var(--color-gray-900);
+  font-weight: 700;
+}
+
+.billing-breakdown-total {
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(17, 24, 39, 0.08);
+}
+
+.billing-cycle-meta-list {
+  gap: 0.85rem;
+}
+
+.billing-history-list,
+.billing-adjustment-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.billing-history-card,
+.billing-adjustment-card {
+  min-width: 0;
+}
+
+.billing-adjustment-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
 .tenant-checklist-item {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -3709,6 +3787,10 @@ select {
 
   .tenant-event-head,
   .tenant-event-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .billing-cycle-detail-grid {
     grid-template-columns: 1fr;
   }
 
