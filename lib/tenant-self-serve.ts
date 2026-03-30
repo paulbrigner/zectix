@@ -193,6 +193,17 @@ export function buildOnboardingChecklist(
   const hasValidatedCipherPay = detail.cipherpay_connections.some(
     (connection) => connection.status === "active",
   );
+  const livePublicEvents = detail.events
+    .flatMap((entry) => entry.events)
+    .filter((event) => isFutureEvent(event.start_at) && event.zcash_enabled);
+  const livePublicTicketCount = livePublicEvents.reduce((count, event) => {
+    return (
+      count +
+      (detail.tickets_by_event.get(event.event_api_id) || []).filter(
+        (ticket) => ticket.zcash_enabled,
+      ).length
+    );
+  }, 0);
 
   return [
     {
@@ -235,6 +246,14 @@ export function buildOnboardingChecklist(
         detail.tenant.status === "active"
           ? "Public calendar routes can resolve for active calendars."
           : "A draft organization stays dark publicly until it is activated.",
+    },
+    {
+      label: "Publish at least one event and ticket",
+      complete: livePublicEvents.length > 0,
+      description:
+        livePublicEvents.length > 0
+          ? `${livePublicEvents.length} public event${livePublicEvents.length === 1 ? "" : "s"} live with ${livePublicTicketCount} ticket${livePublicTicketCount === 1 ? "" : "s"} available`
+          : "Turn on public checkout for at least one upcoming event and one ticket in the Events workspace.",
     },
   ];
 }
