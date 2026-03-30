@@ -668,18 +668,8 @@ select {
   color: #166534;
 }
 
-.tenant-checklist-action {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 1rem 1.05rem 0;
-  border-top: 1px solid rgba(17, 24, 39, 0.08);
-}
-
-.tenant-checklist-action p {
-  margin: 0.35rem 0 0;
+.tenant-checklist-item-actions {
+  margin-top: 0.85rem;
 }
 
 .tenant-events-workspace {

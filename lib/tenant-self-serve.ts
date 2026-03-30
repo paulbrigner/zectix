@@ -226,7 +226,7 @@ export function buildOnboardingChecklist(
       complete: hasValidatedCipherPay,
       description: hasValidatedCipherPay
         ? "At least one CipherPay configuration is marked active."
-        : "Validate the current CipherPay connection after saving it.",
+        : "Save a CipherPay connection to validate it automatically for organizer checkout.",
     },
     {
       label: "Activate public checkout",

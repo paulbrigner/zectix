@@ -178,62 +178,44 @@ export function TenantConnectionsWorkspace({
                 <div>
                   <strong>{item.label}</strong>
                   <p className="subtle-text">{item.description}</p>
+                  {item.label === "Activate public checkout" && !item.complete ? (
+                    <div className="button-row tenant-checklist-item-actions">
+                      {activationReady ? (
+                        <ConsoleConfirmDialog
+                          action={activatePublicCheckoutAction}
+                          confirmClassName="button button-small"
+                          confirmLabel="Activate public checkout"
+                          description="This makes your organizer workspace publicly reachable. Events and tickets still stay hidden until you enable them in the Events workspace."
+                          title="Activate public checkout?"
+                          triggerClassName="button button-small"
+                          triggerLabel="Activate public checkout"
+                        >
+                          <input
+                            name="tenant_slug"
+                            type="hidden"
+                            value={detail.tenant.slug}
+                          />
+                          <input
+                            name="redirect_to"
+                            type="hidden"
+                            value={connectionsBasePath}
+                          />
+                        </ConsoleConfirmDialog>
+                      ) : (
+                        <button
+                          className="button button-secondary button-small"
+                          disabled
+                          type="button"
+                        >
+                          Finish earlier steps first
+                        </button>
+                      )}
+                    </div>
+                  ) : null}
                 </div>
               </li>
             ))}
           </ol>
-
-          <div className="tenant-checklist-action">
-            <div>
-              <strong>Step 6: Activate public checkout</strong>
-              <p className="subtle-text">
-                {detail.tenant.status === "active"
-                  ? "Public checkout is active. Event and ticket visibility still stays under your control in the Events workspace."
-                  : activationReady
-                    ? "Your organization is ready. Activate public checkout when you want ready events to be able to go live."
-                    : "Finish the earlier setup steps first, then come back here to activate public checkout."}
-              </p>
-            </div>
-            <div className="button-row">
-              {detail.tenant.status === "active" ? (
-                <Link
-                  className="button button-secondary button-small"
-                  href={eventsBasePath}
-                >
-                  Review events
-                </Link>
-              ) : activationReady ? (
-                <ConsoleConfirmDialog
-                  action={activatePublicCheckoutAction}
-                  confirmClassName="button button-small"
-                  confirmLabel="Activate public checkout"
-                  description="This makes your organizer workspace publicly reachable. Events and tickets still stay hidden until you enable them in the Events workspace."
-                  title="Activate public checkout?"
-                  triggerClassName="button button-small"
-                  triggerLabel="Activate public checkout"
-                >
-                  <input
-                    name="tenant_slug"
-                    type="hidden"
-                    value={detail.tenant.slug}
-                  />
-                  <input
-                    name="redirect_to"
-                    type="hidden"
-                    value={connectionsBasePath}
-                  />
-                </ConsoleConfirmDialog>
-              ) : (
-                <button
-                  className="button button-secondary button-small"
-                  disabled
-                  type="button"
-                >
-                  Finish earlier steps first
-                </button>
-              )}
-            </div>
-          </div>
         </ConsoleDisclosure>
       </section>
 
@@ -748,29 +730,31 @@ export function TenantConnectionsWorkspace({
                     API {previews?.api.preview || "missing"} · webhook{" "}
                     {previews?.webhook.preview || "missing"}
                   </p>
-                  <form action={validateCipherPayConnectionAction}>
-                    <input
-                      name="cipherpay_connection_id"
-                      type="hidden"
-                      value={connection.cipherpay_connection_id}
-                    />
-                    <input
-                      name="tenant_slug"
-                      type="hidden"
-                      value={detail.tenant.slug}
-                    />
-                    <input
-                      name="redirect_to"
-                      type="hidden"
-                      value={connectionsBasePath}
-                    />
-                    <button
-                      className="button button-secondary button-small"
-                      type="submit"
-                    >
-                      Mark validated
-                    </button>
-                  </form>
+                  {connection.status !== "active" ? (
+                    <form action={validateCipherPayConnectionAction}>
+                      <input
+                        name="cipherpay_connection_id"
+                        type="hidden"
+                        value={connection.cipherpay_connection_id}
+                      />
+                      <input
+                        name="tenant_slug"
+                        type="hidden"
+                        value={detail.tenant.slug}
+                      />
+                      <input
+                        name="redirect_to"
+                        type="hidden"
+                        value={connectionsBasePath}
+                      />
+                      <button
+                        className="button button-secondary button-small"
+                        type="submit"
+                      >
+                        Validate connection
+                      </button>
+                    </form>
+                  ) : null}
                 </article>
               ),
             )}
