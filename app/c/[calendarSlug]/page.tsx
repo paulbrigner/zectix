@@ -116,8 +116,8 @@ export default async function PublicCalendarPage({
               </span>
             </div>
             {!embedMode ? (
-              <Link className="button button-secondary button-small" href="/">
-                Service home
+              <Link className="public-home-link" href="/">
+                Powered by ZecTix
               </Link>
             ) : null}
           </div>
