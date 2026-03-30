@@ -121,14 +121,14 @@ export function LumaIntegrationChecklist() {
 
   return (
     <div className="landing-interest-card landing-readiness-card">
-      <p className="landing-label">Self-serve readiness</p>
+      <p className="landing-label">Setup checklist</p>
       <h2 className="landing-section-title landing-interest-title">
-        Review the checklist before you continue.
+        Confirm these requirements
       </h2>
       <p className="landing-section-desc">
-        Confirm the billing model, the technical inputs you have on hand, and
-        the ticket restrictions that apply to managed mirrored checkout. When
-        every item is checked, you can go straight into organizer onboarding.
+        Make sure the billing model, technical inputs, and ticket restrictions
+        fit your setup. When every item is checked, you can continue straight
+        into organizer onboarding.
       </p>
       <p className="landing-interest-help">
         ZecTix configures the managed Luma webhook for you after you connect a
