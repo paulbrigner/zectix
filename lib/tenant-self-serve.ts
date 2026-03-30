@@ -5,6 +5,7 @@ import type {
   TicketMirror,
 } from "@/lib/app-state/types";
 import { selectUpcomingEvents } from "@/lib/embed";
+import type { LumaEvent } from "@/lib/luma";
 import type { TenantOpsDetail } from "@/lib/tenancy/service";
 
 export type TenantOnboardingChecklistItem = {
@@ -12,6 +13,116 @@ export type TenantOnboardingChecklistItem = {
   description: string;
   label: string;
 };
+
+export type TenantEventWorkspaceFilter =
+  | "all"
+  | "needs_attention"
+  | "live"
+  | "hidden"
+  | "import_candidates";
+
+export type TenantEventWorkspaceTone =
+  | "success"
+  | "warning"
+  | "danger"
+  | "info"
+  | "muted";
+
+export type TenantEventWorkspaceRow = {
+  calendar: CalendarConnection;
+  cover_url: string | null;
+  enabled_ticket_count: number;
+  event_id: string;
+  event_name: string;
+  event_url: string | null;
+  last_synced_at: string | null;
+  location_label: string | null;
+  mirrored_event: EventMirror | null;
+  needs_attention_count: number;
+  primary_blocker: string;
+  public_status_label: string;
+  public_status_tone: TenantEventWorkspaceTone;
+  row_id: string;
+  source: "mirrored" | "upstream";
+  start_at: string;
+  sync_status: string | null;
+  sync_status_label: string;
+  sync_status_tone: TenantEventWorkspaceTone;
+  ticket_count: number;
+  tickets: TicketMirror[];
+  upstream_event: LumaEvent | null;
+};
+
+function buildEventWorkspaceRowId(
+  source: "mirrored" | "upstream",
+  calendarConnectionId: string,
+  eventId: string,
+) {
+  return `${source}:${calendarConnectionId}:${eventId}`;
+}
+
+function syncStatusTone(syncStatus: string | null): TenantEventWorkspaceTone {
+  switch (syncStatus) {
+    case "active":
+      return "success";
+    case "canceled":
+      return "warning";
+    case "error":
+      return "danger";
+    case "hidden":
+      return "muted";
+    default:
+      return "info";
+  }
+}
+
+function syncStatusLabel(syncStatus: string | null) {
+  switch (syncStatus) {
+    case "active":
+      return "Sync active";
+    case "canceled":
+      return "Event canceled";
+    case "error":
+      return "Sync failed";
+    case "hidden":
+      return "No longer in Luma";
+    default:
+      return "Needs sync";
+  }
+}
+
+function primaryBlockerForMirroredEvent(
+  event: EventMirror,
+  tickets: TicketMirror[],
+  enabledTicketCount: number,
+  needsAttentionCount: number,
+) {
+  if (event.sync_status === "error") {
+    return "Sync failed";
+  }
+
+  if (event.sync_status === "canceled") {
+    return "Event canceled in Luma";
+  }
+
+  if (!tickets.length) {
+    return "No ticket tiers mirrored";
+  }
+
+  if (needsAttentionCount > 0) {
+    return `${needsAttentionCount} ticket${needsAttentionCount === 1 ? "" : "s"} need review`;
+  }
+
+  if (!enabledTicketCount) {
+    return event.zcash_enabled_reason || "Enable at least one ticket";
+  }
+
+  if (!event.zcash_enabled) {
+    return event.zcash_enabled_reason || "Public checkout hidden";
+  }
+
+  return "Live";
+}
 
 export function humanizeOnboardingStatus(value: string) {
   return value.replaceAll("_", " ");
@@ -177,13 +288,7 @@ export function buildWorkspaceOverview(detail: TenantOpsDetail) {
   const liveEvents = upcomingEvents.filter(({ event }) => event.zcash_enabled);
   const ticketsNeedingReview = upcomingEvents.reduce((count, current) => {
     return (
-      count +
-      current.tickets.filter(
-        (ticket) =>
-          !ticket.zcash_enabled &&
-          ticket.automatic_eligibility_status === "eligible" &&
-          !ticket.confirmed_fixed_price,
-      ).length
+      count + current.tickets.filter(ticketNeedsAttention).length
     );
   }, 0);
   const embedReadyCalendars = detail.calendars.filter(
@@ -223,9 +328,145 @@ export function ticketNeedsAttention(ticket: TicketMirror) {
     return true;
   }
 
-  return !ticket.confirmed_fixed_price;
+  return (
+    !ticket.confirmed_fixed_price ||
+    !ticket.confirmed_no_approval_required ||
+    !ticket.confirmed_no_extra_required_questions
+  );
 }
 
 export function upcomingEnabledEvents(events: EventMirror[]) {
   return selectUpcomingEvents(events.filter((event) => event.zcash_enabled));
+}
+
+export function buildTenantEventWorkspaceRows(
+  detail: TenantOpsDetail,
+  nowMs = Date.now(),
+): TenantEventWorkspaceRow[] {
+  const rows = detail.calendars.flatMap((calendar) => {
+    const mirroredEvents = (detail.events.find(
+      (entry) => entry.calendar.calendar_connection_id === calendar.calendar_connection_id,
+    )?.events || [])
+      .filter((event) => isFutureEvent(event.start_at, nowMs))
+      .sort((left, right) => new Date(left.start_at).getTime() - new Date(right.start_at).getTime());
+    const mirroredIds = new Set(mirroredEvents.map((event) => event.event_api_id));
+    const upstreamPreview =
+      detail.upstream_luma_events_by_calendar.get(calendar.calendar_connection_id) || null;
+    const upstreamEvents = (upstreamPreview?.events || [])
+      .filter(
+        (event) => isFutureEvent(event.start_at, nowMs) && !mirroredIds.has(event.api_id),
+      )
+      .sort((left, right) => new Date(left.start_at).getTime() - new Date(right.start_at).getTime());
+
+    const mirroredRows = mirroredEvents.map((event) => {
+      const tickets = detail.tickets_by_event.get(event.event_api_id) || [];
+      const enabledTicketCount = tickets.filter((ticket) => ticket.zcash_enabled).length;
+      const needsAttentionCount = tickets.filter(ticketNeedsAttention).length;
+      return {
+        calendar,
+        cover_url: event.cover_url,
+        enabled_ticket_count: enabledTicketCount,
+        event_id: event.event_api_id,
+        event_name: event.name,
+        event_url: event.url,
+        last_synced_at: event.last_synced_at,
+        location_label: event.location_label,
+        mirrored_event: event,
+        needs_attention_count: needsAttentionCount,
+        primary_blocker: primaryBlockerForMirroredEvent(
+          event,
+          tickets,
+          enabledTicketCount,
+          needsAttentionCount,
+        ),
+        public_status_label: event.zcash_enabled ? "Live" : "Hidden",
+        public_status_tone: event.zcash_enabled ? "success" : "muted",
+        row_id: buildEventWorkspaceRowId(
+          "mirrored",
+          calendar.calendar_connection_id,
+          event.event_api_id,
+        ),
+        source: "mirrored" as const,
+        start_at: event.start_at,
+        sync_status: event.sync_status,
+        sync_status_label: syncStatusLabel(event.sync_status),
+        sync_status_tone: syncStatusTone(event.sync_status),
+        ticket_count: tickets.length,
+        tickets,
+        upstream_event: null,
+      };
+    });
+
+    const upstreamRows = upstreamEvents.map((event) => ({
+      calendar,
+      cover_url: event.cover_url,
+      enabled_ticket_count: 0,
+      event_id: event.api_id,
+      event_name: event.name,
+      event_url: event.url,
+      last_synced_at: null,
+      location_label: event.location_label,
+      mirrored_event: null,
+      needs_attention_count: 0,
+      primary_blocker: "Import to begin ticket review",
+      public_status_label: "Import candidate",
+      public_status_tone: "warning" as const,
+      row_id: buildEventWorkspaceRowId(
+        "upstream",
+        calendar.calendar_connection_id,
+        event.api_id,
+      ),
+      source: "upstream" as const,
+      start_at: event.start_at,
+      sync_status: null,
+      sync_status_label: "Upstream only",
+      sync_status_tone: "warning" as const,
+      ticket_count: 0,
+      tickets: [] as TicketMirror[],
+      upstream_event: event,
+    }));
+
+    return [...mirroredRows, ...upstreamRows];
+  });
+
+  rows.sort((left, right) => {
+    const startDiff =
+      new Date(left.start_at).getTime() - new Date(right.start_at).getTime();
+    if (startDiff !== 0) {
+      return startDiff;
+    }
+
+    if (left.source !== right.source) {
+      return left.source === "mirrored" ? -1 : 1;
+    }
+
+    return left.event_name.localeCompare(right.event_name);
+  });
+
+  return rows;
+}
+
+export function matchesTenantEventWorkspaceFilter(
+  row: TenantEventWorkspaceRow,
+  filter: TenantEventWorkspaceFilter,
+) {
+  switch (filter) {
+    case "needs_attention":
+      return (
+        row.source === "upstream" ||
+        row.sync_status === "error" ||
+        row.sync_status === "canceled" ||
+        row.needs_attention_count > 0 ||
+        row.public_status_label !== "Live"
+      );
+    case "live":
+      return row.source === "mirrored" && row.public_status_label === "Live";
+    case "hidden":
+      return row.source === "mirrored" && row.public_status_label === "Hidden";
+    case "import_candidates":
+      return row.source === "upstream";
+    case "all":
+    default:
+      return true;
+  }
 }
