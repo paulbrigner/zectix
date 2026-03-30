@@ -450,6 +450,10 @@ select {
   margin: 0;
 }
 
+.organizer-shell-actions {
+  justify-content: flex-end;
+}
+
 .tenant-overview-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -4065,12 +4069,23 @@ select {
   }
 
   .tenant-workspace-header-top,
-  .tenant-summary-card-head {
+  .tenant-summary-card-head,
+  .console-luma-card-head,
+  .console-event-review-head,
+  .console-preview-body-head,
+  .billing-adjustment-head {
     flex-direction: column;
   }
 
   .tenant-events-workspace,
   .tenant-events-workspace-detail-open {
+    grid-template-columns: 1fr;
+  }
+
+  .tenant-overview-grid,
+  .billing-summary-grid,
+  .console-ticket-review-grid,
+  .console-ticket-assertion-grid {
     grid-template-columns: 1fr;
   }
 
@@ -4087,9 +4102,6 @@ select {
   }
 
   .console-preview-card,
-  .console-event-review-head,
-  .console-luma-card-head,
-  .console-preview-body-head,
   .checkout-overview-head {
     grid-template-columns: 1fr;
   }
@@ -4127,6 +4139,15 @@ select {
 
   .console-mini-pill-row {
     justify-content: flex-start;
+  }
+
+  .tenant-workspace-nav {
+    flex-wrap: wrap;
+  }
+
+  .tenant-workspace-nav .console-nav-link {
+    flex: 1 1 calc(50% - 0.75rem);
+    justify-content: center;
   }
 }
 
@@ -4191,6 +4212,11 @@ select {
   .console-card-shell,
   .checkout-card {
     padding: 1rem;
+  }
+
+  .console-section {
+    padding: 1rem;
+    border-radius: 20px;
   }
 
   .feed-header,
@@ -4265,8 +4291,84 @@ select {
     justify-content: flex-start;
   }
 
+  .tenant-workspace-nav {
+    gap: 0.6rem;
+  }
+
+  .tenant-workspace-nav .console-nav-link {
+    flex: 1 1 100%;
+    min-height: 2.85rem;
+  }
+
+  .organizer-shell-actions,
+  .feed-header .button-row,
+  .console-section-header .button-row,
+  .tenant-overview-actions,
+  .tenant-upcoming-actions,
+  .tenant-events-filter-actions,
+  .tenant-events-detail-actions,
+  .console-dialog-actions {
+    width: 100%;
+  }
+
+  .console-shell .button-row,
+  .tenant-overview-actions,
+  .tenant-upcoming-actions,
+  .tenant-events-detail-actions {
+    gap: 0.6rem;
+  }
+
+  .console-shell .button-row .button,
+  .tenant-overview-actions .button,
+  .tenant-upcoming-actions .button,
+  .tenant-events-detail-actions .button {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+
   .tenant-events-filter-actions {
     justify-content: flex-start;
+  }
+
+  .tenant-events-filter-grid,
+  .embed-settings-top-grid,
+  .tenant-ticket-review-checks,
+  .tenant-ticket-checks,
+  .tenant-upcoming-grid,
+  .tenant-overview-grid,
+  .console-kpi-grid,
+  .console-card-grid,
+  .billing-summary-grid,
+  .console-signal-grid,
+  .console-preview-list-compact,
+  .billing-cycle-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tenant-events-filter-actions .button {
+    flex: 1 1 calc(50% - 0.3rem);
+    width: auto;
+  }
+
+  .console-switch-field {
+    grid-template-columns: 1fr;
+  }
+
+  .console-switch-root {
+    justify-self: start;
+  }
+
+  .billing-breakdown-list div {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+
+  .console-kpi-value,
+  .tenant-overview-card h3,
+  .tenant-summary-card h3,
+  .billing-summary-card h3 {
+    word-break: break-word;
   }
 
   .tenant-events-detail-hero {

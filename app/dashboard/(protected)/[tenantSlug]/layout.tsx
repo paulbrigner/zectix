@@ -7,13 +7,36 @@ import { requireTenantPageAccess } from "@/lib/tenant-auth-server";
 
 export const runtime = "nodejs";
 
-function badgeTone(value: "active" | "draft" | "approved" | "started" | "pending_review" | string) {
-  if (value === "active" || value === "approved") {
+function badgeTone(
+  value:
+    | "active"
+    | "approved"
+    | "completed"
+    | "draft"
+    | "invoiced"
+    | "open"
+    | "paid"
+    | "past_due"
+    | "pending_review"
+    | "started"
+    | "suspended"
+    | string,
+) {
+  if (
+    value === "active" ||
+    value === "approved" ||
+    value === "completed" ||
+    value === "paid"
+  ) {
     return "success";
   }
 
-  if (value === "draft" || value === "started") {
+  if (value === "draft" || value === "started" || value === "open" || value === "invoiced") {
     return "warning";
+  }
+
+  if (value === "past_due" || value === "suspended") {
+    return "danger";
   }
 
   return "muted";
@@ -57,7 +80,11 @@ export default async function TenantScopedLayout({
             >
               onboarding {tenant.onboarding_status.replaceAll("_", " ")}
             </span>
-            <span className="console-mini-pill console-mini-pill-info">
+            <span
+              className={`console-mini-pill console-mini-pill-${badgeTone(
+                tenant.billing_status,
+              )}`}
+            >
               billing {tenant.billing_status}
             </span>
           </div>
