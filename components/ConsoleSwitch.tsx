@@ -32,10 +32,18 @@ export function ConsoleSwitch({
           return;
         }
 
-        if (
-          event.target instanceof HTMLElement &&
-          event.target.closest(".console-switch-root")
-        ) {
+        if (!(event.target instanceof HTMLElement)) {
+          return;
+        }
+
+        if (event.target.closest(".console-switch-root")) {
+          return;
+        }
+
+        // Radix emits a hidden checkbox click for form integration after the
+        // visible switch toggles. Ignore that synthetic event so the wrapper
+        // does not proxy a second click back into the control.
+        if (event.target instanceof HTMLInputElement) {
           return;
         }
 
