@@ -9,6 +9,7 @@ import {
   normalizeEmailAddress,
   supportedTicketCurrencies,
 } from "@/lib/app-state/utils";
+import { evaluateEventCheckoutState } from "@/lib/eligibility/event-checkout";
 import { evaluateTicketEligibility } from "@/lib/eligibility/ticket-eligibility";
 import { makeCheckoutSession, makeTicketMirror } from "@/tests/test-helpers";
 
@@ -64,5 +65,23 @@ describe("app-state utilities", () => {
     );
     expect(ineligible.zcash_enabled).toBe(false);
     expect(ineligible.automatic_eligibility_reasons.join(" ")).toMatch(/approval/i);
+  });
+
+  it("supports intentional hide overrides for tickets and events", () => {
+    const hiddenTicket = evaluateTicketEligibility(
+      makeTicketMirror({
+        public_checkout_requested: false,
+      }),
+    );
+    expect(hiddenTicket.zcash_enabled).toBe(false);
+    expect(hiddenTicket.zcash_enabled_reason).toMatch(/turned off/i);
+
+    const hiddenEvent = evaluateEventCheckoutState({
+      enabled_ticket_count: 2,
+      public_checkout_requested: false,
+      sync_status: "active",
+    });
+    expect(hiddenEvent.zcash_enabled).toBe(false);
+    expect(hiddenEvent.zcash_enabled_reason).toMatch(/turned off/i);
   });
 });

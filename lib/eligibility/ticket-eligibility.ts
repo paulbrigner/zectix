@@ -9,6 +9,7 @@ type TicketEligibilityInput = Pick<
   | "confirmed_fixed_price"
   | "confirmed_no_approval_required"
   | "confirmed_no_extra_required_questions"
+  | "public_checkout_requested"
 >;
 
 export type TicketEligibilityResult = {
@@ -55,13 +56,16 @@ export function evaluateTicketEligibility(
   }
 
   const zcashEnabled = automaticEligible && operatorEligible;
+  const requestedForPublicCheckout = ticket.public_checkout_requested;
 
   return {
     automatic_eligibility_status: automaticEligible ? "eligible" : "ineligible",
     automatic_eligibility_reasons: automaticReasons,
-    zcash_enabled: zcashEnabled,
-    zcash_enabled_reason: zcashEnabled
-      ? "Enabled for managed Zcash checkout."
-      : automaticReasons[0] || "Ticket still needs operator confirmation.",
+    zcash_enabled: requestedForPublicCheckout && zcashEnabled,
+    zcash_enabled_reason: !requestedForPublicCheckout
+      ? "Public checkout is turned off for this ticket."
+      : zcashEnabled
+        ? "Enabled for managed Zcash checkout."
+        : automaticReasons[0] || "Ticket still needs operator confirmation.",
   };
 }

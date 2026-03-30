@@ -18,6 +18,7 @@ import {
   createCipherPayConnection,
   createTenant,
   disableCalendarConnection,
+  setEventPublicCheckoutRequested,
   setTenantStatus,
   setTicketOperatorAssertions,
   syncCalendarEventForOps,
@@ -264,6 +265,20 @@ export async function setTicketAssertionsAction(formData: FormData) {
     confirmed_no_extra_required_questions: asBoolean(
       formData.get("confirmed_no_extra_required_questions"),
     ),
+    public_checkout_requested:
+      formData.get("public_checkout_requested_present") != null
+        ? asBoolean(formData.get("public_checkout_requested"))
+        : undefined,
+  });
+  redirectTo(formData, "/ops/tenants");
+}
+
+export async function setEventPublicCheckoutAction(formData: FormData) {
+  await requireOpsPageAccess();
+  await setEventPublicCheckoutRequested({
+    calendar_connection_id: String(formData.get("calendar_connection_id") || ""),
+    event_api_id: String(formData.get("event_api_id") || ""),
+    public_checkout_requested: asBoolean(formData.get("public_checkout_requested")),
   });
   redirectTo(formData, "/ops/tenants");
 }

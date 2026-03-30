@@ -94,6 +94,8 @@ const {
   getTenantOpsDetail,
   getTenantSelfServeDetailBySlug,
   listSelfServeTenantsForEmail,
+  setEventPublicCheckoutRequested,
+  setTicketOperatorAssertions,
   syncCalendarEventForOps,
   updateCalendarEmbedSettings,
   updateCalendarConnectionLumaKey,
@@ -608,5 +610,96 @@ describe("syncCalendarEventForOps", () => {
     expect(result.review.tickets_added).toBe(1);
     expect(result.review.enabled_ticket_count).toBe(1);
     expect(result.review.public_checkout_enabled).toBe(true);
+  });
+});
+
+describe("setEventPublicCheckoutRequested", () => {
+  it("keeps an event hidden when public checkout is turned off", async () => {
+    const event = makeEventMirror({
+      calendar_connection_id: "calendar_123",
+      event_api_id: "event_123",
+      public_checkout_requested: true,
+      zcash_enabled: true,
+    });
+    const tickets = [
+      makeTicketMirror({
+        event_api_id: event.event_api_id,
+        zcash_enabled: true,
+      }),
+    ];
+
+    mockGetEventMirror.mockResolvedValue(event);
+    mockListTicketMirrorsByEvent.mockResolvedValue(tickets);
+
+    await setEventPublicCheckoutRequested({
+      calendar_connection_id: event.calendar_connection_id,
+      event_api_id: event.event_api_id,
+      public_checkout_requested: false,
+    });
+
+    expect(mockPutEventMirror).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event_api_id: event.event_api_id,
+        public_checkout_requested: false,
+        zcash_enabled: false,
+        zcash_enabled_reason: "Public checkout is turned off for this event.",
+      }),
+    );
+  });
+});
+
+describe("setTicketOperatorAssertions", () => {
+  it("keeps a ticket hidden when public checkout is turned off", async () => {
+    const ticket = makeTicketMirror({
+      event_api_id: "event_123",
+      ticket_type_api_id: "ticket_123",
+      public_checkout_requested: true,
+      confirmed_fixed_price: false,
+      zcash_enabled: false,
+    });
+    const event = makeEventMirror({
+      calendar_connection_id: ticket.calendar_connection_id,
+      event_api_id: ticket.event_api_id,
+      public_checkout_requested: true,
+      zcash_enabled: true,
+    });
+    const nextTicket = {
+      ...ticket,
+      public_checkout_requested: false,
+      confirmed_fixed_price: true,
+      confirmed_no_approval_required: true,
+      confirmed_no_extra_required_questions: true,
+      zcash_enabled: false,
+      zcash_enabled_reason: "Public checkout is turned off for this ticket.",
+    };
+
+    mockGetTicketMirror.mockResolvedValue(ticket);
+    mockGetEventMirror.mockResolvedValue(event);
+    mockListTicketMirrorsByEvent.mockResolvedValue([nextTicket]);
+
+    await setTicketOperatorAssertions({
+      event_api_id: ticket.event_api_id,
+      ticket_type_api_id: ticket.ticket_type_api_id,
+      confirmed_fixed_price: true,
+      confirmed_no_approval_required: true,
+      confirmed_no_extra_required_questions: true,
+      public_checkout_requested: false,
+    });
+
+    expect(mockPutTicketMirror).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ticket_type_api_id: ticket.ticket_type_api_id,
+        public_checkout_requested: false,
+        zcash_enabled: false,
+        zcash_enabled_reason: "Public checkout is turned off for this ticket.",
+      }),
+    );
+    expect(mockPutEventMirror).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event_api_id: event.event_api_id,
+        zcash_enabled: false,
+        zcash_enabled_reason: "No tickets are currently enabled for managed Zcash checkout.",
+      }),
+    );
   });
 });

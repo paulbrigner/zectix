@@ -12,6 +12,7 @@ import {
   createCalendarConnection,
   createCipherPayConnection,
   disableCalendarConnection,
+  setEventPublicCheckoutRequested,
   setTicketOperatorAssertions,
   syncCalendarEventForOps,
   updateCalendarConnectionLumaKey,
@@ -213,6 +214,23 @@ export async function setTicketAssertionsAction(formData: FormData) {
     confirmed_no_extra_required_questions: asBoolean(
       formData.get("confirmed_no_extra_required_questions"),
     ),
+    public_checkout_requested:
+      formData.get("public_checkout_requested_present") != null
+        ? asBoolean(formData.get("public_checkout_requested"))
+        : undefined,
+  });
+  redirectTo(formData, `/dashboard/${encodeURIComponent(tenant.slug)}/events`);
+}
+
+export async function setEventPublicCheckoutAction(formData: FormData) {
+  const tenantSlug = String(formData.get("tenant_slug") || "");
+  const tenant = await requireTenantSlugAccess(tenantSlug);
+  const calendarConnectionId = String(formData.get("calendar_connection_id") || "");
+  await requireCalendarTenantAccess(tenant.tenant_id, calendarConnectionId);
+  await setEventPublicCheckoutRequested({
+    calendar_connection_id: calendarConnectionId,
+    event_api_id: String(formData.get("event_api_id") || ""),
+    public_checkout_requested: asBoolean(formData.get("public_checkout_requested")),
   });
   redirectTo(formData, `/dashboard/${encodeURIComponent(tenant.slug)}/events`);
 }

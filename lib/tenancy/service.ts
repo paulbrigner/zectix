@@ -49,6 +49,7 @@ import {
   normalizeEmbedHeight,
   normalizeOriginList,
 } from "@/lib/embed";
+import { evaluateEventCheckoutState } from "@/lib/eligibility/event-checkout";
 import { evaluateTicketEligibility } from "@/lib/eligibility/ticket-eligibility";
 import { getSecretStore } from "@/lib/secrets";
 import {
@@ -92,6 +93,17 @@ async function getSecretPreview(ref: string | null): Promise<SecretPreview> {
     preview: maskSecretPreview(value),
     has_value: Boolean(value),
   };
+}
+
+function buildEventCheckoutState(
+  event: Pick<EventMirror, "public_checkout_requested" | "sync_status">,
+  tickets: Pick<TicketMirror, "zcash_enabled">[],
+) {
+  return evaluateEventCheckoutState({
+    enabled_ticket_count: tickets.filter((ticket) => ticket.zcash_enabled).length,
+    public_checkout_requested: event.public_checkout_requested,
+    sync_status: event.sync_status,
+  });
 }
 
 export type EventSyncFocus = "mirrored" | "upstream";
@@ -725,6 +737,7 @@ export async function setTicketOperatorAssertions(input: {
   confirmed_fixed_price: boolean;
   confirmed_no_approval_required: boolean;
   confirmed_no_extra_required_questions: boolean;
+  public_checkout_requested?: boolean;
 }) {
   const ticket = await getTicketMirror(input.event_api_id, input.ticket_type_api_id);
   if (!ticket) {
@@ -734,10 +747,18 @@ export async function setTicketOperatorAssertions(input: {
   const eligibility = evaluateTicketEligibility({
     ...ticket,
     ...input,
+    public_checkout_requested:
+      typeof input.public_checkout_requested === "boolean"
+        ? input.public_checkout_requested
+        : ticket.public_checkout_requested,
   });
   const nextTicket: TicketMirror = {
     ...ticket,
     ...input,
+    public_checkout_requested:
+      typeof input.public_checkout_requested === "boolean"
+        ? input.public_checkout_requested
+        : ticket.public_checkout_requested,
     ...eligibility,
     updated_at: nowIso(),
   };
@@ -748,15 +769,40 @@ export async function setTicketOperatorAssertions(input: {
   if (event) {
     await putEventMirror({
       ...event,
-      zcash_enabled: tickets.some((entry) => entry.zcash_enabled),
-      zcash_enabled_reason: tickets.some((entry) => entry.zcash_enabled)
-        ? "At least one ticket is enabled for Zcash checkout."
-        : "No tickets are currently enabled for managed Zcash checkout.",
+      ...buildEventCheckoutState(event, tickets),
       updated_at: nowIso(),
     });
   }
 
   return nextTicket;
+}
+
+export async function setEventPublicCheckoutRequested(input: {
+  calendar_connection_id: string;
+  event_api_id: string;
+  public_checkout_requested: boolean;
+}) {
+  const event = await getEventMirror(input.calendar_connection_id, input.event_api_id);
+  if (!event) {
+    throw new Error("Event mirror was not found.");
+  }
+
+  const tickets = await listTicketMirrorsByEvent(event.event_api_id);
+  const nextEvent: EventMirror = {
+    ...event,
+    public_checkout_requested: input.public_checkout_requested,
+    ...buildEventCheckoutState(
+      {
+        ...event,
+        public_checkout_requested: input.public_checkout_requested,
+      },
+      tickets,
+    ),
+    updated_at: nowIso(),
+  };
+
+  await putEventMirror(nextEvent);
+  return nextEvent;
 }
 
 export async function getTenantOpsDetail(tenantId: string) {
