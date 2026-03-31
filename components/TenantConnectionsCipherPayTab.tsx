@@ -15,10 +15,19 @@ function withHash(path: string, hash: string) {
 export function TenantConnectionsCipherPayTab({
   cipherPayTabPath,
   detail,
+  onboardingIncomplete,
+  setupTabPath,
 }: {
   cipherPayTabPath: string;
   detail: TenantOpsDetail;
+  onboardingIncomplete: boolean;
+  setupTabPath: string;
 }) {
+  const setupReturnPath = withHash(setupTabPath, "setup-checklist");
+  const cipherPayReturnPath = onboardingIncomplete
+    ? setupReturnPath
+    : withHash(cipherPayTabPath, "current-cipherpay-connection");
+
   const calendarNamesById = new Map(
     detail.calendars.map((calendar) => [
       calendar.calendar_connection_id,
@@ -89,7 +98,11 @@ export function TenantConnectionsCipherPayTab({
             <input
               name="redirect_to"
               type="hidden"
-              value={withHash(cipherPayTabPath, "connect-cipherpay")}
+              value={
+                onboardingIncomplete
+                  ? setupReturnPath
+                  : withHash(cipherPayTabPath, "connect-cipherpay")
+              }
             />
             <div className="public-field-grid">
               <label className="console-field">
@@ -232,10 +245,7 @@ export function TenantConnectionsCipherPayTab({
                       <input
                         name="redirect_to"
                         type="hidden"
-                        value={withHash(
-                          cipherPayTabPath,
-                          "current-cipherpay-connection",
-                        )}
+                        value={cipherPayReturnPath}
                       />
                       <div className="button-row">
                         <ConsoleSubmitButton

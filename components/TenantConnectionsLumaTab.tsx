@@ -27,11 +27,22 @@ export function TenantConnectionsLumaTab({
   detail,
   eventsBasePath,
   lumaTabPath,
+  onboardingIncomplete,
+  setupTabPath,
 }: {
   detail: TenantOpsDetail;
   eventsBasePath: string;
   lumaTabPath: string;
+  onboardingIncomplete: boolean;
+  setupTabPath: string;
 }) {
+  const setupReturnPath = withHash(setupTabPath, "setup-checklist");
+  const lumaReturnPath = withHash(lumaTabPath, "luma-calendars");
+  const createCalendarReturnPath = onboardingIncomplete
+    ? setupReturnPath
+    : withHash(lumaTabPath, "connect-luma-calendar");
+  const calendarReturnPath = onboardingIncomplete ? setupReturnPath : lumaReturnPath;
+
   return (
     <div className="console-content">
       <section
@@ -67,7 +78,7 @@ export function TenantConnectionsLumaTab({
               <input
                 name="redirect_to"
                 type="hidden"
-                value={withHash(lumaTabPath, "connect-luma-calendar")}
+                value={createCalendarReturnPath}
               />
               <div className="public-field-grid">
                 <label className="console-field">
@@ -193,7 +204,7 @@ export function TenantConnectionsLumaTab({
                         <input
                           name="redirect_to"
                           type="hidden"
-                          value={withHash(lumaTabPath, "luma-calendars")}
+                          value={calendarReturnPath}
                         />
                         <ConsoleSubmitButton
                           className={`button button-small${
@@ -241,7 +252,7 @@ export function TenantConnectionsLumaTab({
                           <input
                             name="redirect_to"
                             type="hidden"
-                            value={withHash(lumaTabPath, "luma-calendars")}
+                            value={calendarReturnPath}
                           />
                         </ConsoleConfirmDialog>
                       ) : null}
@@ -394,7 +405,7 @@ export function TenantConnectionsLumaTab({
                       <input
                         name="redirect_to"
                         type="hidden"
-                        value={withHash(lumaTabPath, "luma-calendars")}
+                        value={calendarReturnPath}
                       />
                       <label className="console-field">
                         <ConsoleFieldLabel
