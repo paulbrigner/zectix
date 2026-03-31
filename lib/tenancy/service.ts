@@ -165,9 +165,9 @@ type EventSyncSnapshot = {
 };
 
 export class OutstandingBillingBalanceError extends Error {
-  constructor(outstandingZatoshis: number) {
+  constructor(outstandingZatoshis: number, settlementThresholdZatoshis: number) {
     super(
-      `Outstanding billing balance must be settled before deleting this account (${outstandingZatoshis} zatoshis remaining).`,
+      `Outstanding billing balance exceeds the settlement threshold for deletion (${outstandingZatoshis} zatoshis outstanding, ${settlementThresholdZatoshis} zatoshis threshold).`,
     );
     this.name = "OutstandingBillingBalanceError";
   }
@@ -476,8 +476,11 @@ export async function deleteTenantSelfServeAccount(tenantId: string) {
     (total, cycle) => total + cycle.outstanding_zatoshis,
     0,
   );
-  if (outstandingZatoshis > 0) {
-    throw new OutstandingBillingBalanceError(outstandingZatoshis);
+  if (outstandingZatoshis > tenant.settlement_threshold_zatoshis) {
+    throw new OutstandingBillingBalanceError(
+      outstandingZatoshis,
+      tenant.settlement_threshold_zatoshis,
+    );
   }
 
   const [

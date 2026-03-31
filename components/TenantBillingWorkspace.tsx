@@ -141,7 +141,7 @@ export function TenantBillingWorkspace({
   return (
     <div className="console-page-body">
       <ConsoleSection
-        description="ZEC-native platform fees accrue when a paid registration is recognized in Luma. Billing cycles stay separate from public checkout visibility and settlement is still operator-managed."
+        description="ZEC-native platform fees accrue when a paid registration is recognized in Luma."
         title="Billing"
       >
 

@@ -602,8 +602,10 @@ describe("disableCalendarConnection", () => {
 });
 
 describe("deleteTenantSelfServeAccount", () => {
-  it("blocks deletion while an outstanding balance remains", async () => {
-    const tenant = makeTenant();
+  it("blocks deletion when the outstanding balance exceeds the settlement threshold", async () => {
+    const tenant = makeTenant({
+      settlement_threshold_zatoshis: 500,
+    });
     mockGetTenant.mockResolvedValue(tenant);
     mockGetTenantBillingSnapshot.mockResolvedValue({
       tenant,
@@ -624,6 +626,30 @@ describe("deleteTenantSelfServeAccount", () => {
       OutstandingBillingBalanceError,
     );
     expect(mockDeleteTenantRecord).not.toHaveBeenCalled();
+  });
+
+  it("allows deletion when the outstanding balance stays below the settlement threshold", async () => {
+    const tenant = makeTenant({
+      settlement_threshold_zatoshis: 2_000,
+    });
+    mockGetTenant.mockResolvedValue(tenant);
+    mockGetTenantBillingSnapshot.mockResolvedValue({
+      tenant,
+      current_cycle: {
+        billing_cycle_id: "cycle_123",
+        outstanding_zatoshis: 1_000,
+      },
+      cycles: [
+        {
+          billing_cycle_id: "cycle_123",
+          outstanding_zatoshis: 1_000,
+        },
+      ],
+      adjustments_by_cycle: new Map(),
+    });
+
+    await expect(deleteTenantSelfServeAccount(tenant.tenant_id)).resolves.toBeUndefined();
+    expect(mockDeleteTenantRecord).toHaveBeenCalledWith(tenant);
   });
 
   it("removes tenant data and tears down active Luma webhooks", async () => {
