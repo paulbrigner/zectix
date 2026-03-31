@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { jsonError, jsonOk, redirectToPath } from "@/lib/http";
+import { jsonError, jsonOk, redirectToPath, safeRedirectPath } from "@/lib/http";
 
 describe("http helpers", () => {
   it("builds success json responses", async () => {
@@ -21,5 +21,28 @@ describe("http helpers", () => {
 
     expect(response.status).toBe(303);
     expect(response.headers.get("location")).toBe("/ops/login?error=invalid_password");
+  });
+
+  it("keeps redirect targets internal and within allowed prefixes", () => {
+    expect(
+      safeRedirectPath("/dashboard/help?sent=1", "/dashboard", {
+        allowedPrefixes: ["/dashboard"],
+      }),
+    ).toBe("/dashboard/help?sent=1");
+    expect(
+      safeRedirectPath("https://evil.example/phish", "/dashboard", {
+        allowedPrefixes: ["/dashboard"],
+      }),
+    ).toBe("/dashboard");
+    expect(
+      safeRedirectPath("//evil.example/phish", "/dashboard", {
+        allowedPrefixes: ["/dashboard"],
+      }),
+    ).toBe("/dashboard");
+    expect(
+      safeRedirectPath("/ops/tenants", "/dashboard", {
+        allowedPrefixes: ["/dashboard"],
+      }),
+    ).toBe("/dashboard");
   });
 });

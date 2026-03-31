@@ -23,10 +23,16 @@ describe("app-state utilities", () => {
   it("normalizes email addresses, secret previews, and billing periods", () => {
     expect(normalizeEmailAddress(" Jordan@Example.com ")).toBe("jordan@example.com");
     expect(isValidEmailAddress(" Jordan@Example.com ")).toBe(true);
+    expect(isValidEmailAddress("jordan+ops@example.co.uk")).toBe(true);
     expect(isValidEmailAddress("@")).toBe(false);
     expect(isValidEmailAddress("@@@@")).toBe(false);
     expect(isValidEmailAddress("foo@")).toBe(false);
     expect(isValidEmailAddress("foo@example")).toBe(false);
+    expect(isValidEmailAddress(".foo@example.com")).toBe(false);
+    expect(isValidEmailAddress("foo..bar@example.com")).toBe(false);
+    expect(isValidEmailAddress("foo@example..com")).toBe(false);
+    expect(isValidEmailAddress("foo@-example.com")).toBe(false);
+    expect(isValidEmailAddress("foo@example-.com")).toBe(false);
     expect(maskSecretPreview("secret-value")).toBe("secret••••alue");
     expect(billingPeriodForTimestamp("2026-03-24T12:00:00.000Z")).toBe("2026-03");
   });

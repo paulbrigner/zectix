@@ -158,6 +158,20 @@ describe("auth route email validation", () => {
     expect(mockSendTenantMagicLinkEmail).not.toHaveBeenCalled();
   });
 
+  it("rejects subtly malformed tenant login emails", async () => {
+    const response = await postDashboardLogin(
+      makeFormRequest("https://zectix.com/api/dashboard/login", {
+        email: "foo..bar@example.com",
+      }),
+    );
+
+    expect(response.status).toBe(303);
+    expect(response.headers.get("location")).toContain("/dashboard/login");
+    expect(response.headers.get("location")).toContain("error=invalid_email");
+    expect(mockListSelfServeTenantsForEmail).not.toHaveBeenCalled();
+    expect(mockSendTenantMagicLinkEmail).not.toHaveBeenCalled();
+  });
+
   it("rejects malformed tenant signup emails before tenant creation or send", async () => {
     const response = await postDashboardStart(
       makeFormRequest("https://zectix.com/api/dashboard/start", {
