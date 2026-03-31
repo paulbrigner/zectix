@@ -82,11 +82,21 @@ When something looks off, check these in order:
 5. Confirm the browser session cookie has not expired and that one-time email links are being used only once.
 6. If the organizer has never had access before, start from `/dashboard/start` to create the draft tenant and send the first sign-in link.
 
+### Organizer account deletion fails
+
+1. Confirm the tenant's outstanding balance is above the settlement threshold before treating the deletion block as expected.
+2. If the UI shows a deletion block, use the Billing workspace to compare `outstanding_zatoshis` against `settlement_threshold_zatoshis`.
+3. Confirm the Amplify compute role has `secretsmanager:DeleteSecret` for the deployed `SECRET_STORE_PREFIX` namespace if AWS secret cleanup is expected.
+4. If using AWS Secrets Manager, remember deletions are scheduled with a 30-day recovery window rather than force-deleted immediately.
+5. After a successful delete, the organizer session should be cleared and the browser should land back on `/dashboard`.
+
 ## Recovery Notes
 
 - The ops console is the main recovery surface.
-- The tenant dashboard is the main self-serve surface for calendar setup, event review, and checkout visibility.
-- The tenant settings page also owns calendar-level iframe embed settings and generated snippets for enabled events.
+- The tenant dashboard is the main self-serve surface for onboarding, event review, billing, embeds, account settings, and support.
+- The tenant connections page owns onboarding, Luma setup, CipherPay setup, and checkout activation.
+- The tenant embed page owns calendar-level iframe embed settings and generated snippets for enabled events.
+- The tenant settings page owns organizer email changes and organizer account deletion.
 - The tenant detail page is the quickest place to compare the current live Luma feed against mirrored inventory when something looks off.
 - Calendar connections can be disabled from the tenant detail page. Disabling turns off the public calendar route for that connection and clears the managed Luma webhook state, but keeps mirrored inventory available for review.
 - The tenant events page separates upstream-only future Luma events from mirrored events and supports event-focused sync/import actions.
@@ -120,23 +130,17 @@ Required production values:
 - `LUMA_INTEREST_INBOX_EMAIL`
 - `SUPPORT_FROM_EMAIL`
 - `SUPPORT_INBOX_EMAIL`
+- `TENANT_SESSION_SECRET`
+- `TENANT_AUTH_FROM_EMAIL`
+- `TENANT_MAGIC_LINK_SECRET`
+- `SESSION_VIEWER_SECRET`
+- `EMBED_SESSION_SECRET`
 
 Additional production values for emailed operator sign-in:
 
 - `ADMIN_LOGIN_EMAIL`
 - `ADMIN_AUTH_FROM_EMAIL`
 - `ADMIN_MAGIC_LINK_SECRET`
-
-Optional production values for emailed tenant sign-in:
-
-- `TENANT_SESSION_SECRET`
-- `TENANT_AUTH_FROM_EMAIL`
-- `TENANT_MAGIC_LINK_SECRET`
-
-Additional production values for protected session and embed access:
-
-- `SESSION_VIEWER_SECRET`
-- `EMBED_SESSION_SECRET`
 
 Optional production values for tenant billing defaults:
 
