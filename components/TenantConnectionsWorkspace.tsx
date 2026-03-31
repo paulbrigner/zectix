@@ -48,6 +48,7 @@ export function TenantConnectionsWorkspace({
   const eventsBasePath = `${tenantBasePath}/events`;
   const onboardingChecklist = buildOnboardingChecklist(detail);
   const checklistComplete = onboardingChecklist.every((item) => item.complete);
+  const onboardingIncomplete = !checklistComplete;
   const activeTab = readConnectionsTab(searchParams.tab, checklistComplete);
   const setupTabPath = buildConnectionsTabHref(connectionsBasePath, "setup");
   const lumaTabPath = buildConnectionsTabHref(connectionsBasePath, "luma");
@@ -129,12 +130,16 @@ export function TenantConnectionsWorkspace({
               detail={detail}
               eventsBasePath={eventsBasePath}
               lumaTabPath={lumaTabPath}
+              onboardingIncomplete={onboardingIncomplete}
+              setupTabPath={setupTabPath}
             />
           ) : null}
           {activeTab === "cipherpay" ? (
             <TenantConnectionsCipherPayTab
               cipherPayTabPath={cipherPayTabPath}
               detail={detail}
+              onboardingIncomplete={onboardingIncomplete}
+              setupTabPath={setupTabPath}
             />
           ) : null}
         </div>
