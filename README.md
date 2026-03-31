@@ -31,14 +31,15 @@ The repository is designed to run in two environments:
 1. Ops creates a tenant and sets the tenant contact email.
 2. Organizers can also start a draft tenant through `/dashboard/start`, which emails the first sign-in link to the owner contact.
 3. The tenant signs in through `/dashboard/login` with a one-time email link.
-4. The tenant or ops connects a Luma calendar and stores the Luma API key in the secret store.
-5. The tenant settings page shows onboarding progress, connection health, embed settings, live Luma preview metadata, and mirrored inventory status for review.
-6. The tenant or ops syncs mirrored events and tickets from Luma and connects CipherPay for checkout.
+4. During onboarding, the organizer is guided through `Connections > Setup` to connect and sync a Luma calendar, attach CipherPay, publish at least one ticket-backed event, and activate public checkout.
+5. The Connections workspace owns onboarding progress, Luma connection health, CipherPay connection health, and public-checkout activation.
+6. The Events workspace manages mirrored events and ticket availability. An event becomes publicly visible when at least one mirrored ticket is allowed on public checkout.
 7. Public checkout happens under `/c/[calendarSlug]` and `/c/[calendarSlug]/events/[eventId]`.
-8. Tenants can enable iframe embed mode per calendar with allowed origins, default height, and compact theme overrides.
-9. CipherPay webhooks update payment state and immediately attempt registration once payment is detected in the mempool.
-10. The registration worker processes any follow-up retries through `/api/ops/process-registration-tasks` or the ops recovery UI.
-11. Successful registrations are attached back to the checkout session and recorded in the usage ledger.
+8. The Embed workspace manages iframe mode per calendar with allowed origins, default height, branding visibility, and compact theme overrides.
+9. The Settings workspace manages organizer account email confirmation and account deletion, including outstanding-balance checks before deletion is allowed.
+10. CipherPay webhooks update payment state and immediately attempt registration once payment is detected in the mempool.
+11. The registration worker processes any follow-up retries through `/api/ops/process-registration-tasks` or the ops recovery UI.
+12. Successful registrations are attached back to the checkout session and recorded in the usage ledger.
 
 ## Main Routes
 
@@ -50,8 +51,12 @@ The repository is designed to run in two environments:
 - `/dashboard/start` public self-serve tenant creation and first-owner sign-in
 - `/dashboard` tenant dashboard landing page
 - `/dashboard/[tenantSlug]` tenant overview
+- `/dashboard/[tenantSlug]/connections` tenant onboarding, Luma, and CipherPay management
+- `/dashboard/[tenantSlug]/billing` tenant billing and settlement history
 - `/dashboard/[tenantSlug]/events` tenant event review and ticket settings
-- `/dashboard/[tenantSlug]/settings` tenant connection and checkout setup
+- `/dashboard/[tenantSlug]/embed` tenant iframe embed configuration
+- `/dashboard/[tenantSlug]/settings` tenant account email and delete-account controls
+- `/dashboard/help` organizer support request page
 - `/ops/login` operator sign-in
 - `/ops` operator overview
 - `/ops/tenants` tenant onboarding and inventory
@@ -155,7 +160,7 @@ Common local variables:
 - `AWS_SECRET_ACCESS_KEY=local`
 - `SECRET_STORE_BACKEND=local`
 
-Optional operator auth:
+Operator auth:
 
 - `ADMIN_PASSWORD_HASH`
 - `ADMIN_SESSION_SECRET`
@@ -163,7 +168,7 @@ Optional operator auth:
 - `ADMIN_AUTH_FROM_EMAIL`
 - `ADMIN_MAGIC_LINK_SECRET`
 
-Optional tenant auth:
+Tenant auth:
 
 - `TENANT_SESSION_SECRET`
 - `TENANT_AUTH_FROM_EMAIL`
@@ -210,7 +215,11 @@ Optional organizer support inbox:
 - `/ops` is the primary console for onboarding, monitoring, retries, and reporting.
 - operator auth can run in password mode or emailed one-time-link mode. Email mode uses the configured admin email, stores one-time verification tokens in DynamoDB, and sends the link through SES.
 - `/dashboard/start` creates a draft tenant for self-serve onboarding and emails the first one-time sign-in link.
-- `/dashboard` is the tenant self-serve surface. The first version still uses the tenant `contact_email` as the organizer sign-in identity and sends one-time login links through SES.
+- `/dashboard` is the tenant self-serve surface. Organizer sign-in uses the tenant `contact_email` as the active login identity and sends one-time login links through SES.
+- `/dashboard/[tenantSlug]/connections` is the primary organizer onboarding surface and keeps the user focused on setup until onboarding is marked complete.
+- `/dashboard/[tenantSlug]/events` is the day-to-day organizer review surface for mirrored events and mirrored ticket availability.
+- `/dashboard/[tenantSlug]/embed` owns iframe configuration and generated snippets for public checkout embeds.
+- `/dashboard/[tenantSlug]/settings` owns account email changes and organizer account deletion.
 - `/dashboard/help` lets signed-in organizers send a support request through SES without leaving the organizer dashboard.
 - `/luma-integration` is the public-facing beta application page for the managed Luma integration.
 - `/api/luma-integration-interest` validates the application payload and sends an SES email to the configured inbox.
@@ -223,7 +232,8 @@ Optional organizer support inbox:
 - event-focused sync controls let ops sync one mirrored or upstream-only event at a time while still using the existing full-calendar refresh as the backend source of truth.
 - upstream-only events have a surgical import path in the UI: syncing one selected upstream event imports it into mirrored inventory if it is still present in Luma, and the result is shown as an event-focused diff.
 - the tenant dashboard is the internal organizer-style view for connection health, upcoming mirrored inventory, recent sessions, and webhook visibility.
-- the tenant settings page now also manages calendar-level iframe embed settings, including origin allowlists, default iframe height, branding visibility, and compact theme overrides.
+- the tenant settings page sends email-change confirmations before a new organizer login address becomes active.
+- organizer account deletion logs the organizer out, blocks only when the outstanding balance is above the settlement threshold, disables active Luma webhooks, and schedules AWS Secrets Manager cleanup with a 30-day recovery window when `SECRET_STORE_BACKEND=aws-secrets-manager`.
 - the public event form shows only ticket tiers that are active and enabled for managed Zcash checkout.
 - embedded checkout reuses the mirrored public event and checkout pages, adds a compact shell, and emits `postMessage` events for resize and checkout state updates.
 - the checkout page centers the attendee-facing payment/pass states: pay with Zcash, preparing your pass, pass ready, open on Luma, and save pass.
