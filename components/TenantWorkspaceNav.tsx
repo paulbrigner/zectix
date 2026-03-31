@@ -19,6 +19,7 @@ export function TenantWorkspaceNav({
     { href: `${basePath}/billing`, label: "Billing" },
     { href: `${basePath}/connections`, label: "Connections" },
     { href: `${basePath}/embed`, label: "Embed" },
+    { href: `${basePath}/settings`, label: "Settings" },
   ];
 
   return (

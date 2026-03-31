@@ -5,6 +5,7 @@ import {
   PutCommand,
   QueryCommand,
   TransactWriteCommand,
+  type TransactWriteCommandInput,
   UpdateCommand,
 } from "@aws-sdk/lib-dynamodb";
 import {
@@ -305,6 +306,15 @@ async function getItem(
   );
 
   return asRecord(response.Item);
+}
+
+async function deleteItemByKey(key: { pk: string; sk: string }) {
+  await getDynamoDocumentClient().send(
+    new DeleteCommand({
+      TableName: appStateTableName(),
+      Key: key,
+    }),
+  );
 }
 
 async function queryPartition(
@@ -979,6 +989,10 @@ function normalizeTenantMagicLinkRecord(value: unknown) {
   };
 }
 
+type TenantMagicLinkRecord = NonNullable<
+  ReturnType<typeof normalizeTenantMagicLinkRecord>
+>;
+
 export async function putTenant(tenant: Tenant) {
   await Promise.all([
     getDynamoDocumentClient().send(
@@ -1013,6 +1027,96 @@ export async function putTenant(tenant: Tenant) {
   ]);
 
   return tenant;
+}
+
+export async function replaceTenant(previous: Tenant, tenant: Tenant) {
+  const items: NonNullable<TransactWriteCommandInput["TransactItems"]> = [
+    {
+      Put: {
+        TableName: appStateTableName(),
+        Item: {
+          ...tenantKey(tenant.tenant_id),
+          ...tenant,
+        },
+      },
+    },
+    {
+      Put: {
+        TableName: appStateTableName(),
+        Item: {
+          ...tenantSlugKey(tenant.slug),
+          tenant_id: tenant.tenant_id,
+          slug: tenant.slug,
+        },
+      },
+    },
+    {
+      Put: {
+        TableName: appStateTableName(),
+        Item: {
+          ...tenantContactEmailKey(tenant.contact_email, tenant.tenant_id),
+          tenant_id: tenant.tenant_id,
+          contact_email: normalizeEmailAddress(tenant.contact_email),
+        },
+      },
+    },
+  ];
+
+  if (previous.slug !== tenant.slug) {
+    items.push({
+      Delete: {
+        TableName: appStateTableName(),
+        Key: tenantSlugKey(previous.slug),
+      },
+    });
+  }
+
+  if (
+    normalizeEmailAddress(previous.contact_email) !==
+    normalizeEmailAddress(tenant.contact_email)
+  ) {
+    items.push({
+      Delete: {
+        TableName: appStateTableName(),
+        Key: tenantContactEmailKey(previous.contact_email, previous.tenant_id),
+      },
+    });
+  }
+
+  await getDynamoDocumentClient().send(
+    new TransactWriteCommand({
+      TransactItems: items,
+    }),
+  );
+
+  return tenant;
+}
+
+export async function deleteTenantRecord(tenant: Tenant) {
+  await getDynamoDocumentClient().send(
+    new TransactWriteCommand({
+      TransactItems: [
+        {
+          Delete: {
+            TableName: appStateTableName(),
+            Key: tenantKey(tenant.tenant_id),
+          },
+        },
+        {
+          Delete: {
+            TableName: appStateTableName(),
+            Key: tenantSlugKey(tenant.slug),
+          },
+        },
+        {
+          Delete: {
+            TableName: appStateTableName(),
+            Key: tenantContactEmailKey(tenant.contact_email, tenant.tenant_id),
+          },
+        },
+      ],
+    }),
+  );
 }
 
 export async function getTenant(tenantId: string) {
@@ -1139,6 +1243,37 @@ export async function listCalendarConnectionsByTenant(tenantId: string) {
   }
 }
 
+export async function deleteCalendarConnectionRecord(connection: CalendarConnection) {
+  await getDynamoDocumentClient().send(
+    new TransactWriteCommand({
+      TransactItems: [
+        {
+          Delete: {
+            TableName: appStateTableName(),
+            Key: calendarConnectionKey(connection.calendar_connection_id),
+          },
+        },
+        {
+          Delete: {
+            TableName: appStateTableName(),
+            Key: tenantCalendarKey(
+              connection.tenant_id,
+              connection.created_at,
+              connection.calendar_connection_id,
+            ),
+          },
+        },
+        {
+          Delete: {
+            TableName: appStateTableName(),
+            Key: calendarSlugKey(connection.slug),
+          },
+        },
+      ],
+    }),
+  );
+}
+
 export async function putCipherPayConnection(
   connection: CipherPayConnection,
   options?: { attachToCalendar?: boolean },
@@ -1215,6 +1350,37 @@ export async function listCipherPayConnectionsByTenant(tenantId: string) {
   }
 }
 
+export async function deleteCipherPayConnectionRecord(connection: CipherPayConnection) {
+  await getDynamoDocumentClient().send(
+    new TransactWriteCommand({
+      TransactItems: [
+        {
+          Delete: {
+            TableName: appStateTableName(),
+            Key: cipherPayConnectionKey(connection.cipherpay_connection_id),
+          },
+        },
+        {
+          Delete: {
+            TableName: appStateTableName(),
+            Key: tenantCipherPayKey(
+              connection.tenant_id,
+              connection.created_at,
+              connection.cipherpay_connection_id,
+            ),
+          },
+        },
+        {
+          Delete: {
+            TableName: appStateTableName(),
+            Key: calendarCipherPayKey(connection.calendar_connection_id),
+          },
+        },
+      ],
+    }),
+  );
+}
+
 export async function putEventMirror(event: EventMirror) {
   await getDynamoDocumentClient().send(
     new PutCommand({
@@ -1249,6 +1415,12 @@ export async function listEventMirrorsByCalendar(calendarConnectionId: string) {
   }
 }
 
+export async function deleteEventMirrorRecord(event: EventMirror) {
+  await deleteItemByKey(
+    eventMirrorKey(event.calendar_connection_id, event.event_api_id),
+  );
+}
+
 export async function putTicketMirror(ticket: TicketMirror) {
   await getDynamoDocumentClient().send(
     new PutCommand({
@@ -1281,6 +1453,10 @@ export async function listTicketMirrorsByEvent(eventApiId: string) {
 
     throw error;
   }
+}
+
+export async function deleteTicketMirrorRecord(ticket: TicketMirror) {
+  await deleteItemByKey(ticketMirrorKey(ticket.event_api_id, ticket.ticket_type_api_id));
 }
 
 function buildSessionVersionCondition(expectedVersion: number) {
@@ -1481,6 +1657,57 @@ export async function listSessionsByTenant(tenantId: string, limit = 50) {
   }
 }
 
+export async function deleteSessionRecord(session: CheckoutSession) {
+  await getDynamoDocumentClient().send(
+    new TransactWriteCommand({
+      TransactItems: [
+        {
+          Delete: {
+            TableName: appStateTableName(),
+            Key: sessionKey(session.session_id),
+          },
+        },
+        {
+          Delete: {
+            TableName: appStateTableName(),
+            Key: recentSessionKey(session.created_at, session.session_id),
+          },
+        },
+        {
+          Delete: {
+            TableName: appStateTableName(),
+            Key: tenantSessionKey(
+              session.tenant_id,
+              session.created_at,
+              session.session_id,
+            ),
+          },
+        },
+        {
+          Delete: {
+            TableName: appStateTableName(),
+            Key: invoiceLookupKey(session.cipherpay_invoice_id),
+          },
+        },
+        {
+          Delete: {
+            TableName: appStateTableName(),
+            Key: attendeeLookupKey(
+              session.tenant_id,
+              session.calendar_connection_id,
+              session.event_api_id,
+              session.ticket_type_api_id,
+              session.attendee_email,
+              session.created_at,
+              session.session_id,
+            ),
+          },
+        },
+      ],
+    }),
+  );
+}
+
 export async function findLatestSessionForAttendee({
   tenantId,
   calendarConnectionId,
@@ -1615,6 +1842,36 @@ export async function listWebhookDeliveriesByTenant(tenantId: string, limit = 50
   }
 }
 
+export async function deleteWebhookDeliveryRecord(delivery: WebhookDelivery) {
+  const items = [
+    {
+      Delete: {
+        TableName: appStateTableName(),
+        Key: webhookKey(delivery.received_at, delivery.webhook_delivery_id),
+      },
+    },
+  ];
+
+  if (delivery.tenant_id) {
+    items.push({
+      Delete: {
+        TableName: appStateTableName(),
+        Key: tenantWebhookKey(
+          delivery.tenant_id,
+          delivery.received_at,
+          delivery.webhook_delivery_id,
+        ),
+      },
+    });
+  }
+
+  await getDynamoDocumentClient().send(
+    new TransactWriteCommand({
+      TransactItems: items,
+    }),
+  );
+}
+
 export async function putRegistrationTask(task: RegistrationTask) {
   const existing = await getRegistrationTask(task.task_id).catch(() => null);
 
@@ -1735,6 +1992,50 @@ export async function listRegistrationTasksByTenant(tenantId: string, limit = 50
 
     throw error;
   }
+}
+
+export async function deleteRegistrationTaskRecord(task: RegistrationTask) {
+  const items = [
+    {
+      Delete: {
+        TableName: appStateTableName(),
+        Key: taskKey(task.task_id),
+      },
+    },
+    {
+      Delete: {
+        TableName: appStateTableName(),
+        Key: recentTaskKey(task.created_at, task.task_id),
+      },
+    },
+    {
+      Delete: {
+        TableName: appStateTableName(),
+        Key: tenantTaskKey(task.tenant_id, task.created_at, task.task_id),
+      },
+    },
+    {
+      Delete: {
+        TableName: appStateTableName(),
+        Key: sessionTaskLookupKey(task.session_id),
+      },
+    },
+  ];
+
+  if (task.next_attempt_at) {
+    items.push({
+      Delete: {
+        TableName: appStateTableName(),
+        Key: dueTaskKey(task.next_attempt_at, task.task_id),
+      },
+    });
+  }
+
+  await getDynamoDocumentClient().send(
+    new TransactWriteCommand({
+      TransactItems: items,
+    }),
+  );
 }
 
 export async function listDueRegistrationTasks(limit = 20, dueAt = nowIso()) {
@@ -1881,6 +2182,31 @@ export async function listUsageLedgerEntriesByTenantCycle(
   }
 }
 
+export async function deleteUsageLedgerEntryRecord(entry: UsageLedgerEntry) {
+  await getDynamoDocumentClient().send(
+    new TransactWriteCommand({
+      TransactItems: [
+        {
+          Delete: {
+            TableName: appStateTableName(),
+            Key: usageEntryKey(
+              entry.tenant_id,
+              entry.billing_period,
+              entry.usage_entry_id,
+            ),
+          },
+        },
+        {
+          Delete: {
+            TableName: appStateTableName(),
+            Key: sessionUsageLookupKey(entry.session_id),
+          },
+        },
+      ],
+    }),
+  );
+}
+
 export async function putBillingCycle(cycle: BillingCycle) {
   await Promise.all([
     getDynamoDocumentClient().send(
@@ -1953,6 +2279,31 @@ export async function listBillingCyclesByTenant(tenantId: string) {
   }
 }
 
+export async function deleteBillingCycleRecord(cycle: BillingCycle) {
+  await getDynamoDocumentClient().send(
+    new TransactWriteCommand({
+      TransactItems: [
+        {
+          Delete: {
+            TableName: appStateTableName(),
+            Key: billingCycleKey(cycle.billing_cycle_id),
+          },
+        },
+        {
+          Delete: {
+            TableName: appStateTableName(),
+            Key: tenantBillingCycleKey(
+              cycle.tenant_id,
+              cycle.period_start,
+              cycle.billing_cycle_id,
+            ),
+          },
+        },
+      ],
+    }),
+  );
+}
+
 export async function putBillingAdjustment(adjustment: BillingAdjustment) {
   await Promise.all([
     getDynamoDocumentClient().send(
@@ -1995,6 +2346,31 @@ export async function listBillingAdjustmentsByCycle(billingCycleId: string) {
 
     throw error;
   }
+}
+
+export async function deleteBillingAdjustmentRecord(adjustment: BillingAdjustment) {
+  await getDynamoDocumentClient().send(
+    new TransactWriteCommand({
+      TransactItems: [
+        {
+          Delete: {
+            TableName: appStateTableName(),
+            Key: billingAdjustmentKey(adjustment.adjustment_id),
+          },
+        },
+        {
+          Delete: {
+            TableName: appStateTableName(),
+            Key: cycleBillingAdjustmentKey(
+              adjustment.billing_cycle_id,
+              adjustment.created_at,
+              adjustment.adjustment_id,
+            ),
+          },
+        },
+      ],
+    }),
+  );
 }
 
 export async function putAdminAuditEvent(
@@ -2146,6 +2522,29 @@ export async function deleteTenantMagicLinkToken(tokenHash: string) {
       Key: tenantMagicLinkKey(tokenHash),
     }),
   );
+}
+
+export async function listTenantMagicLinkTokensByEmail(email: string) {
+  const normalizedEmail = normalizeEmailAddress(email);
+  if (!normalizedEmail) {
+    return [] as TenantMagicLinkRecord[];
+  }
+
+  try {
+    const items = await queryPartition("TENANT_MAGIC_LINK");
+    return items
+      .map(normalizeTenantMagicLinkRecord)
+      .filter(
+        (record): record is TenantMagicLinkRecord =>
+          record !== null && record.email === normalizedEmail,
+      );
+  } catch (error) {
+    if (isMissingLocalStateError(error)) {
+      return [] as TenantMagicLinkRecord[];
+    }
+
+    throw error;
+  }
 }
 
 export async function consumeCheckoutRateLimit({
