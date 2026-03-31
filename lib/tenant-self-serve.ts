@@ -2,6 +2,7 @@ import type {
   CalendarConnection,
   CheckoutSession,
   EventMirror,
+  Tenant,
   TicketMirror,
 } from "@/lib/app-state/types";
 import { selectUpcomingEvents } from "@/lib/embed";
@@ -22,10 +23,8 @@ export type TenantOnboardingChecklistItem = {
 
 export type TenantEventWorkspaceFilter =
   | "all"
-  | "needs_attention"
   | "live"
-  | "hidden"
-  | "import_candidates";
+  | "hidden";
 
 export type TenantEventWorkspaceTone =
   | "success"
@@ -135,6 +134,12 @@ export function humanizeOnboardingStatus(value: string) {
     return "in progress";
   }
   return value.replaceAll("_", " ");
+}
+
+export function hasCompletedTenantOnboarding(
+  tenant: Pick<Tenant, "onboarding_status">,
+) {
+  return tenant.onboarding_status === "completed";
 }
 
 export function isFutureEvent(startAt: string, nowMs = Date.now()) {
@@ -368,18 +373,6 @@ export function upcomingEnabledEvents(events: EventMirror[]) {
   return selectUpcomingEvents(events.filter((event) => event.zcash_enabled));
 }
 
-function eventNeedsAttention(row: TenantEventWorkspaceRow) {
-  if (row.source === "upstream") {
-    return true;
-  }
-
-  if (row.sync_status === "error" || row.sync_status === "canceled") {
-    return true;
-  }
-
-  return row.needs_attention_count > 0;
-}
-
 export function buildTenantEventWorkspaceRows(
   detail: TenantOpsDetail,
   nowMs = Date.now(),
@@ -454,8 +447,8 @@ export function buildTenantEventWorkspaceRows(
       mirrored_event: null,
       needs_attention_count: 0,
       primary_blocker: "Import to begin ticket review",
-      public_status_label: "Import candidate",
-      public_status_tone: "warning" as const,
+      public_status_label: "Not mirrored",
+      public_status_tone: "muted" as const,
       row_id: buildEventWorkspaceRowId(
         "upstream",
         calendar.calendar_connection_id,
@@ -496,14 +489,10 @@ export function matchesTenantEventWorkspaceFilter(
   filter: TenantEventWorkspaceFilter,
 ) {
   switch (filter) {
-    case "needs_attention":
-      return eventNeedsAttention(row);
     case "live":
       return row.source === "mirrored" && row.public_status_label === "Live";
     case "hidden":
       return row.source === "mirrored" && row.public_status_label === "Hidden";
-    case "import_candidates":
-      return row.source === "upstream";
     case "all":
     default:
       return true;

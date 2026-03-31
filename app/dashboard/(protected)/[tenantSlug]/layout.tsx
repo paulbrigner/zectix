@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { TenantWorkspaceNav } from "@/components/TenantWorkspaceNav";
 import { getTenantBySlug } from "@/lib/app-state/state";
 import { normalizeEmailAddress } from "@/lib/app-state/utils";
+import { hasCompletedTenantOnboarding } from "@/lib/tenant-self-serve";
 import { requireTenantPageAccess } from "@/lib/tenant-auth-server";
 
 export const runtime = "nodejs";
@@ -22,6 +23,7 @@ export default async function TenantScopedLayout({
   }
 
   const basePath = `/dashboard/${encodeURIComponent(tenant.slug)}`;
+  const onboardingIncomplete = !hasCompletedTenantOnboarding(tenant);
 
   return (
     <>
@@ -33,7 +35,10 @@ export default async function TenantScopedLayout({
           </div>
         </div>
 
-        <TenantWorkspaceNav basePath={basePath} />
+        <TenantWorkspaceNav
+          basePath={basePath}
+          onboardingIncomplete={onboardingIncomplete}
+        />
       </header>
 
       {children}

@@ -65,10 +65,8 @@ function readWorkspaceFilter(
 ): TenantEventWorkspaceFilter {
   const normalized = readSearchValue(value);
   switch (normalized) {
-    case "needs_attention":
     case "live":
     case "hidden":
-    case "import_candidates":
       return normalized;
     case "all":
     default:
@@ -245,11 +243,11 @@ function buildEventsHref(
 }
 
 function sourceLabel(row: TenantEventWorkspaceRow) {
-  return row.source === "upstream" ? "Import candidate" : "Mirrored";
+  return row.source === "upstream" ? "Upstream" : "Mirrored";
 }
 
 function sourceTone(row: TenantEventWorkspaceRow): TenantEventWorkspaceTone {
-  return row.source === "upstream" ? "warning" : "info";
+  return row.source === "upstream" ? "muted" : "info";
 }
 
 function selectedRowFromSyncNotice(
@@ -488,10 +486,8 @@ export function TenantEventsWorkspace({
                   name="state"
                 >
                   <option value="all">All upcoming events</option>
-                  <option value="needs_attention">Needs attention</option>
                   <option value="live">Live publicly</option>
                   <option value="hidden">Hidden mirrored events</option>
-                  <option value="import_candidates">Import candidates</option>
                 </select>
               </label>
               <label className="console-field">
@@ -563,9 +559,6 @@ export function TenantEventsWorkspace({
                   <ConsoleTableHeader className="tenant-events-cell-tickets">
                     Tickets
                   </ConsoleTableHeader>
-                  <ConsoleTableHeader className="tenant-events-cell-blocker">
-                    Main blocker
-                  </ConsoleTableHeader>
                   <ConsoleTableHeader className="tenant-events-cell-sync">
                     Last sync
                   </ConsoleTableHeader>
@@ -623,16 +616,10 @@ export function TenantEventsWorkspace({
                               {row.enabled_ticket_count}/{row.ticket_count}{" "}
                               ready
                             </strong>
-                            <p className="subtle-text console-table-note">
-                              {row.needs_attention_count} needing review
-                            </p>
                           </div>
                         ) : (
                           <span className="subtle-text">Import first</span>
                         )}
-                      </ConsoleTableCell>
-                      <ConsoleTableCell className="tenant-events-cell-blocker">
-                        {row.primary_blocker}
                       </ConsoleTableCell>
                       <ConsoleTableCell className="tenant-events-cell-sync">
                         {row.last_synced_at ? (
@@ -718,7 +705,7 @@ export function TenantEventsWorkspace({
                   </strong>
                   <p className="subtle-text">
                     {selectedRow.source === "mirrored"
-                      ? `${selectedRow.needs_attention_count} needing review`
+                      ? "Ticket availability is controlled individually below."
                       : "Ticket review starts after import"}
                   </p>
                 </div>

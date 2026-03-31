@@ -52,6 +52,34 @@ export function buildTenantMagicLinkUrl(token: string) {
   return appUrl(`/dashboard/login/verify?token=${encodeURIComponent(token)}`);
 }
 
+export function buildTenantEmailChangeConfirmationEmail(
+  verifyUrl: string,
+  nextEmail: string,
+) {
+  const subject = "Confirm your new ZecTix organizer email";
+  const text = [
+    `Confirm that ${nextEmail} should become the sign-in email for your ZecTix organizer dashboard.`,
+    "",
+    verifyUrl,
+    "",
+    "This link expires in 15 minutes.",
+    "It can only be used once.",
+    "Your current sign-in email will keep working until you confirm this change.",
+  ].join("\n");
+
+  const html = [
+    "<h1>Confirm your new organizer email</h1>",
+    `<p>Confirm that <strong>${escapeHtml(nextEmail)}</strong> should become the sign-in email for your ZecTix organizer dashboard.</p>`,
+    `<p><a href="${escapeHtml(verifyUrl)}">Confirm email change</a></p>`,
+    `<p style="word-break:break-all">${escapeHtml(verifyUrl)}</p>`,
+    "<p>This link expires in 15 minutes.</p>",
+    "<p>It can only be used once.</p>",
+    "<p>Your current sign-in email will keep working until you confirm this change.</p>",
+  ].join("");
+
+  return { subject, text, html };
+}
+
 export async function sendTenantMagicLinkEmail(email: string, token: string) {
   const fromEmail = getTenantAuthFromEmail();
   if (!fromEmail) {
@@ -64,6 +92,50 @@ export async function sendTenantMagicLinkEmail(email: string, token: string) {
   }
 
   const { subject, text, html } = buildTenantMagicLinkEmail(verifyUrl);
+
+  await getSesClient().send(
+    new SendEmailCommand({
+      FromEmailAddress: fromEmail,
+      Destination: {
+        ToAddresses: [email],
+      },
+      Content: {
+        Simple: {
+          Subject: {
+            Data: subject,
+          },
+          Body: {
+            Text: {
+              Data: text,
+            },
+            Html: {
+              Data: html,
+            },
+          },
+        },
+      },
+    }),
+  );
+}
+
+export async function sendTenantContactEmailChangeConfirmationEmail(
+  email: string,
+  token: string,
+) {
+  const fromEmail = getTenantAuthFromEmail();
+  if (!fromEmail) {
+    throw new Error("Tenant email auth is not configured.");
+  }
+
+  const verifyUrl = buildTenantMagicLinkUrl(token);
+  if (!verifyUrl) {
+    throw new Error("APP_PUBLIC_ORIGIN must be configured for tenant email sign-in.");
+  }
+
+  const { subject, text, html } = buildTenantEmailChangeConfirmationEmail(
+    verifyUrl,
+    email,
+  );
 
   await getSesClient().send(
     new SendEmailCommand({

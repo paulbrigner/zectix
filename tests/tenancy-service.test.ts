@@ -36,6 +36,7 @@ const mockListEventMirrorsByCalendar = vi.fn();
 const mockListRegistrationTasksByTenant = vi.fn();
 const mockListSessionsByTenant = vi.fn();
 const mockListTenantMagicLinkTokensByEmail = vi.fn();
+const mockListTenantMagicLinkTokensByTenantId = vi.fn();
 const mockListTenantsByContactEmail = vi.fn();
 const mockListTicketMirrorsByEvent = vi.fn();
 const mockListUsageLedgerEntriesByTenantCycle = vi.fn();
@@ -86,6 +87,7 @@ vi.mock("@/lib/app-state/state", () => ({
   listRegistrationTasksByTenant: mockListRegistrationTasksByTenant,
   listSessionsByTenant: mockListSessionsByTenant,
   listTenantMagicLinkTokensByEmail: mockListTenantMagicLinkTokensByEmail,
+  listTenantMagicLinkTokensByTenantId: mockListTenantMagicLinkTokensByTenantId,
   listTenantsByContactEmail: mockListTenantsByContactEmail,
   listTicketMirrorsByEvent: mockListTicketMirrorsByEvent,
   listUsageLedgerEntriesByTenantCycle: mockListUsageLedgerEntriesByTenantCycle,
@@ -176,6 +178,7 @@ beforeEach(() => {
   mockListRegistrationTasksByTenant.mockReset();
   mockListSessionsByTenant.mockReset();
   mockListTenantMagicLinkTokensByEmail.mockReset();
+  mockListTenantMagicLinkTokensByTenantId.mockReset();
   mockListTenantsByContactEmail.mockReset();
   mockListTicketMirrorsByEvent.mockReset();
   mockListUsageLedgerEntriesByTenantCycle.mockReset();
@@ -220,6 +223,7 @@ beforeEach(() => {
   mockListCalendarConnectionsByTenant.mockResolvedValue([]);
   mockListCipherPayConnectionsByTenant.mockResolvedValue([]);
   mockListTenantMagicLinkTokensByEmail.mockResolvedValue([]);
+  mockListTenantMagicLinkTokensByTenantId.mockResolvedValue([]);
   mockListTenantsByContactEmail.mockResolvedValue([]);
   mockListWebhookDeliveriesByTenant.mockResolvedValue([]);
   mockListRegistrationTasksByTenant.mockResolvedValue([]);
@@ -564,6 +568,37 @@ describe("disableCalendarConnection", () => {
     expect(result.luma_webhook_secret_ref).toBeNull();
     expect(result.luma_webhook_token_ref).toBeNull();
   });
+
+  it("does not reopen onboarding after the tenant has already completed it once", async () => {
+    const existingConnection = makeCalendarConnection({
+      status: "active",
+      luma_api_secret_ref: "secret://luma-existing",
+      luma_webhook_id: "whk_existing",
+    });
+    const completedTenant = makeTenant({
+      onboarding_status: "completed",
+      onboarding_completed_at: "2026-03-31T12:00:00.000Z",
+      status: "active",
+    });
+
+    mockGetCalendarConnection.mockResolvedValue(existingConnection);
+    mockGetSecret.mockResolvedValue("resolved-luma-api-key");
+    mockDeleteLumaWebhook.mockResolvedValue(undefined);
+    mockGetTenant.mockResolvedValue(completedTenant);
+    mockListCalendarConnectionsByTenant.mockResolvedValue([
+      makeCalendarConnection({
+        ...existingConnection,
+        status: "disabled",
+        luma_webhook_id: null,
+        luma_webhook_secret_ref: null,
+        luma_webhook_token_ref: null,
+      }),
+    ]);
+
+    await disableCalendarConnection(existingConnection.calendar_connection_id);
+
+    expect(mockPutTenant).not.toHaveBeenCalled();
+  });
 });
 
 describe("deleteTenantSelfServeAccount", () => {
@@ -722,6 +757,18 @@ describe("deleteTenantSelfServeAccount", () => {
         created_at: "2026-03-04T00:00:00.000Z",
       },
     ]);
+    mockListTenantMagicLinkTokensByTenantId.mockResolvedValue([
+      {
+        token_hash: "token_change_123",
+        email: "next@example.com",
+        expires_at: "2026-03-05T00:00:00.000Z",
+        created_at: "2026-03-04T00:00:00.000Z",
+        purpose: "confirm_contact_email",
+        tenant_id: tenant.tenant_id,
+        next_contact_email: "next@example.com",
+        previous_contact_email: tenant.contact_email,
+      },
+    ]);
     mockListEventMirrorsByCalendar.mockResolvedValue([event]);
     mockListTicketMirrorsByEvent.mockResolvedValue([ticket]);
     mockListUsageLedgerEntriesByTenantCycle.mockResolvedValue([usageEntry]);
@@ -745,7 +792,30 @@ describe("deleteTenantSelfServeAccount", () => {
     expect(mockDeleteCipherPayConnectionRecord).toHaveBeenCalledWith(cipherpay);
     expect(mockDeleteCalendarConnectionRecord).toHaveBeenCalledWith(calendar);
     expect(mockDeleteTenantMagicLinkToken).toHaveBeenCalledWith("token_123");
+    expect(mockDeleteTenantMagicLinkToken).toHaveBeenCalledWith("token_change_123");
     expect(mockDeleteSecret).toHaveBeenCalledTimes(5);
+    expect(mockDeleteTenantRecord).toHaveBeenCalledWith(tenant);
+  });
+
+  it("continues deleting the account when secret deletion permission is missing", async () => {
+    const tenant = makeTenant();
+    const calendar = makeCalendarConnection({
+      tenant_id: tenant.tenant_id,
+      luma_api_secret_ref: "secret://luma-api",
+    });
+    mockGetTenant.mockResolvedValue(tenant);
+    mockListCalendarConnectionsByTenant.mockResolvedValue([calendar]);
+    mockDeleteSecret.mockRejectedValue(
+      Object.assign(
+        new Error(
+          "not authorized to perform: secretsmanager:DeleteSecret on resource",
+        ),
+        { name: "AccessDeniedException" },
+      ),
+    );
+
+    await expect(deleteTenantSelfServeAccount(tenant.tenant_id)).resolves.toBeUndefined();
+    expect(mockDeleteSecret).toHaveBeenCalledWith("secret://luma-api");
     expect(mockDeleteTenantRecord).toHaveBeenCalledWith(tenant);
   });
 });

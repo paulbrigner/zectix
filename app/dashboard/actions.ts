@@ -1,28 +1,34 @@
 "use server";
 
-import { cookies } from "next/headers";
 import { redirect, unstable_rethrow } from "next/navigation";
-import { asBoolean, asString } from "@/lib/app-state/utils";
+import {
+  asBoolean,
+  asString,
+  isValidEmailAddress,
+  normalizeEmailAddress,
+} from "@/lib/app-state/utils";
 import { safeRedirectPath } from "@/lib/http";
 import {
+  deleteTenantMagicLinkToken,
   getCalendarConnection,
   getCipherPayConnection,
   getTenantBySlug,
   putAdminAuditEvent,
+  putTenantMagicLinkToken,
 } from "@/lib/app-state/state";
+import { requireTenantPageAccess } from "@/lib/tenant-auth-server";
 import {
-  createTenantSessionToken,
-  TENANT_SESSION_COOKIE,
+  createTenantMagicLinkTokenHash,
+  createTenantMagicLinkTokenValue,
 } from "@/lib/tenant-auth";
-import {
-  requireTenantPageAccess,
-  tenantSessionCookieOptions,
-} from "@/lib/tenant-auth-server";
 import {
   parseSupportRequestSubmission,
   sendSupportRequestEmail,
 } from "@/lib/support-request";
-import { buildOnboardingChecklist } from "@/lib/tenant-self-serve";
+import {
+  buildOnboardingChecklist,
+  hasCompletedTenantOnboarding,
+} from "@/lib/tenant-self-serve";
 import {
   createCalendarConnection,
   createCipherPayConnection,
@@ -35,12 +41,12 @@ import {
   setEventPublicCheckoutRequested,
   setTicketOperatorAssertions,
   syncCalendarEventForOps,
-  updateTenantContactEmail,
   updateCalendarConnectionLumaKey,
   updateCalendarEmbedSettings,
   validateAndSyncCalendar,
   validateCipherPayConnection,
 } from "@/lib/tenancy/service";
+import { sendTenantContactEmailChangeConfirmationEmail } from "@/lib/tenant-auth-email";
 
 type TenantSelfServeDetail = NonNullable<
   Awaited<ReturnType<typeof getTenantSelfServeDetailBySlug>>
@@ -109,7 +115,7 @@ async function requireCipherPayTenantAccess(tenantId: string, cipherpayConnectio
 function onboardingChecklistComplete(
   detail: Awaited<ReturnType<typeof getTenantSelfServeDetailBySlug>> | null,
 ) {
-  return detail ? buildOnboardingChecklist(detail).every((item) => item.complete) : false;
+  return detail ? hasCompletedTenantOnboarding(detail.tenant) : false;
 }
 
 function summarizeTenantDashboardMutation(
@@ -768,42 +774,67 @@ export async function updateTenantContactEmailAction(formData: FormData) {
   );
   const params = new URLSearchParams();
   const nextEmail = String(formData.get("contact_email") || "");
+  const normalizedNextEmail = normalizeEmailAddress(nextEmail);
+  let issuedTokenHash: string | null = null;
 
   try {
-    const nextTenant = await updateTenantContactEmail(tenant.tenant_id, nextEmail);
-    const cookieStore = await cookies();
-    cookieStore.set(
-      TENANT_SESSION_COOKIE,
-      createTenantSessionToken(nextTenant.contact_email),
-      tenantSessionCookieOptions(),
+    if (!isValidEmailAddress(normalizedNextEmail)) {
+      throw new Error("Enter a valid email address.");
+    }
+
+    if (
+      normalizeEmailAddress(tenant.contact_email) === normalizedNextEmail
+    ) {
+      throw new Error("That email is already active for this account.");
+    }
+
+    const token = createTenantMagicLinkTokenValue();
+    const tokenHash = createTenantMagicLinkTokenHash(token);
+    issuedTokenHash = tokenHash;
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+    await putTenantMagicLinkToken({
+      email: normalizedNextEmail,
+      expiresAt,
+      nextContactEmail: normalizedNextEmail,
+      previousContactEmail: tenant.contact_email,
+      purpose: "confirm_contact_email",
+      tenantId: tenant.tenant_id,
+      tokenHash,
+    });
+    await sendTenantContactEmailChangeConfirmationEmail(
+      normalizedNextEmail,
+      token,
     );
 
-    const afterDetail = await getTenantSelfServeDetailBySlug(
-      nextTenant.slug,
-      nextTenant.contact_email,
-    );
     await putAdminAuditEvent({
-      event_type: "tenant.dashboard.update_contact_email",
+      event_type: "tenant.dashboard.request_contact_email_change",
       actor_ip: null,
       actor_origin: null,
       request_headers_json: null,
       metadata_json: {
-        action: "update_contact_email",
+        action: "request_contact_email_change",
         actor_email: sessionEmail,
-        after_summary: summarizeTenantDashboardMutation(afterDetail),
         before_summary: summarizeTenantDashboardMutation(beforeDetail),
-        next_contact_email: nextTenant.contact_email,
+        expires_at: expiresAt,
+        next_contact_email: normalizedNextEmail,
         previous_contact_email: tenant.contact_email,
         tenant_id: tenant.tenant_id,
       },
     });
 
-    params.set("email_updated", "1");
-    redirectToWithQuery(settingsPath(nextTenant.slug), params);
+    params.set("email_pending", "1");
+    redirectToWithQuery(settingsPath(tenant.slug), params);
   } catch (error) {
     unstable_rethrow(error);
+    if (issuedTokenHash) {
+      try {
+        await deleteTenantMagicLinkToken(issuedTokenHash);
+      } catch {
+        // Ignore cleanup failures so the user still sees the original error.
+      }
+    }
     await auditTenantDashboardActionFailure({
-      action: "update_contact_email",
+      action: "request_contact_email_change",
       beforeDetail,
       context: {
         requested_contact_email: nextEmail,

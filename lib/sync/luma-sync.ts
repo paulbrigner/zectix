@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import {
+  deleteTicketMirrorRecord,
   getCalendarConnection,
   listEventMirrorsByCalendar,
   listTicketMirrorsByEvent,
@@ -172,19 +173,7 @@ async function syncTicketMirrorsForEvent(args: {
       continue;
     }
 
-    syncedTickets.push(
-      await putTicketMirror({
-        ...existing,
-        active: false,
-        zcash_enabled: false,
-        zcash_enabled_reason: "Ticket no longer appears in the latest Luma sync.",
-        automatic_eligibility_status: "ineligible",
-        automatic_eligibility_reasons: [
-          "Ticket no longer appears in the latest Luma sync.",
-        ],
-        updated_at: nowIso(),
-      }),
-    );
+    await deleteTicketMirrorRecord(existing);
   }
 
   return syncedTickets;
