@@ -54,7 +54,7 @@ export class AwsSecretsManagerSecretStore implements SecretStore {
     try {
       await getSecretsClient().send(
         new DeleteSecretCommand({
-          ForceDeleteWithoutRecovery: true,
+          RecoveryWindowInDays: 30,
           SecretId: ref,
         }),
       );

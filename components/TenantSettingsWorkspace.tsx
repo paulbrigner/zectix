@@ -36,6 +36,8 @@ export function TenantSettingsWorkspace({
 }) {
   const settingsBasePath = `${tenantBasePath}/settings`;
   const outstandingZatoshis = totalOutstandingZatoshis(detail);
+  const settlementThresholdZatoshis = detail.tenant.settlement_threshold_zatoshis;
+  const deletionBlockedByBalance = outstandingZatoshis > settlementThresholdZatoshis;
   const emailPending = readSearchValue(searchParams.email_pending) === "1";
   const emailUpdated = readSearchValue(searchParams.email_updated) === "1";
   const emailError = readSearchValue(searchParams.email_error);
@@ -149,33 +151,30 @@ export function TenantSettingsWorkspace({
       </ConsoleSection>
 
       <ConsoleSection
-        description="Permanently delete your account and all data. This cannot be undone. You must settle any outstanding billing balance before deleting."
+        description="Permanently delete your account and all data. This cannot be undone. You must settle any outstanding billing balance above the settlement threshold before deleting."
         title="DANGER ZONE"
       >
         <article className="console-detail-card">
-          <p className="console-kpi-label">Delete account</p>
-          <p className="subtle-text">
-            Permanently delete your account and all data. This cannot be undone. You must settle any outstanding billing balance before deleting.
-          </p>
-          {outstandingZatoshis > 0 ? (
+          {deletionBlockedByBalance ? (
             <p className="subtle-text">
               Current outstanding balance: {formatZecAmount(outstandingZatoshis)}
             </p>
           ) : null}
           <div className="button-row">
-            {outstandingZatoshis > 0 ? (
+            {deletionBlockedByBalance ? (
               <ConsoleConfirmDialog
                 action={redirectToTenantBillingAction}
                 body={
                   <p className="subtle-text">
                     This account still has an outstanding balance of{" "}
-                    {formatZecAmount(outstandingZatoshis)}. Settle it in Billing first,
-                    then return here to delete the account.
+                    {formatZecAmount(outstandingZatoshis)}, which is above the deletion
+                    threshold of {formatZecAmount(settlementThresholdZatoshis)}. Settle it
+                    in Billing first, then return here to delete the account.
                   </p>
                 }
                 confirmClassName="button button-small"
                 confirmLabel="Open billing"
-                description="You must settle any outstanding billing balance before deleting."
+                description="You must settle balances above the settlement threshold before deleting."
                 title="Settle outstanding balance first"
                 triggerClassName="button button-danger button-small"
                 triggerLabel="Delete account"
