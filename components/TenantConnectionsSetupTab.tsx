@@ -53,6 +53,7 @@ export function TenantConnectionsSetupTab({
   const onboardingChecklist = buildOnboardingChecklist(detail);
   const onboardingCompletionNotice =
     readOnboardingCompletionNotice(searchParams);
+  const setupError = readSearchValue(searchParams.setup_error);
   const completedSteps = onboardingChecklist.filter(
     (item) => item.complete,
   ).length;
@@ -85,6 +86,20 @@ export function TenantConnectionsSetupTab({
 
   return (
     <div className="console-content console-anchor-target" id="setup-checklist">
+      {setupError ? (
+        <ConsoleSection
+          eyebrow={<p className="console-kpi-label">Setup issue</p>}
+          role="alert"
+          title={setupError}
+          titleAs="h3"
+        >
+          <p className="subtle-text">
+            The calendar was saved, but the initial validation and mirror refresh still
+            need attention.
+          </p>
+        </ConsoleSection>
+      ) : null}
+
       {onboardingCompletionNotice ? (
         <ConsoleSection
           actions={

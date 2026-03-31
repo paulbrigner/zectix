@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   makeCalendarConnection,
+  makeCheckoutSession,
   makeCipherPayConnection,
   makeEventMirror,
   makeTenant,
@@ -15,21 +16,39 @@ const mockGetEventMirror = vi.fn();
 const mockGetTenant = vi.fn();
 const mockGetTenantBySlug = vi.fn();
 const mockGetTicketMirror = vi.fn();
+const mockDeleteBillingAdjustmentRecord = vi.fn();
+const mockDeleteBillingCycleRecord = vi.fn();
+const mockDeleteCalendarConnectionRecord = vi.fn();
+const mockDeleteCipherPayConnectionRecord = vi.fn();
+const mockDeleteEventMirrorRecord = vi.fn();
+const mockDeleteRegistrationTaskRecord = vi.fn();
+const mockDeleteSessionRecord = vi.fn();
+const mockDeleteTenantMagicLinkToken = vi.fn();
+const mockDeleteTenantRecord = vi.fn();
+const mockDeleteTicketMirrorRecord = vi.fn();
+const mockDeleteUsageLedgerEntryRecord = vi.fn();
+const mockDeleteWebhookDeliveryRecord = vi.fn();
+const mockListBillingAdjustmentsByCycle = vi.fn();
+const mockListBillingCyclesByTenant = vi.fn();
 const mockListCalendarConnectionsByTenant = vi.fn();
 const mockListCipherPayConnectionsByTenant = vi.fn();
 const mockListEventMirrorsByCalendar = vi.fn();
 const mockListRegistrationTasksByTenant = vi.fn();
 const mockListSessionsByTenant = vi.fn();
+const mockListTenantMagicLinkTokensByEmail = vi.fn();
 const mockListTenantsByContactEmail = vi.fn();
 const mockListTicketMirrorsByEvent = vi.fn();
+const mockListUsageLedgerEntriesByTenantCycle = vi.fn();
 const mockListWebhookDeliveriesByTenant = vi.fn();
 const mockPutCalendarConnection = vi.fn();
 const mockPutCipherPayConnection = vi.fn();
 const mockPutEventMirror = vi.fn();
 const mockPutTenant = vi.fn();
 const mockPutTicketMirror = vi.fn();
+const mockReplaceTenant = vi.fn();
 
 const mockSetSecret = vi.fn();
+const mockDeleteSecret = vi.fn();
 const mockGetSecret = vi.fn();
 const mockDeleteLumaWebhook = vi.fn();
 const mockListLumaEvents = vi.fn();
@@ -39,6 +58,18 @@ const mockValidateCalendarConnection = vi.fn();
 const mockGetTenantBillingSnapshot = vi.fn();
 
 vi.mock("@/lib/app-state/state", () => ({
+  deleteBillingAdjustmentRecord: mockDeleteBillingAdjustmentRecord,
+  deleteBillingCycleRecord: mockDeleteBillingCycleRecord,
+  deleteCalendarConnectionRecord: mockDeleteCalendarConnectionRecord,
+  deleteCipherPayConnectionRecord: mockDeleteCipherPayConnectionRecord,
+  deleteEventMirrorRecord: mockDeleteEventMirrorRecord,
+  deleteRegistrationTaskRecord: mockDeleteRegistrationTaskRecord,
+  deleteSessionRecord: mockDeleteSessionRecord,
+  deleteTenantMagicLinkToken: mockDeleteTenantMagicLinkToken,
+  deleteTenantRecord: mockDeleteTenantRecord,
+  deleteTicketMirrorRecord: mockDeleteTicketMirrorRecord,
+  deleteUsageLedgerEntryRecord: mockDeleteUsageLedgerEntryRecord,
+  deleteWebhookDeliveryRecord: mockDeleteWebhookDeliveryRecord,
   getCalendarConnection: mockGetCalendarConnection,
   getCalendarConnectionBySlug: mockGetCalendarConnectionBySlug,
   getCipherPayConnection: mockGetCipherPayConnection,
@@ -47,24 +78,30 @@ vi.mock("@/lib/app-state/state", () => ({
   getTenant: mockGetTenant,
   getTenantBySlug: mockGetTenantBySlug,
   getTicketMirror: mockGetTicketMirror,
+  listBillingAdjustmentsByCycle: mockListBillingAdjustmentsByCycle,
+  listBillingCyclesByTenant: mockListBillingCyclesByTenant,
   listCalendarConnectionsByTenant: mockListCalendarConnectionsByTenant,
   listCipherPayConnectionsByTenant: mockListCipherPayConnectionsByTenant,
   listEventMirrorsByCalendar: mockListEventMirrorsByCalendar,
   listRegistrationTasksByTenant: mockListRegistrationTasksByTenant,
   listSessionsByTenant: mockListSessionsByTenant,
+  listTenantMagicLinkTokensByEmail: mockListTenantMagicLinkTokensByEmail,
   listTenantsByContactEmail: mockListTenantsByContactEmail,
   listTicketMirrorsByEvent: mockListTicketMirrorsByEvent,
+  listUsageLedgerEntriesByTenantCycle: mockListUsageLedgerEntriesByTenantCycle,
   listWebhookDeliveriesByTenant: mockListWebhookDeliveriesByTenant,
   putCalendarConnection: mockPutCalendarConnection,
   putCipherPayConnection: mockPutCipherPayConnection,
   putEventMirror: mockPutEventMirror,
   putTenant: mockPutTenant,
+  replaceTenant: mockReplaceTenant,
   putTicketMirror: mockPutTicketMirror,
 }));
 
 vi.mock("@/lib/secrets", () => ({
   getSecretStore: () => ({
     setSecret: mockSetSecret,
+    deleteSecret: mockDeleteSecret,
     getSecret: mockGetSecret,
   }),
 }));
@@ -90,14 +127,17 @@ const {
   createCalendarConnection,
   createCipherPayConnection,
   createTenant,
+  deleteTenantSelfServeAccount,
   disableCalendarConnection,
   getTenantOpsDetail,
   getTenantSelfServeDetailBySlug,
   listSelfServeTenantsForEmail,
+  OutstandingBillingBalanceError,
   setEventPublicCheckoutRequested,
   setTenantStatus,
   setTicketOperatorAssertions,
   syncCalendarEventForOps,
+  updateTenantContactEmail,
   updateCalendarEmbedSettings,
   updateCalendarConnectionLumaKey,
   validateCipherPayConnection,
@@ -115,19 +155,37 @@ beforeEach(() => {
   mockGetTenant.mockReset();
   mockGetTenantBySlug.mockReset();
   mockGetTicketMirror.mockReset();
+  mockDeleteBillingAdjustmentRecord.mockReset();
+  mockDeleteBillingCycleRecord.mockReset();
+  mockDeleteCalendarConnectionRecord.mockReset();
+  mockDeleteCipherPayConnectionRecord.mockReset();
+  mockDeleteEventMirrorRecord.mockReset();
+  mockDeleteRegistrationTaskRecord.mockReset();
+  mockDeleteSecret.mockReset();
+  mockDeleteSessionRecord.mockReset();
+  mockDeleteTenantMagicLinkToken.mockReset();
+  mockDeleteTenantRecord.mockReset();
+  mockDeleteTicketMirrorRecord.mockReset();
+  mockDeleteUsageLedgerEntryRecord.mockReset();
+  mockDeleteWebhookDeliveryRecord.mockReset();
+  mockListBillingAdjustmentsByCycle.mockReset();
+  mockListBillingCyclesByTenant.mockReset();
   mockListCalendarConnectionsByTenant.mockReset();
   mockListCipherPayConnectionsByTenant.mockReset();
   mockListEventMirrorsByCalendar.mockReset();
   mockListRegistrationTasksByTenant.mockReset();
   mockListSessionsByTenant.mockReset();
+  mockListTenantMagicLinkTokensByEmail.mockReset();
   mockListTenantsByContactEmail.mockReset();
   mockListTicketMirrorsByEvent.mockReset();
+  mockListUsageLedgerEntriesByTenantCycle.mockReset();
   mockListWebhookDeliveriesByTenant.mockReset();
   mockPutCalendarConnection.mockReset();
   mockPutCipherPayConnection.mockReset();
   mockPutEventMirror.mockReset();
   mockPutTenant.mockReset();
   mockPutTicketMirror.mockReset();
+  mockReplaceTenant.mockReset();
   mockSetSecret.mockReset();
   mockGetSecret.mockReset();
   mockDeleteLumaWebhook.mockReset();
@@ -140,16 +198,34 @@ beforeEach(() => {
   mockPutCalendarConnection.mockImplementation(async (connection) => connection);
   mockPutCipherPayConnection.mockImplementation(async (connection) => connection);
   mockPutTenant.mockImplementation(async (tenant) => tenant);
+  mockReplaceTenant.mockImplementation(async (_previous, tenant) => tenant);
   mockGetSecret.mockResolvedValue("resolved-secret");
+  mockDeleteSecret.mockResolvedValue(undefined);
+  mockDeleteBillingAdjustmentRecord.mockResolvedValue(undefined);
+  mockDeleteBillingCycleRecord.mockResolvedValue(undefined);
+  mockDeleteCalendarConnectionRecord.mockResolvedValue(undefined);
+  mockDeleteCipherPayConnectionRecord.mockResolvedValue(undefined);
+  mockDeleteEventMirrorRecord.mockResolvedValue(undefined);
+  mockDeleteRegistrationTaskRecord.mockResolvedValue(undefined);
+  mockDeleteSessionRecord.mockResolvedValue(undefined);
+  mockDeleteTenantMagicLinkToken.mockResolvedValue(undefined);
+  mockDeleteTenantRecord.mockResolvedValue(undefined);
+  mockDeleteTicketMirrorRecord.mockResolvedValue(undefined);
+  mockDeleteUsageLedgerEntryRecord.mockResolvedValue(undefined);
+  mockDeleteWebhookDeliveryRecord.mockResolvedValue(undefined);
+  mockListBillingAdjustmentsByCycle.mockResolvedValue([]);
+  mockListBillingCyclesByTenant.mockResolvedValue([]);
   mockListLumaEvents.mockResolvedValue([]);
   mockListSessionsByTenant.mockResolvedValue([]);
   mockListCalendarConnectionsByTenant.mockResolvedValue([]);
   mockListCipherPayConnectionsByTenant.mockResolvedValue([]);
+  mockListTenantMagicLinkTokensByEmail.mockResolvedValue([]);
   mockListTenantsByContactEmail.mockResolvedValue([]);
   mockListWebhookDeliveriesByTenant.mockResolvedValue([]);
   mockListRegistrationTasksByTenant.mockResolvedValue([]);
   mockListEventMirrorsByCalendar.mockResolvedValue([]);
   mockListTicketMirrorsByEvent.mockResolvedValue([]);
+  mockListUsageLedgerEntriesByTenantCycle.mockResolvedValue([]);
   mockGetTenantBillingSnapshot.mockResolvedValue({
     tenant: makeTenant(),
     current_cycle: null,
@@ -364,6 +440,37 @@ describe("createTenant", () => {
   });
 });
 
+describe("updateTenantContactEmail", () => {
+  it("replaces the tenant contact email and its lookup", async () => {
+    const tenant = makeTenant({
+      contact_email: "owner@example.com",
+    });
+    mockGetTenant.mockResolvedValue(tenant);
+
+    const result = await updateTenantContactEmail(
+      tenant.tenant_id,
+      "new-owner@example.com",
+    );
+
+    expect(mockReplaceTenant).toHaveBeenCalledWith(
+      tenant,
+      expect.objectContaining({
+        tenant_id: tenant.tenant_id,
+        contact_email: "new-owner@example.com",
+      }),
+    );
+    expect(result.contact_email).toBe("new-owner@example.com");
+  });
+
+  it("rejects malformed email addresses", async () => {
+    mockGetTenant.mockResolvedValue(makeTenant());
+
+    await expect(
+      updateTenantContactEmail("tenant_123", "bad-email"),
+    ).rejects.toThrow("Enter a valid email address.");
+  });
+});
+
 describe("updateCalendarConnectionLumaKey", () => {
   it("reuses the stored secret ref and clears managed validation state", async () => {
     const existingConnection = makeCalendarConnection({
@@ -456,6 +563,190 @@ describe("disableCalendarConnection", () => {
     expect(result.luma_webhook_id).toBeNull();
     expect(result.luma_webhook_secret_ref).toBeNull();
     expect(result.luma_webhook_token_ref).toBeNull();
+  });
+});
+
+describe("deleteTenantSelfServeAccount", () => {
+  it("blocks deletion while an outstanding balance remains", async () => {
+    const tenant = makeTenant();
+    mockGetTenant.mockResolvedValue(tenant);
+    mockGetTenantBillingSnapshot.mockResolvedValue({
+      tenant,
+      current_cycle: {
+        billing_cycle_id: "cycle_123",
+        outstanding_zatoshis: 1_000,
+      },
+      cycles: [
+        {
+          billing_cycle_id: "cycle_123",
+          outstanding_zatoshis: 1_000,
+        },
+      ],
+      adjustments_by_cycle: new Map(),
+    });
+
+    await expect(deleteTenantSelfServeAccount(tenant.tenant_id)).rejects.toBeInstanceOf(
+      OutstandingBillingBalanceError,
+    );
+    expect(mockDeleteTenantRecord).not.toHaveBeenCalled();
+  });
+
+  it("removes tenant data and tears down active Luma webhooks", async () => {
+    const tenant = makeTenant({
+      contact_email: "owner@example.com",
+    });
+    const calendar = makeCalendarConnection({
+      tenant_id: tenant.tenant_id,
+      luma_api_secret_ref: "secret://luma-api",
+      luma_webhook_secret_ref: "secret://luma-webhook",
+      luma_webhook_token_ref: "secret://luma-token",
+      luma_webhook_id: "whk_123",
+    });
+    const cipherpay = makeCipherPayConnection({
+      tenant_id: tenant.tenant_id,
+      calendar_connection_id: calendar.calendar_connection_id,
+      cipherpay_api_secret_ref: "secret://cipherpay-api",
+      cipherpay_webhook_secret_ref: "secret://cipherpay-webhook",
+    });
+    const event = makeEventMirror({
+      tenant_id: tenant.tenant_id,
+      calendar_connection_id: calendar.calendar_connection_id,
+      event_api_id: "event_123",
+    });
+    const ticket = makeTicketMirror({
+      tenant_id: tenant.tenant_id,
+      calendar_connection_id: calendar.calendar_connection_id,
+      event_api_id: event.event_api_id,
+    });
+    const session = makeCheckoutSession({
+      tenant_id: tenant.tenant_id,
+      calendar_connection_id: calendar.calendar_connection_id,
+      cipherpay_connection_id: cipherpay.cipherpay_connection_id,
+      event_api_id: event.event_api_id,
+    });
+    const cycle = {
+      billing_cycle_id: "cycle_123",
+      tenant_id: tenant.tenant_id,
+      billing_period: "2026-03",
+      period_start: "2026-03-01T00:00:00.000Z",
+      period_end: "2026-03-31T23:59:59.999Z",
+      grace_until: "2026-04-07T00:00:00.000Z",
+      status: "paid",
+      gross_zatoshis: 0,
+      service_fee_zatoshis: 0,
+      credited_zatoshis: 0,
+      waived_zatoshis: 0,
+      outstanding_zatoshis: 0,
+      recognized_session_count: 0,
+      invoice_reference: null,
+      settlement_txid: null,
+      created_at: "2026-03-01T00:00:00.000Z",
+      updated_at: "2026-03-31T00:00:00.000Z",
+    };
+    const adjustment = {
+      adjustment_id: "adj_123",
+      billing_cycle_id: cycle.billing_cycle_id,
+      tenant_id: tenant.tenant_id,
+      type: "credit",
+      amount_zatoshis: 100,
+      reason: "manual",
+      created_at: "2026-03-02T00:00:00.000Z",
+    };
+    const usageEntry = {
+      usage_entry_id: "usage_123",
+      tenant_id: tenant.tenant_id,
+      calendar_connection_id: calendar.calendar_connection_id,
+      session_id: session.session_id,
+      cipherpay_invoice_id: session.cipherpay_invoice_id,
+      event_api_id: event.event_api_id,
+      gross_zatoshis: 0,
+      service_fee_bps: 33,
+      service_fee_zatoshis: 0,
+      recognized_at: "2026-03-02T00:00:00.000Z",
+      billing_period: "2026-03",
+      billing_cycle_id: cycle.billing_cycle_id,
+      status: "billable",
+      created_at: "2026-03-02T00:00:00.000Z",
+      updated_at: "2026-03-02T00:00:00.000Z",
+    };
+    const webhook = {
+      webhook_delivery_id: "wh_123",
+      provider: "luma",
+      tenant_id: tenant.tenant_id,
+      calendar_connection_id: calendar.calendar_connection_id,
+      session_id: null,
+      cipherpay_invoice_id: null,
+      event_api_id: event.event_api_id,
+      event_type: "event.updated",
+      signature_valid: true,
+      validation_error: null,
+      request_body_json: null,
+      request_headers_json: null,
+      received_at: "2026-03-03T00:00:00.000Z",
+      applied_at: "2026-03-03T00:00:00.000Z",
+      apply_status: "applied",
+    };
+    const task = {
+      task_id: "task_123",
+      tenant_id: tenant.tenant_id,
+      calendar_connection_id: calendar.calendar_connection_id,
+      session_id: session.session_id,
+      cipherpay_invoice_id: session.cipherpay_invoice_id,
+      status: "pending",
+      attempt_count: 0,
+      next_attempt_at: "2026-03-04T00:00:00.000Z",
+      last_error: null,
+      created_at: "2026-03-04T00:00:00.000Z",
+      updated_at: "2026-03-04T00:00:00.000Z",
+      last_attempt_at: null,
+    };
+
+    mockGetTenant.mockResolvedValue(tenant);
+    mockGetTenantBillingSnapshot.mockResolvedValue({
+      tenant,
+      current_cycle: cycle,
+      cycles: [cycle],
+      adjustments_by_cycle: new Map([[cycle.billing_cycle_id, [adjustment]]]),
+    });
+    mockListCalendarConnectionsByTenant.mockResolvedValue([calendar]);
+    mockListCipherPayConnectionsByTenant.mockResolvedValue([cipherpay]);
+    mockListSessionsByTenant.mockResolvedValue([session]);
+    mockListWebhookDeliveriesByTenant.mockResolvedValue([webhook]);
+    mockListRegistrationTasksByTenant.mockResolvedValue([task]);
+    mockListBillingCyclesByTenant.mockResolvedValue([cycle]);
+    mockListTenantMagicLinkTokensByEmail.mockResolvedValue([
+      {
+        token_hash: "token_123",
+        email: tenant.contact_email,
+        expires_at: "2026-03-05T00:00:00.000Z",
+        created_at: "2026-03-04T00:00:00.000Z",
+      },
+    ]);
+    mockListEventMirrorsByCalendar.mockResolvedValue([event]);
+    mockListTicketMirrorsByEvent.mockResolvedValue([ticket]);
+    mockListUsageLedgerEntriesByTenantCycle.mockResolvedValue([usageEntry]);
+    mockListBillingAdjustmentsByCycle.mockResolvedValue([adjustment]);
+    mockGetSecret.mockResolvedValue("resolved-luma-key");
+
+    await deleteTenantSelfServeAccount(tenant.tenant_id);
+
+    expect(mockDeleteLumaWebhook).toHaveBeenCalledWith({
+      apiKey: "resolved-luma-key",
+      id: calendar.luma_webhook_id,
+    });
+    expect(mockDeleteTicketMirrorRecord).toHaveBeenCalledWith(ticket);
+    expect(mockDeleteEventMirrorRecord).toHaveBeenCalledWith(event);
+    expect(mockDeleteSessionRecord).toHaveBeenCalledWith(session);
+    expect(mockDeleteWebhookDeliveryRecord).toHaveBeenCalledWith(webhook);
+    expect(mockDeleteRegistrationTaskRecord).toHaveBeenCalledWith(task);
+    expect(mockDeleteUsageLedgerEntryRecord).toHaveBeenCalledWith(usageEntry);
+    expect(mockDeleteBillingAdjustmentRecord).toHaveBeenCalledWith(adjustment);
+    expect(mockDeleteBillingCycleRecord).toHaveBeenCalledWith(cycle);
+    expect(mockDeleteCipherPayConnectionRecord).toHaveBeenCalledWith(cipherpay);
+    expect(mockDeleteCalendarConnectionRecord).toHaveBeenCalledWith(calendar);
+    expect(mockDeleteTenantMagicLinkToken).toHaveBeenCalledWith("token_123");
+    expect(mockDeleteSecret).toHaveBeenCalledTimes(5);
+    expect(mockDeleteTenantRecord).toHaveBeenCalledWith(tenant);
   });
 });
 

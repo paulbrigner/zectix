@@ -1,5 +1,6 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { redirect, unstable_rethrow } from "next/navigation";
 import { asBoolean, asString } from "@/lib/app-state/utils";
 import { safeRedirectPath } from "@/lib/http";
@@ -9,22 +10,32 @@ import {
   getTenantBySlug,
   putAdminAuditEvent,
 } from "@/lib/app-state/state";
-import { requireTenantPageAccess } from "@/lib/tenant-auth-server";
+import {
+  createTenantSessionToken,
+  TENANT_SESSION_COOKIE,
+} from "@/lib/tenant-auth";
+import {
+  requireTenantPageAccess,
+  tenantSessionCookieOptions,
+} from "@/lib/tenant-auth-server";
 import {
   parseSupportRequestSubmission,
   sendSupportRequestEmail,
 } from "@/lib/support-request";
 import { buildOnboardingChecklist } from "@/lib/tenant-self-serve";
 import {
-  getTenantSelfServeDetailBySlug,
   createCalendarConnection,
   createCipherPayConnection,
+  deleteTenantSelfServeAccount,
   disableCalendarConnection,
+  getTenantSelfServeDetailBySlug,
   listSelfServeTenantsForEmail,
+  OutstandingBillingBalanceError,
   setTenantStatus,
   setEventPublicCheckoutRequested,
   setTicketOperatorAssertions,
   syncCalendarEventForOps,
+  updateTenantContactEmail,
   updateCalendarConnectionLumaKey,
   updateCalendarEmbedSettings,
   validateAndSyncCalendar,
@@ -43,6 +54,10 @@ function safeDashboardRedirectPath(path: string | null | undefined, fallback: st
 
 function connectionsSetupTabPath(tenantSlug: string) {
   return `/dashboard/${encodeURIComponent(tenantSlug)}/connections?tab=setup`;
+}
+
+function settingsPath(tenantSlug: string) {
+  return `/dashboard/${encodeURIComponent(tenantSlug)}/settings`;
 }
 
 function redirectToWithQuery(base: string, params: URLSearchParams) {
@@ -336,7 +351,7 @@ export async function createCalendarConnectionAction(formData: FormData) {
   const wasComplete = onboardingChecklistComplete(beforeDetail);
   const displayName = String(formData.get("display_name") || "");
   const slug = asString(formData.get("slug"));
-  await runAuditedTenantDashboardMutation({
+  const connection = await runAuditedTenantDashboardMutation({
     action: "create_calendar_connection",
     beforeDetail,
     context: {
@@ -354,6 +369,34 @@ export async function createCalendarConnectionAction(formData: FormData) {
     tenantId: tenant.tenant_id,
     tenantSlug: tenant.slug,
   });
+
+  if (!wasComplete) {
+    try {
+      await runAuditedTenantDashboardMutation({
+        action: "validate_and_sync_calendar",
+        beforeDetail,
+        context: {
+          auto_triggered: true,
+          calendar_connection_id: connection.calendar_connection_id,
+        },
+        mutation: () => validateAndSyncCalendar(connection.calendar_connection_id),
+        sessionEmail,
+        tenantId: tenant.tenant_id,
+        tenantSlug: tenant.slug,
+      });
+    } catch (error) {
+      unstable_rethrow(error);
+      const params = new URLSearchParams();
+      params.set(
+        "setup_error",
+        error instanceof Error
+          ? error.message
+          : "We saved the calendar, but couldn’t finish the initial sync.",
+      );
+      redirectToWithQuery(connectionsSetupTabPath(tenant.slug), params);
+    }
+  }
+
   await redirectAfterTenantMutation(formData, {
     fallback: `/dashboard/${encodeURIComponent(tenant.slug)}/connections`,
     sessionEmail,
@@ -546,6 +589,7 @@ export async function activatePublicCheckoutAction(formData: FormData) {
     tenantId: tenant.tenant_id,
     tenantSlug: tenant.slug,
   });
+
   await redirectAfterTenantMutation(formData, {
     fallback: `/dashboard/${encodeURIComponent(tenant.slug)}/connections`,
     sessionEmail,
@@ -706,6 +750,124 @@ export async function submitSupportRequestAction(formData: FormData) {
 
   params.set("sent", "1");
   redirectToWithQuery(redirectBase, params);
+}
+
+export async function redirectToTenantBillingAction(formData: FormData) {
+  const tenantSlug = String(formData.get("tenant_slug") || "");
+  const { tenant } = await requireTenantMutationContext(tenantSlug);
+  redirect(`/dashboard/${encodeURIComponent(tenant.slug)}/billing`);
+}
+
+export async function updateTenantContactEmailAction(formData: FormData) {
+  const tenantSlug = String(formData.get("tenant_slug") || "");
+  const { detail: beforeDetail, sessionEmail, tenant } =
+    await requireTenantMutationContext(tenantSlug);
+  const redirectBase = safeDashboardRedirectPath(
+    asString(formData.get("redirect_to")),
+    settingsPath(tenant.slug),
+  );
+  const params = new URLSearchParams();
+  const nextEmail = String(formData.get("contact_email") || "");
+
+  try {
+    const nextTenant = await updateTenantContactEmail(tenant.tenant_id, nextEmail);
+    const cookieStore = await cookies();
+    cookieStore.set(
+      TENANT_SESSION_COOKIE,
+      createTenantSessionToken(nextTenant.contact_email),
+      tenantSessionCookieOptions(),
+    );
+
+    const afterDetail = await getTenantSelfServeDetailBySlug(
+      nextTenant.slug,
+      nextTenant.contact_email,
+    );
+    await putAdminAuditEvent({
+      event_type: "tenant.dashboard.update_contact_email",
+      actor_ip: null,
+      actor_origin: null,
+      request_headers_json: null,
+      metadata_json: {
+        action: "update_contact_email",
+        actor_email: sessionEmail,
+        after_summary: summarizeTenantDashboardMutation(afterDetail),
+        before_summary: summarizeTenantDashboardMutation(beforeDetail),
+        next_contact_email: nextTenant.contact_email,
+        previous_contact_email: tenant.contact_email,
+        tenant_id: tenant.tenant_id,
+      },
+    });
+
+    params.set("email_updated", "1");
+    redirectToWithQuery(settingsPath(nextTenant.slug), params);
+  } catch (error) {
+    unstable_rethrow(error);
+    await auditTenantDashboardActionFailure({
+      action: "update_contact_email",
+      beforeDetail,
+      context: {
+        requested_contact_email: nextEmail,
+      },
+      error,
+      sessionEmail,
+      tenantId: tenant.tenant_id,
+    });
+    params.set(
+      "email_error",
+      error instanceof Error ? error.message : "We couldn't update the account email.",
+    );
+    redirectToWithQuery(redirectBase, params);
+  }
+}
+
+export async function deleteTenantAccountAction(formData: FormData) {
+  const tenantSlug = String(formData.get("tenant_slug") || "");
+  const { detail: beforeDetail, sessionEmail, tenant } =
+    await requireTenantMutationContext(tenantSlug);
+  const redirectBase = safeDashboardRedirectPath(
+    asString(formData.get("redirect_to")),
+    settingsPath(tenant.slug),
+  );
+  const params = new URLSearchParams();
+
+  try {
+    await deleteTenantSelfServeAccount(tenant.tenant_id);
+    await putAdminAuditEvent({
+      event_type: "tenant.dashboard.delete_account",
+      actor_ip: null,
+      actor_origin: null,
+      request_headers_json: null,
+      metadata_json: {
+        action: "delete_account",
+        actor_email: sessionEmail,
+        after_summary: null,
+        before_summary: summarizeTenantDashboardMutation(beforeDetail),
+        tenant_id: tenant.tenant_id,
+        tenant_slug: tenant.slug,
+      },
+    });
+    redirect("/dashboard");
+  } catch (error) {
+    unstable_rethrow(error);
+    await auditTenantDashboardActionFailure({
+      action: "delete_account",
+      beforeDetail,
+      error,
+      sessionEmail,
+      tenantId: tenant.tenant_id,
+    });
+    if (error instanceof OutstandingBillingBalanceError) {
+      params.set("delete_error", "balance_due");
+    } else {
+      params.set(
+        "delete_error",
+        error instanceof Error
+          ? error.message
+          : "We couldn't delete this account right now.",
+      );
+    }
+    redirectToWithQuery(redirectBase, params);
+  }
 }
 
 export async function setTicketAssertionsAction(formData: FormData) {

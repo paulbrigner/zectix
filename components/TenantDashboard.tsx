@@ -114,7 +114,7 @@ export function TenantDashboard({
     (calendar) => calendar.status === "active",
   ).length;
   const settingsHref = isTenantAudience
-    ? `${tenantBasePath}/connections`
+    ? `${tenantBasePath}/settings`
     : tenantBasePath;
   const eventsHref = `${tenantBasePath}/events`;
   const billingHref = isTenantAudience
@@ -141,7 +141,7 @@ export function TenantDashboard({
               className="button button-secondary button-small"
               href={settingsHref}
             >
-              {isTenantAudience ? "Connections" : "Organization settings"}
+              {isTenantAudience ? "Settings" : "Organization settings"}
             </Link>
             <Link
               className="button button-secondary button-small"

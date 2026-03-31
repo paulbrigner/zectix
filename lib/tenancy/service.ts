@@ -1,5 +1,17 @@
 import { randomUUID } from "node:crypto";
 import {
+  deleteBillingAdjustmentRecord,
+  deleteBillingCycleRecord,
+  deleteCalendarConnectionRecord,
+  deleteCipherPayConnectionRecord,
+  deleteEventMirrorRecord,
+  deleteRegistrationTaskRecord,
+  deleteSessionRecord,
+  deleteTenantMagicLinkToken,
+  deleteTenantRecord,
+  deleteTicketMirrorRecord,
+  deleteUsageLedgerEntryRecord,
+  deleteWebhookDeliveryRecord,
   getCalendarConnection,
   getCalendarConnectionBySlug,
   getCipherPayConnection,
@@ -9,20 +21,26 @@ import {
   getTenantBySlug,
   getTicketMirror,
   listCalendarConnectionsByTenant,
+  listBillingAdjustmentsByCycle,
+  listBillingCyclesByTenant,
   listCipherPayConnectionsByTenant,
   listEventMirrorsByCalendar,
   listRegistrationTasksByTenant,
   listSessionsByTenant,
+  listTenantMagicLinkTokensByEmail,
   listTenantsByContactEmail,
   listTicketMirrorsByEvent,
+  listUsageLedgerEntriesByTenantCycle,
   listWebhookDeliveriesByTenant,
   putCalendarConnection,
   putCipherPayConnection,
   putEventMirror,
   putTenant,
+  replaceTenant,
   putTicketMirror,
 } from "@/lib/app-state/state";
 import type {
+  BillingAdjustment,
   CalendarConnection,
   CipherPayConnection,
   EventMirror,
@@ -34,9 +52,11 @@ import type {
   TenantOnboardingStatus,
   TenantStatus,
   TicketMirror,
+  UsageLedgerEntry,
 } from "@/lib/app-state/types";
 import {
   cipherPayDefaultsForNetwork,
+  isValidEmailAddress,
   maskSecretPreview,
   normalizeEmailAddress,
   nowIso,
@@ -142,6 +162,15 @@ type EventSyncSnapshot = {
   event: EventMirror | null;
   tickets: TicketMirror[];
 };
+
+export class OutstandingBillingBalanceError extends Error {
+  constructor(outstandingZatoshis: number) {
+    super(
+      `Outstanding billing balance must be settled before deleting this account (${outstandingZatoshis} zatoshis remaining).`,
+    );
+    this.name = "OutstandingBillingBalanceError";
+  }
+}
 
 async function loadEventSyncSnapshot(
   calendarConnectionId: string,
@@ -390,6 +419,180 @@ export async function setTenantStatus(tenantId: string, status: TenantStatus) {
 
   await putTenant(nextTenant);
   return refreshTenantOnboardingProgress(tenantId);
+}
+
+export async function updateTenantContactEmail(
+  tenantId: string,
+  nextContactEmail: string,
+) {
+  const tenant = await getTenant(tenantId);
+  if (!tenant) {
+    throw new Error(`Tenant ${tenantId} was not found.`);
+  }
+
+  const normalizedEmail = normalizeEmailAddress(nextContactEmail);
+  if (!isValidEmailAddress(normalizedEmail)) {
+    throw new Error("Enter a valid email address.");
+  }
+
+  if (normalizedEmail === normalizeEmailAddress(tenant.contact_email)) {
+    return tenant;
+  }
+
+  const nextTenant: Tenant = {
+    ...tenant,
+    contact_email: normalizedEmail,
+    updated_at: nowIso(),
+  };
+
+  await replaceTenant(tenant, nextTenant);
+  return nextTenant;
+}
+
+export async function deleteTenantSelfServeAccount(tenantId: string) {
+  const tenant = await getTenant(tenantId);
+  if (!tenant) {
+    throw new Error(`Tenant ${tenantId} was not found.`);
+  }
+
+  const billing = await getTenantBillingSnapshot(tenantId);
+  const outstandingZatoshis = (billing?.cycles || []).reduce(
+    (total, cycle) => total + cycle.outstanding_zatoshis,
+    0,
+  );
+  if (outstandingZatoshis > 0) {
+    throw new OutstandingBillingBalanceError(outstandingZatoshis);
+  }
+
+  const [
+    calendars,
+    cipherpayConnections,
+    sessions,
+    webhooks,
+    tasks,
+    billingCycles,
+    tenantMagicLinks,
+  ] = await Promise.all([
+    listCalendarConnectionsByTenant(tenantId),
+    listCipherPayConnectionsByTenant(tenantId),
+    listSessionsByTenant(tenantId, 1000),
+    listWebhookDeliveriesByTenant(tenantId, 1000),
+    listRegistrationTasksByTenant(tenantId, 1000),
+    listBillingCyclesByTenant(tenantId),
+    listTenantMagicLinkTokensByEmail(tenant.contact_email),
+  ]);
+
+  const eventsByCalendar = new Map<string, EventMirror[]>(
+    await Promise.all(
+      calendars.map(
+        async (calendar): Promise<[string, EventMirror[]]> => [
+          calendar.calendar_connection_id,
+          await listEventMirrorsByCalendar(calendar.calendar_connection_id),
+        ],
+      ),
+    ),
+  );
+  const ticketsByEvent = new Map<string, TicketMirror[]>(
+    await Promise.all(
+      Array.from(eventsByCalendar.values())
+        .flat()
+        .map(
+          async (event): Promise<[string, TicketMirror[]]> => [
+            event.event_api_id,
+            await listTicketMirrorsByEvent(event.event_api_id),
+          ],
+        ),
+    ),
+  );
+  const usageEntriesByCycle = new Map<string, UsageLedgerEntry[]>(
+    await Promise.all(
+      billingCycles.map(
+        async (cycle): Promise<[string, UsageLedgerEntry[]]> => [
+          cycle.billing_cycle_id,
+          await listUsageLedgerEntriesByTenantCycle(
+            tenantId,
+            cycle.billing_cycle_id,
+          ),
+        ],
+      ),
+    ),
+  );
+  const adjustmentsByCycle = new Map<string, BillingAdjustment[]>(
+    await Promise.all(
+      billingCycles.map(
+        async (cycle): Promise<[string, BillingAdjustment[]]> => [
+          cycle.billing_cycle_id,
+          await listBillingAdjustmentsByCycle(cycle.billing_cycle_id),
+        ],
+      ),
+    ),
+  );
+
+  const secretStore = getSecretStore();
+  for (const calendar of calendars) {
+    const lumaApiKey = calendar.luma_api_secret_ref
+      ? await secretStore.getSecret(calendar.luma_api_secret_ref)
+      : null;
+
+    if (lumaApiKey && calendar.luma_webhook_id) {
+      try {
+        await deleteLumaWebhook({
+          apiKey: lumaApiKey,
+          id: calendar.luma_webhook_id,
+        });
+      } catch {
+        // Keep deletion moving even if the upstream webhook was already removed.
+      }
+    }
+  }
+
+  const secretRefs = new Set(
+    [
+      ...calendars.flatMap((calendar) => [
+        calendar.luma_api_secret_ref,
+        calendar.luma_webhook_secret_ref,
+        calendar.luma_webhook_token_ref,
+      ]),
+      ...cipherpayConnections.flatMap((connection) => [
+        connection.cipherpay_api_secret_ref,
+        connection.cipherpay_webhook_secret_ref,
+      ]),
+    ].filter(Boolean) as string[],
+  );
+
+  for (const ticketList of ticketsByEvent.values()) {
+    await Promise.all(ticketList.map((ticket) => deleteTicketMirrorRecord(ticket)));
+  }
+
+  for (const eventList of eventsByCalendar.values()) {
+    await Promise.all(eventList.map((event) => deleteEventMirrorRecord(event)));
+  }
+
+  await Promise.all(sessions.map((session) => deleteSessionRecord(session)));
+  await Promise.all(webhooks.map((delivery) => deleteWebhookDeliveryRecord(delivery)));
+  await Promise.all(tasks.map((task) => deleteRegistrationTaskRecord(task)));
+
+  for (const cycle of billingCycles) {
+    const usageEntries = usageEntriesByCycle.get(cycle.billing_cycle_id) || [];
+    const adjustments = adjustmentsByCycle.get(cycle.billing_cycle_id) || [];
+    await Promise.all([
+      ...usageEntries.map((entry) => deleteUsageLedgerEntryRecord(entry)),
+      ...adjustments.map((adjustment) => deleteBillingAdjustmentRecord(adjustment)),
+    ]);
+  }
+
+  await Promise.all(billingCycles.map((cycle) => deleteBillingCycleRecord(cycle)));
+  await Promise.all(cipherpayConnections.map((connection) => deleteCipherPayConnectionRecord(connection)));
+  await Promise.all(calendars.map((calendar) => deleteCalendarConnectionRecord(calendar)));
+  await Promise.all(
+    tenantMagicLinks.map((record) => deleteTenantMagicLinkToken(record.token_hash)),
+  );
+
+  for (const ref of secretRefs) {
+    await secretStore.deleteSecret(ref);
+  }
+
+  await deleteTenantRecord(tenant);
 }
 
 export async function updateTenantBillingSettings(input: {

@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import {
   CreateSecretCommand,
+  DeleteSecretCommand,
   GetSecretValueCommand,
   PutSecretValueCommand,
   SecretsManagerClient,
@@ -47,5 +48,23 @@ export class AwsSecretsManagerSecretStore implements SecretStore {
     );
 
     return created.ARN || created.Name || `${secretPrefix()}/${randomUUID()}`;
+  }
+
+  async deleteSecret(ref: string) {
+    try {
+      await getSecretsClient().send(
+        new DeleteSecretCommand({
+          ForceDeleteWithoutRecovery: true,
+          SecretId: ref,
+        }),
+      );
+    } catch (error) {
+      const candidate = error as { name?: string } | null;
+      if (candidate?.name === "ResourceNotFoundException") {
+        return;
+      }
+
+      throw error;
+    }
   }
 }

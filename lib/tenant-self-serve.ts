@@ -223,11 +223,9 @@ export function buildOnboardingChecklist(
     },
     {
       stepId: "connect_luma_calendar",
-      label: "Connect and sync at least one Luma calendar",
+      label: "Connect and sync a Luma calendar",
       complete: hasConnectedAndSyncedCalendar,
-      description: hasConnectedAndSyncedCalendar
-        ? "At least one calendar is connected, validated, and mirrored."
-        : "Save a Luma calendar and run Connect and sync once.",
+      description: "1 calendar is connected, validated, and mirrored.",
     },
     {
       stepId: "attach_cipherpay",

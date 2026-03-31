@@ -69,4 +69,14 @@ export class LocalDevSecretStore implements SecretStore {
     await writeSecretMap(records);
     return nextRef;
   }
+
+  async deleteSecret(ref: string) {
+    const records = await readSecretMap();
+    if (!records[ref]) {
+      return;
+    }
+
+    delete records[ref];
+    await writeSecretMap(records);
+  }
 }
