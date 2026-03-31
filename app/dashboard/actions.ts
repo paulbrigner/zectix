@@ -1,5 +1,6 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { redirect, unstable_rethrow } from "next/navigation";
 import {
   asBoolean,
@@ -17,10 +18,12 @@ import {
   putTenantMagicLinkToken,
 } from "@/lib/app-state/state";
 import { requireTenantPageAccess } from "@/lib/tenant-auth-server";
+import { TENANT_SESSION_COOKIE } from "@/lib/tenant-auth";
 import {
   createTenantMagicLinkTokenHash,
   createTenantMagicLinkTokenValue,
 } from "@/lib/tenant-auth";
+import { tenantSessionCookieOptions } from "@/lib/tenant-auth-server";
 import {
   parseSupportRequestSubmission,
   sendSupportRequestEmail,
@@ -876,6 +879,11 @@ export async function deleteTenantAccountAction(formData: FormData) {
         tenant_id: tenant.tenant_id,
         tenant_slug: tenant.slug,
       },
+    });
+    const cookieStore = await cookies();
+    cookieStore.set(TENANT_SESSION_COOKIE, "", {
+      ...tenantSessionCookieOptions(),
+      maxAge: 0,
     });
     redirect("/dashboard");
   } catch (error) {
