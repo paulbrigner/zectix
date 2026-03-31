@@ -1,6 +1,7 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { getAdminAuthFromEmail } from "@/lib/admin-auth";
 import { normalizeEmailAddress } from "@/lib/app-state/utils";
+import { isProductionRuntime } from "@/lib/runtime-env";
 
 export const TENANT_SESSION_COOKIE = "zectix_tenant";
 export const TENANT_SESSION_TTL_SECONDS = 60 * 60 * 12;
@@ -20,17 +21,29 @@ function safeCompare(left: Buffer, right: Buffer) {
 }
 
 function getTenantSessionSecret() {
-  return (
-    asNonEmptyString(process.env.TENANT_SESSION_SECRET) ||
-    asNonEmptyString(process.env.ADMIN_SESSION_SECRET)
-  );
+  const tenantSecret = asNonEmptyString(process.env.TENANT_SESSION_SECRET);
+  if (tenantSecret) {
+    return tenantSecret;
+  }
+
+  if (isProductionRuntime()) {
+    throw new Error("TENANT_SESSION_SECRET is required in production.");
+  }
+
+  return asNonEmptyString(process.env.ADMIN_SESSION_SECRET);
 }
 
 function getTenantMagicLinkSecret() {
-  return (
-    asNonEmptyString(process.env.TENANT_MAGIC_LINK_SECRET) ||
-    asNonEmptyString(process.env.ADMIN_MAGIC_LINK_SECRET)
-  );
+  const tenantSecret = asNonEmptyString(process.env.TENANT_MAGIC_LINK_SECRET);
+  if (tenantSecret) {
+    return tenantSecret;
+  }
+
+  if (isProductionRuntime()) {
+    throw new Error("TENANT_MAGIC_LINK_SECRET is required in production.");
+  }
+
+  return asNonEmptyString(process.env.ADMIN_MAGIC_LINK_SECRET);
 }
 
 export function getTenantAuthFromEmail() {

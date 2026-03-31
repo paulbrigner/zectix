@@ -56,10 +56,10 @@ export async function POST(request: Request) {
   if (!rateLimit.ok) {
     logEvent("warn", "checkout.rate_limited", {
       request_id: requestId,
-      actor_ip: ipAddress,
-      attendee_email: attendeeEmail,
       tenant_id: calendar.tenant.tenant_id,
       event_api_id: eventApiId,
+      calendar_slug: calendarSlug,
+      reason: rateLimit.reason || "Too many checkout attempts.",
     });
     return jsonError(rateLimit.reason || "Too many checkout attempts.", 429, {
       headers: {
@@ -87,15 +87,10 @@ export async function POST(request: Request) {
   } catch (error) {
     logEvent("error", "checkout.request.failed", {
       request_id: requestId,
-      actor_ip: ipAddress,
-      attendee_email: attendeeEmail,
       event_api_id: eventApiId,
       calendar_slug: calendarSlug,
       error: error instanceof Error ? error.message : "Failed to create checkout session",
     });
-    return jsonError(
-      error instanceof Error ? error.message : "Failed to create checkout session",
-      500,
-    );
+    return jsonError("Something went wrong. Please try again.", 500);
   }
 }

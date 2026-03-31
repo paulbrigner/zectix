@@ -24,20 +24,13 @@ describe("session viewer tokens", () => {
     ).toBe(true);
   });
 
-  it("falls back to the admin secret in production", () => {
+  it("requires a dedicated viewer secret in production", () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("ADMIN_SESSION_SECRET", "admin-session-secret");
 
-    const token = createSessionViewerToken("session_123", "Jordan@example.com");
-
-    expect(token).toBeTruthy();
-    expect(
-      isSessionViewerTokenValid(
-        "session_123",
-        "jordan@example.com",
-        token,
-      ),
-    ).toBe(true);
+    expect(() =>
+      createSessionViewerToken("session_123", "Jordan@example.com"),
+    ).toThrow("SESSION_VIEWER_SECRET is required in production.");
   });
 
   it("allows access when protection is disabled", () => {

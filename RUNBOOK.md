@@ -76,7 +76,7 @@ When something looks off, check these in order:
 ### Tenant sign-in fails
 
 1. Confirm `APP_PUBLIC_ORIGIN` is set to the deployed origin.
-2. Confirm `TENANT_SESSION_SECRET`, `TENANT_MAGIC_LINK_SECRET`, and `TENANT_AUTH_FROM_EMAIL` are set, or that the corresponding admin auth values are available for fallback.
+2. Confirm `TENANT_SESSION_SECRET`, `TENANT_MAGIC_LINK_SECRET`, and `TENANT_AUTH_FROM_EMAIL` are set. Production no longer falls back to the admin signing secrets for tenant auth.
 3. Confirm the tenant `contact_email` matches the email address being used for sign-in.
 4. Confirm the `from` address or domain is verified in SES and the Amplify compute role can send from it.
 5. Confirm the browser session cookie has not expired and that one-time email links are being used only once.
@@ -133,12 +133,15 @@ Optional production values for emailed tenant sign-in:
 - `TENANT_AUTH_FROM_EMAIL`
 - `TENANT_MAGIC_LINK_SECRET`
 
+Additional production values for protected session and embed access:
+
+- `SESSION_VIEWER_SECRET`
+- `EMBED_SESSION_SECRET`
+
 Optional production values for tenant billing defaults:
 
 - `TENANT_DEFAULT_SERVICE_FEE_BPS`
 - `TENANT_DEFAULT_SETTLEMENT_THRESHOLD_ZATOSHIS`
-
-If the tenant-specific values are unset, tenant sign-in reuses the admin sender and signing secrets.
 
 ## Probes
 

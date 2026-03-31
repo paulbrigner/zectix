@@ -209,6 +209,7 @@ export type CheckoutSession = {
   confirmed_at: string | null;
   registered_at: string | null;
   refunded_at: string | null;
+  version: number;
   created_at: string;
   updated_at: string;
 };

@@ -206,7 +206,15 @@ export function buildOnboardingChecklist(
   );
   const livePublicEvents = detail.events
     .flatMap((entry) => entry.events)
-    .filter((event) => isFutureEvent(event.start_at) && event.zcash_enabled);
+    .filter((event) => {
+      if (!isFutureEvent(event.start_at) || !event.zcash_enabled) {
+        return false;
+      }
+
+      return (detail.tickets_by_event.get(event.event_api_id) || []).some(
+        (ticket) => ticket.zcash_enabled,
+      );
+    });
   const livePublicTicketCount = livePublicEvents.reduce((count, event) => {
     return (
       count +

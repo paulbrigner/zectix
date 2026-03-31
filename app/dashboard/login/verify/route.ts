@@ -14,6 +14,7 @@ import { listSelfServeTenantsForEmail } from "@/lib/tenancy/service";
 import { appPath } from "@/lib/app-paths";
 import { redirectToPath } from "@/lib/http";
 import { createRequestId, logEvent } from "@/lib/observability";
+import { authAuditEmailMetadata } from "@/lib/privacy";
 import { getTrustedIpAddress } from "@/lib/request-security";
 
 export const runtime = "nodejs";
@@ -58,17 +59,13 @@ export async function GET(request: Request) {
       event_type: "tenant.login.verify_failed",
       actor_ip: actorIp,
       actor_origin: actorOrigin,
-      request_headers_json: {
-        referer: request.headers.get("referer"),
-        "user-agent": request.headers.get("user-agent"),
-      },
+      request_headers_json: null,
       metadata_json: {
         request_id: requestId,
       },
     });
     logEvent("warn", "tenant.login.verify_failed", {
       request_id: requestId,
-      actor_ip: actorIp,
     });
     return redirectToPath(loginRedirectPath("invalid_link"));
   }
@@ -84,22 +81,17 @@ export async function GET(request: Request) {
     event_type: "tenant.login.succeeded",
     actor_ip: actorIp,
     actor_origin: actorOrigin,
-    request_headers_json: {
-      referer: request.headers.get("referer"),
-      "user-agent": request.headers.get("user-agent"),
-    },
+    request_headers_json: null,
     metadata_json: {
       request_id: requestId,
       method: "magic_link",
-      email,
+      ...authAuditEmailMetadata(email),
       next: "/dashboard",
     },
   });
   logEvent("info", "tenant.login.succeeded", {
     request_id: requestId,
-    actor_ip: actorIp,
     method: "magic_link",
-    email,
   });
 
   return redirectToPath(appPath("/dashboard"));

@@ -21,6 +21,10 @@ import { createCipherPayInvoice } from "@/lib/cipherpay";
 import { extractLumaWebhookEventApiId } from "@/lib/luma-webhook";
 import { logEvent } from "@/lib/observability";
 import {
+  summarizeWebhookHeaders,
+  summarizeWebhookPayload,
+} from "@/lib/privacy";
+import {
   getPublicCalendar,
   getPublicEventPageData,
   getPublicTicket,
@@ -228,6 +232,7 @@ export async function createCheckoutSession(input: CreateCheckoutInput) {
     confirmed_at: invoice.confirmed_at,
     registered_at: null,
     refunded_at: invoice.refunded_at,
+    version: 0,
     created_at: timestamp,
     updated_at: timestamp,
   };
@@ -284,8 +289,8 @@ export async function processCipherPayWebhook({
     event_type: eventType,
     signature_valid: signatureValid,
     validation_error: validationError,
-    request_body_json: requestBody,
-    request_headers_json: requestHeaders,
+    request_body_json: summarizeWebhookPayload(requestBody),
+    request_headers_json: summarizeWebhookHeaders(requestHeaders),
     received_at: receivedAt,
     applied_at: null,
     apply_status: "received",
@@ -310,29 +315,22 @@ export async function processCipherPayWebhook({
     return null;
   }
 
-  const status = cipherPayStatusFromEvent(eventType, session.status);
-  let nextSession = await updateSession(session.session_id, {
-    status,
-    last_event_type: eventType,
-    last_event_at:
-      (typeof requestBody.timestamp === "string" ? requestBody.timestamp : null) || receivedAt,
-    last_txid: txid,
-    last_payload_json: requestBody,
-    detected_at:
-      status === "detected"
-        ? ((typeof requestBody.timestamp === "string" ? requestBody.timestamp : null) ||
-          receivedAt)
-        : session.detected_at,
-    confirmed_at:
-      status === "confirmed"
-        ? ((typeof requestBody.timestamp === "string" ? requestBody.timestamp : null) ||
-          receivedAt)
-        : session.confirmed_at,
-    refunded_at:
-      status === "refunded"
-        ? ((typeof requestBody.timestamp === "string" ? requestBody.timestamp : null) ||
-          receivedAt)
-        : session.refunded_at,
+  let nextSession = await updateSession(session.session_id, (current) => {
+    const eventTimestamp =
+      (typeof requestBody.timestamp === "string" ? requestBody.timestamp : null) ||
+      receivedAt;
+    const status = cipherPayStatusFromEvent(eventType, current.status);
+
+    return {
+      status,
+      last_event_type: eventType,
+      last_event_at: eventTimestamp,
+      last_txid: txid,
+      last_payload_json: summarizeWebhookPayload(requestBody),
+      detected_at: status === "detected" ? eventTimestamp : current.detected_at,
+      confirmed_at: status === "confirmed" ? eventTimestamp : current.confirmed_at,
+      refunded_at: status === "refunded" ? eventTimestamp : current.refunded_at,
+    };
   });
 
   if (shouldAttemptInlineRegistration(nextSession)) {
@@ -389,8 +387,8 @@ export async function processLumaWebhook({
     event_type: eventType,
     signature_valid: signatureValid,
     validation_error: validationError,
-    request_body_json: requestBody,
-    request_headers_json: requestHeaders,
+    request_body_json: summarizeWebhookPayload(requestBody),
+    request_headers_json: summarizeWebhookHeaders(requestHeaders),
     received_at: receivedAt,
     applied_at: null,
     apply_status: "received",

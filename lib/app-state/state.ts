@@ -4,6 +4,7 @@ import {
   GetCommand,
   PutCommand,
   QueryCommand,
+  TransactWriteCommand,
   UpdateCommand,
 } from "@aws-sdk/lib-dynamodb";
 import {
@@ -208,6 +209,43 @@ function sessionUsageLookupKey(sessionId: string) {
   return { pk: "USAGE_BY_SESSION", sk: sessionId };
 }
 
+function isConditionalTransactionConflict(error: unknown) {
+  const candidate = error as
+    | {
+        CancellationReasons?: Array<{ Code?: string }>;
+        name?: string;
+      }
+    | null;
+
+  if (candidate?.name === "ConditionalCheckFailedException") {
+    return true;
+  }
+
+  if (candidate?.name !== "TransactionCanceledException") {
+    return false;
+  }
+
+  return (
+    candidate.CancellationReasons?.some(
+      (reason) => reason?.Code === "ConditionalCheckFailed",
+    ) || false
+  );
+}
+
+export class UsageLedgerSessionConflictError extends Error {
+  constructor(sessionId: string) {
+    super(`Usage ledger entry already exists for session ${sessionId}.`);
+    this.name = "UsageLedgerSessionConflictError";
+  }
+}
+
+export class SessionVersionConflictError extends Error {
+  constructor(sessionId: string) {
+    super(`Checkout session ${sessionId} was updated concurrently.`);
+    this.name = "SessionVersionConflictError";
+  }
+}
+
 function billingCycleKey(billingCycleId: string) {
   return { pk: "BILLING_CYCLE", sk: billingCycleId };
 }
@@ -254,10 +292,14 @@ function opsLoginRateLimitKey(scope: string, identifier: string, windowStart: st
   return { pk: `OPS_LOGIN#${scope}#${identifier}`, sk: windowStart };
 }
 
-async function getItem(key: { pk: string; sk: string }) {
+async function getItem(
+  key: { pk: string; sk: string },
+  options: { consistentRead?: boolean } = {},
+) {
   const response = await getDynamoDocumentClient().send(
     new GetCommand({
       TableName: appStateTableName(),
+      ConsistentRead: options.consistentRead,
       Key: key,
     }),
   );
@@ -645,6 +687,7 @@ function normalizeCheckoutSession(value: unknown): CheckoutSession | null {
     confirmed_at: asIsoTimestamp(item?.confirmed_at),
     registered_at: asIsoTimestamp(item?.registered_at),
     refunded_at: asIsoTimestamp(item?.refunded_at),
+    version: asNonNegativeInteger(item?.version, 0),
     created_at: createdAt,
     updated_at: updatedAt,
   });
@@ -1240,68 +1283,115 @@ export async function listTicketMirrorsByEvent(eventApiId: string) {
   }
 }
 
-export async function putSession(session: CheckoutSession) {
-  await Promise.all([
-    getDynamoDocumentClient().send(
-      new PutCommand({
-        TableName: appStateTableName(),
-        Item: {
-          ...sessionKey(session.session_id),
-          ...session,
-        },
+function buildSessionVersionCondition(expectedVersion: number) {
+  const condition =
+    expectedVersion === 0
+      ? "attribute_not_exists(#version) OR #version = :expectedVersion"
+      : "#version = :expectedVersion";
+
+  return {
+    ConditionExpression: condition,
+    ExpressionAttributeNames: {
+      "#version": "version",
+    },
+    ExpressionAttributeValues: {
+      ":expectedVersion": expectedVersion,
+    },
+  };
+}
+
+export async function putSession(
+  session: CheckoutSession,
+  options: { expectedVersion?: number } = {},
+) {
+  const primarySessionItem = {
+    TableName: appStateTableName(),
+    Item: {
+      ...sessionKey(session.session_id),
+      ...session,
+    },
+    ...(typeof options.expectedVersion === "number"
+      ? buildSessionVersionCondition(options.expectedVersion)
+      : {}),
+  };
+
+  try {
+    await getDynamoDocumentClient().send(
+      new TransactWriteCommand({
+        TransactItems: [
+          {
+            Put: primarySessionItem,
+          },
+          {
+            Put: {
+              TableName: appStateTableName(),
+              Item: {
+                ...recentSessionKey(session.created_at, session.session_id),
+                ...session,
+              },
+            },
+          },
+          {
+            Put: {
+              TableName: appStateTableName(),
+              Item: {
+                ...tenantSessionKey(
+                  session.tenant_id,
+                  session.created_at,
+                  session.session_id,
+                ),
+                ...session,
+              },
+            },
+          },
+          {
+            Put: {
+              TableName: appStateTableName(),
+              Item: {
+                ...invoiceLookupKey(session.cipherpay_invoice_id),
+                session_id: session.session_id,
+              },
+            },
+          },
+          {
+            Put: {
+              TableName: appStateTableName(),
+              Item: {
+                ...attendeeLookupKey(
+                  session.tenant_id,
+                  session.calendar_connection_id,
+                  session.event_api_id,
+                  session.ticket_type_api_id,
+                  session.attendee_email,
+                  session.created_at,
+                  session.session_id,
+                ),
+                session_id: session.session_id,
+              },
+            },
+          },
+        ],
       }),
-    ),
-    getDynamoDocumentClient().send(
-      new PutCommand({
-        TableName: appStateTableName(),
-        Item: {
-          ...recentSessionKey(session.created_at, session.session_id),
-          ...session,
-        },
-      }),
-    ),
-    getDynamoDocumentClient().send(
-      new PutCommand({
-        TableName: appStateTableName(),
-        Item: {
-          ...tenantSessionKey(session.tenant_id, session.created_at, session.session_id),
-          ...session,
-        },
-      }),
-    ),
-    getDynamoDocumentClient().send(
-      new PutCommand({
-        TableName: appStateTableName(),
-        Item: {
-          ...invoiceLookupKey(session.cipherpay_invoice_id),
-          session_id: session.session_id,
-        },
-      }),
-    ),
-    getDynamoDocumentClient().send(
-      new PutCommand({
-        TableName: appStateTableName(),
-        Item: {
-          ...attendeeLookupKey(
-            session.tenant_id,
-            session.calendar_connection_id,
-            session.event_api_id,
-            session.ticket_type_api_id,
-            session.attendee_email,
-            session.created_at,
-            session.session_id,
-          ),
-          session_id: session.session_id,
-        },
-      }),
-    ),
-  ]);
+    );
+  } catch (error) {
+    if (
+      typeof options.expectedVersion === "number" &&
+      isConditionalTransactionConflict(error)
+    ) {
+      throw new SessionVersionConflictError(session.session_id);
+    }
+
+    throw error;
+  }
 
   return session;
 }
 
-export async function getSession(sessionId: string) {
-  return normalizeCheckoutSession(await getItem(sessionKey(sessionId)));
+export async function getSession(
+  sessionId: string,
+  options: { consistentRead?: boolean } = {},
+) {
+  return normalizeCheckoutSession(await getItem(sessionKey(sessionId), options));
 }
 
 export async function getSessionByInvoiceId(invoiceId: string) {
@@ -1312,26 +1402,51 @@ export async function getSessionByInvoiceId(invoiceId: string) {
 
 export async function updateSession(
   sessionId: string,
-  patch: Partial<CheckoutSession>,
+  patch:
+    | Partial<CheckoutSession>
+    | ((current: CheckoutSession) => Partial<CheckoutSession>),
 ) {
-  const current = await getSession(sessionId);
-  if (!current) {
-    throw new Error(`Session ${sessionId} was not found.`);
+  const maxAttempts = 4;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const current = await getSession(sessionId, {
+      consistentRead: true,
+    });
+    if (!current) {
+      throw new Error(`Session ${sessionId} was not found.`);
+    }
+
+    const nextPatch = typeof patch === "function" ? patch(current) : patch;
+    const next = normalizeCheckoutSession({
+      ...current,
+      ...nextPatch,
+      session_id: current.session_id,
+      created_at: current.created_at,
+      updated_at: nowIso(),
+      version: current.version + 1,
+    });
+
+    if (!next) {
+      throw new Error("Session update produced an invalid session shape.");
+    }
+
+    try {
+      return await putSession(next, {
+        expectedVersion: current.version,
+      });
+    } catch (error) {
+      if (
+        error instanceof SessionVersionConflictError &&
+        attempt < maxAttempts - 1
+      ) {
+        continue;
+      }
+
+      throw error;
+    }
   }
 
-  const next = normalizeCheckoutSession({
-    ...current,
-    ...patch,
-    session_id: current.session_id,
-    created_at: current.created_at,
-    updated_at: nowIso(),
-  });
-
-  if (!next) {
-    throw new Error("Session update produced an invalid session shape.");
-  }
-
-  return putSession(next);
+  throw new SessionVersionConflictError(sessionId);
 }
 
 export async function listRecentSessions(limit = 20) {
@@ -1647,35 +1762,90 @@ export async function listDueRegistrationTasks(limit = 20, dueAt = nowIso()) {
 }
 
 export async function putUsageLedgerEntry(entry: UsageLedgerEntry) {
-  await Promise.all([
-    getDynamoDocumentClient().send(
-      new PutCommand({
-        TableName: appStateTableName(),
-        Item: {
-          ...usageEntryKey(entry.tenant_id, entry.billing_period, entry.usage_entry_id),
-          ...entry,
+  await getDynamoDocumentClient().send(
+    new TransactWriteCommand({
+      TransactItems: [
+        {
+          Put: {
+            TableName: appStateTableName(),
+            Item: {
+              ...usageEntryKey(
+                entry.tenant_id,
+                entry.billing_period,
+                entry.usage_entry_id,
+              ),
+              ...entry,
+            },
+          },
         },
-      }),
-    ),
-    getDynamoDocumentClient().send(
-      new PutCommand({
-        TableName: appStateTableName(),
-        Item: {
-          ...sessionUsageLookupKey(entry.session_id),
-          usage_entry_id: entry.usage_entry_id,
-          tenant_id: entry.tenant_id,
-          billing_period: entry.billing_period,
-          billing_cycle_id: entry.billing_cycle_id,
+        {
+          Put: {
+            TableName: appStateTableName(),
+            Item: {
+              ...sessionUsageLookupKey(entry.session_id),
+              usage_entry_id: entry.usage_entry_id,
+              tenant_id: entry.tenant_id,
+              billing_period: entry.billing_period,
+              billing_cycle_id: entry.billing_cycle_id,
+            },
+          },
         },
+      ],
+    }),
+  );
+
+  return entry;
+}
+
+export async function putUsageLedgerEntryIfAbsent(entry: UsageLedgerEntry) {
+  try {
+    await getDynamoDocumentClient().send(
+      new TransactWriteCommand({
+        TransactItems: [
+          {
+            Put: {
+              TableName: appStateTableName(),
+              Item: {
+                ...usageEntryKey(
+                  entry.tenant_id,
+                  entry.billing_period,
+                  entry.usage_entry_id,
+                ),
+                ...entry,
+              },
+            },
+          },
+          {
+            Put: {
+              TableName: appStateTableName(),
+              Item: {
+                ...sessionUsageLookupKey(entry.session_id),
+                usage_entry_id: entry.usage_entry_id,
+                tenant_id: entry.tenant_id,
+                billing_period: entry.billing_period,
+                billing_cycle_id: entry.billing_cycle_id,
+              },
+              ConditionExpression: "attribute_not_exists(pk)",
+            },
+          },
+        ],
       }),
-    ),
-  ]);
+    );
+  } catch (error) {
+    if (isConditionalTransactionConflict(error)) {
+      throw new UsageLedgerSessionConflictError(entry.session_id);
+    }
+
+    throw error;
+  }
 
   return entry;
 }
 
 export async function getUsageLedgerEntryBySession(sessionId: string) {
-  const lookup = await getItem(sessionUsageLookupKey(sessionId));
+  const lookup = await getItem(sessionUsageLookupKey(sessionId), {
+    consistentRead: true,
+  });
   const usageEntryId = asString(lookup?.usage_entry_id);
   const tenantId = asString(lookup?.tenant_id);
   const billingPeriod =
@@ -1688,7 +1858,9 @@ export async function getUsageLedgerEntryBySession(sessionId: string) {
   }
 
   return normalizeUsageLedgerEntry(
-    await getItem(usageEntryKey(tenantId, billingPeriod, usageEntryId)),
+    await getItem(usageEntryKey(tenantId, billingPeriod, usageEntryId), {
+      consistentRead: true,
+    }),
   );
 }
 
@@ -2145,6 +2317,54 @@ export async function consumeTenantOnboardingRateLimit({
       ok: false,
       retry_after_seconds: windowSeconds,
       reason: "Too many onboarding attempts. Please wait a few minutes and try again.",
+    };
+  }
+
+  return {
+    ok: true,
+    retry_after_seconds: null,
+    reason: null,
+  };
+}
+
+export async function consumeLumaIntegrationInterestRateLimit({
+  ipAddress,
+}: {
+  ipAddress: string | null;
+}) {
+  const now = Date.now();
+  const windowSeconds = 10 * 60;
+  const windowStart = new Date(
+    Math.floor(now / (windowSeconds * 1000)) * windowSeconds * 1000,
+  ).toISOString();
+  const expiresAt = new Date(now + windowSeconds * 1000).toISOString();
+  const timestamp = nowIso();
+  const ipIdentifier = hashIdentifier(ipAddress || "unknown");
+
+  const result = await getDynamoDocumentClient().send(
+    new UpdateCommand({
+      TableName: appStateTableName(),
+      Key: checkoutRateLimitKey("LUMA_INTEREST", ipIdentifier, windowStart),
+      UpdateExpression:
+        "SET request_count = if_not_exists(request_count, :zero) + :one, expires_at = :expires_at, updated_at = :updated_at, created_at = if_not_exists(created_at, :created_at)",
+      ExpressionAttributeValues: {
+        ":zero": 0,
+        ":one": 1,
+        ":expires_at": expiresAt,
+        ":updated_at": timestamp,
+        ":created_at": timestamp,
+      },
+      ReturnValues: "ALL_NEW",
+    }),
+  );
+
+  const count = asFiniteNumber(asRecord(result.Attributes)?.request_count) || 0;
+  if (count > 6) {
+    return {
+      ok: false,
+      retry_after_seconds: windowSeconds,
+      reason:
+        "Too many interest form submissions from this IP. Please wait a few minutes and try again.",
     };
   }
 

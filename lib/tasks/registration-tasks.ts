@@ -119,14 +119,14 @@ export async function ensureRegistrationTaskForSession(session: CheckoutSession)
 
   await Promise.all([
     putRegistrationTask(task),
-    updateSession(session.session_id, {
+    updateSession(session.session_id, (current) => ({
       registration_task_id: task.task_id,
       registration_status:
-        session.registration_status === "registered" ? "registered" : "pending",
+        current.registration_status === "registered" ? "registered" : "pending",
       registration_error: null,
       registration_failure_code: null,
       registration_next_retry_at: timestamp,
-    }),
+    })),
   ]);
 
   return task;
@@ -156,7 +156,7 @@ async function completeSuccessfulRegistration(
   guestLookup: Record<string, unknown>,
 ) {
   const timestamp = nowIso();
-  const nextSession = await updateSession(session.session_id, {
+  const nextSession = await updateSession(session.session_id, (current) => ({
     registration_status: "registered",
     registration_error: null,
     registration_failure_code: null,
@@ -164,15 +164,17 @@ async function completeSuccessfulRegistration(
     registration_last_attempt_at: timestamp,
     registration_next_retry_at: null,
     luma_registration_json: {
-      ...(session.luma_registration_json || {}),
+      ...(current.luma_registration_json || {}),
       guest_lookup: guestLookup,
     },
     registered_at:
       (asRecord(guestLookup.guest) &&
       typeof asRecord(guestLookup.guest)?.registered_at === "string"
         ? (asRecord(guestLookup.guest)?.registered_at as string)
-        : null) || session.registered_at || timestamp,
-  });
+        : null) ||
+      current.registered_at ||
+      timestamp,
+  }));
   const [nextTask] = await Promise.all([
     markTaskOutcome(task, {
       status: "succeeded",
