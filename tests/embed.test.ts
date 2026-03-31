@@ -85,6 +85,18 @@ describe("embed helpers", () => {
     ).toBeNull();
   });
 
+  it("requires a dedicated embed secret in production", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("EMBED_SESSION_SECRET", "");
+    vi.stubEnv("SESSION_VIEWER_SECRET", "viewer-secret");
+    vi.stubEnv("TENANT_SESSION_SECRET", "tenant-session-secret");
+    vi.stubEnv("ADMIN_SESSION_SECRET", "admin-session-secret");
+
+    expect(() =>
+      createEmbedParentToken("calendar_123", "https://events.example.com"),
+    ).toThrow("EMBED_SESSION_SECRET is required in production.");
+  });
+
   it("resolves embed parent origin from an allowed referer", () => {
     expect(
       resolveEmbedParentOrigin({

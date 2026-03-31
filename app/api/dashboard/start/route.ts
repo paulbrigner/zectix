@@ -16,10 +16,14 @@ import { appPath } from "@/lib/app-paths";
 import { redirectToPath } from "@/lib/http";
 import { createRequestId, logEvent } from "@/lib/observability";
 import {
+  authAuditEmailMetadata,
+  summarizeAuthRequestHeaders,
+} from "@/lib/privacy";
+import {
   ensureSameOriginMutation,
   getTrustedIpAddress,
 } from "@/lib/request-security";
-import { normalizeEmailAddress } from "@/lib/app-state/utils";
+import { isValidEmailAddress, normalizeEmailAddress } from "@/lib/app-state/utils";
 
 export const runtime = "nodejs";
 
@@ -46,11 +50,7 @@ export async function POST(request: Request) {
       event_type: "tenant.signup.blocked_origin",
       actor_ip: actorIp,
       actor_origin: actorOrigin,
-      request_headers_json: {
-        origin: request.headers.get("origin"),
-        referer: request.headers.get("referer"),
-        "user-agent": request.headers.get("user-agent"),
-      },
+      request_headers_json: summarizeAuthRequestHeaders(request, { includeOrigin: true }),
       metadata_json: {
         request_id: requestId,
       },
@@ -75,7 +75,7 @@ export async function POST(request: Request) {
     return redirectToPath(startRedirectPath("invalid_name"));
   }
 
-  if (!email.includes("@")) {
+  if (!isValidEmailAddress(email)) {
     return redirectToPath(startRedirectPath("invalid_email"));
   }
 
@@ -116,14 +116,10 @@ export async function POST(request: Request) {
       event_type: "tenant.signup.link_failed",
       actor_ip: actorIp,
       actor_origin: actorOrigin,
-      request_headers_json: {
-        origin: request.headers.get("origin"),
-        referer: request.headers.get("referer"),
-        "user-agent": request.headers.get("user-agent"),
-      },
+      request_headers_json: null,
       metadata_json: {
         request_id: requestId,
-        email,
+        ...authAuditEmailMetadata(email),
         tenant_id: tenant.tenant_id,
         expires_at: expiresAt,
         reason: error instanceof Error ? error.message : "send_failed",
@@ -131,8 +127,6 @@ export async function POST(request: Request) {
     });
     logEvent("error", "tenant.signup.link_failed", {
       request_id: requestId,
-      actor_ip: actorIp,
-      email,
       tenant_id: tenant.tenant_id,
     });
     return redirectToPath(startRedirectPath("email_delivery_failed"));
@@ -142,14 +136,10 @@ export async function POST(request: Request) {
     event_type: duplicateTenant ? "tenant.signup.link_resent" : "tenant.signup.started",
     actor_ip: actorIp,
     actor_origin: actorOrigin,
-    request_headers_json: {
-      origin: request.headers.get("origin"),
-      referer: request.headers.get("referer"),
-      "user-agent": request.headers.get("user-agent"),
-    },
+    request_headers_json: null,
     metadata_json: {
       request_id: requestId,
-      email,
+      ...authAuditEmailMetadata(email),
       tenant_id: tenant.tenant_id,
       duplicate_tenant: Boolean(duplicateTenant),
       expires_at: expiresAt,
@@ -157,9 +147,8 @@ export async function POST(request: Request) {
   });
   logEvent("info", duplicateTenant ? "tenant.signup.link_resent" : "tenant.signup.started", {
     request_id: requestId,
-    actor_ip: actorIp,
-    email,
     tenant_id: tenant.tenant_id,
+    duplicate_tenant: Boolean(duplicateTenant),
   });
 
   return redirectToPath(startRedirectPath(undefined, true));

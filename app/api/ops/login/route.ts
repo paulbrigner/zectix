@@ -21,6 +21,11 @@ import {
 import { appPath } from "@/lib/app-paths";
 import { redirectToPath } from "@/lib/http";
 import { createRequestId, logEvent } from "@/lib/observability";
+import {
+  authAuditEmailMetadata,
+  summarizeAuthRequestHeaders,
+} from "@/lib/privacy";
+import { isValidEmailAddress, normalizeEmailAddress } from "@/lib/app-state/utils";
 import { ensureSameOriginMutation, getTrustedIpAddress } from "@/lib/request-security";
 
 export const runtime = "nodejs";
@@ -48,11 +53,7 @@ export async function POST(request: Request) {
       event_type: "ops.login.blocked_origin",
       actor_ip: actorIp,
       actor_origin: actorOrigin,
-      request_headers_json: {
-        origin: request.headers.get("origin"),
-        referer: request.headers.get("referer"),
-        "user-agent": request.headers.get("user-agent"),
-      },
+      request_headers_json: summarizeAuthRequestHeaders(request, { includeOrigin: true }),
       metadata_json: {
         request_id: requestId,
       },
@@ -73,9 +74,9 @@ export async function POST(request: Request) {
 
   const formData = await request.formData();
   if (authMode === "email") {
-    const email = String(formData.get("email") || "").trim().toLowerCase();
+    const email = normalizeEmailAddress(String(formData.get("email") || ""));
 
-    if (!email.includes("@")) {
+    if (!isValidEmailAddress(email)) {
       return redirectToPath(loginRedirectPath("invalid_email"));
     }
 
@@ -104,22 +105,16 @@ export async function POST(request: Request) {
           event_type: "ops.login.link_failed",
           actor_ip: actorIp,
           actor_origin: actorOrigin,
-          request_headers_json: {
-            origin: request.headers.get("origin"),
-            referer: request.headers.get("referer"),
-            "user-agent": request.headers.get("user-agent"),
-          },
+          request_headers_json: null,
           metadata_json: {
             request_id: requestId,
-            email,
+            ...authAuditEmailMetadata(email),
             expires_at: expiresAt,
             reason: error instanceof Error ? error.message : "send_failed",
           },
         });
         logEvent("error", "ops.login.link_failed", {
           request_id: requestId,
-          actor_ip: actorIp,
-          email,
         });
         return redirectToPath(loginRedirectPath("email_delivery_failed"));
       }
@@ -128,41 +123,29 @@ export async function POST(request: Request) {
         event_type: "ops.login.link_sent",
         actor_ip: actorIp,
         actor_origin: actorOrigin,
-        request_headers_json: {
-          origin: request.headers.get("origin"),
-          referer: request.headers.get("referer"),
-          "user-agent": request.headers.get("user-agent"),
-        },
+        request_headers_json: null,
         metadata_json: {
           request_id: requestId,
-          email,
+          ...authAuditEmailMetadata(email),
           expires_at: expiresAt,
         },
       });
       logEvent("info", "ops.login.link_sent", {
         request_id: requestId,
-        actor_ip: actorIp,
-        email,
       });
     } else {
       await putAdminAuditEvent({
         event_type: "ops.login.link_ignored",
         actor_ip: actorIp,
         actor_origin: actorOrigin,
-        request_headers_json: {
-          origin: request.headers.get("origin"),
-          referer: request.headers.get("referer"),
-          "user-agent": request.headers.get("user-agent"),
-        },
+        request_headers_json: null,
         metadata_json: {
           request_id: requestId,
-          email,
+          ...authAuditEmailMetadata(email),
         },
       });
       logEvent("warn", "ops.login.link_ignored", {
         request_id: requestId,
-        actor_ip: actorIp,
-        email,
       });
     }
 
@@ -176,18 +159,13 @@ export async function POST(request: Request) {
       event_type: "ops.login.failed",
       actor_ip: actorIp,
       actor_origin: actorOrigin,
-      request_headers_json: {
-        origin: request.headers.get("origin"),
-        referer: request.headers.get("referer"),
-        "user-agent": request.headers.get("user-agent"),
-      },
+      request_headers_json: null,
       metadata_json: {
         request_id: requestId,
       },
     });
     logEvent("warn", "ops.login.failed", {
       request_id: requestId,
-      actor_ip: actorIp,
     });
     return redirectToPath(loginRedirectPath("invalid_password"));
   }
@@ -203,11 +181,7 @@ export async function POST(request: Request) {
     event_type: "ops.login.succeeded",
     actor_ip: actorIp,
     actor_origin: actorOrigin,
-    request_headers_json: {
-      origin: request.headers.get("origin"),
-      referer: request.headers.get("referer"),
-      "user-agent": request.headers.get("user-agent"),
-    },
+    request_headers_json: null,
     metadata_json: {
       request_id: requestId,
       next: "/ops",
@@ -215,7 +189,6 @@ export async function POST(request: Request) {
   });
   logEvent("info", "ops.login.succeeded", {
     request_id: requestId,
-    actor_ip: actorIp,
   });
 
   return redirectToPath(appPath("/ops"));

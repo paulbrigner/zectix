@@ -12,12 +12,16 @@ export function isExternalSecretManagementEnabled() {
 }
 
 export function getSessionViewerSecret() {
-  return (
-    asNonEmptyString(process.env.SESSION_VIEWER_SECRET) ||
-    (isProductionRuntime()
-      ? asNonEmptyString(process.env.ADMIN_SESSION_SECRET)
-      : null)
-  );
+  const dedicatedSecret = asNonEmptyString(process.env.SESSION_VIEWER_SECRET);
+  if (dedicatedSecret) {
+    return dedicatedSecret;
+  }
+
+  if (isProductionRuntime()) {
+    throw new Error("SESSION_VIEWER_SECRET is required in production.");
+  }
+
+  return asNonEmptyString(process.env.ADMIN_SESSION_SECRET);
 }
 
 export function isSessionViewerProtectionEnabled() {

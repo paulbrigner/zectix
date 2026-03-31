@@ -23,6 +23,7 @@ const LOCALLY_EXPIRABLE_SESSION_STATUSES = new Set<CipherPaySessionStatus>([
 ]);
 
 export const ZATOSHIS_PER_ZEC = 100_000_000;
+const EMAIL_ADDRESS_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function nowIso() {
   return new Date().toISOString();
@@ -90,6 +91,11 @@ export function asIsoTimestamp(value: unknown): string | null {
 
 export function normalizeEmailAddress(value: string | null | undefined) {
   return value?.trim().toLowerCase() || "";
+}
+
+export function isValidEmailAddress(value: string | null | undefined) {
+  const normalized = normalizeEmailAddress(value);
+  return normalized.length > 0 && normalized.length <= 320 && EMAIL_ADDRESS_PATTERN.test(normalized);
 }
 
 export function normalizeCurrencyCode(value: unknown, fallback = "USD") {

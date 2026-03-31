@@ -18,7 +18,11 @@ frontend:
         - env | grep -e ADMIN_AUTH_FROM_EMAIL >> .env.production || true
         - env | grep -e ADMIN_MAGIC_LINK_SECRET >> .env.production || true
         - env | grep -e ADMIN_SESSION_SECRET >> .env.production || true
+        - env | grep -e TENANT_AUTH_FROM_EMAIL >> .env.production || true
+        - env | grep -e TENANT_MAGIC_LINK_SECRET >> .env.production || true
+        - env | grep -e TENANT_SESSION_SECRET >> .env.production || true
         - env | grep -e SESSION_VIEWER_SECRET >> .env.production || true
+        - env | grep -e EMBED_SESSION_SECRET >> .env.production || true
         - env | grep -e DYNAMODB_TABLE_NAME >> .env.production || true
         - env | grep -e AWS_REGION >> .env.production || true
         - env | grep -e SECRET_STORE_BACKEND >> .env.production || true

@@ -11,16 +11,15 @@ export function buildBillingCycleId(tenantId: string, billingPeriod: string) {
 }
 
 export function billingWindowForPeriod(billingPeriod: string, graceDays: number) {
+  if (!/^\d{4}-\d{2}$/.test(billingPeriod)) {
+    throw new Error(`Invalid billing period: ${billingPeriod}`);
+  }
+
   const [yearText, monthText] = billingPeriod.split("-");
   const year = Number.parseInt(yearText || "", 10);
   const month = Number.parseInt(monthText || "", 10);
   if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) {
-    const fallback = nowIso();
-    return {
-      period_start: fallback,
-      period_end: fallback,
-      grace_until: fallback,
-    };
+    throw new Error(`Invalid billing period: ${billingPeriod}`);
   }
 
   const periodStart = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0, 0));

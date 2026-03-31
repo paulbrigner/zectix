@@ -12,6 +12,7 @@ import {
   putBillingAdjustment,
   putBillingCycle,
   putUsageLedgerEntry,
+  putUsageLedgerEntryIfAbsent,
   updateBillingCycle,
 } from "@/lib/app-state/state";
 import type {
@@ -67,6 +68,35 @@ function buildBillingCycleRecord(
     created_at: timestamp,
     updated_at: timestamp,
   };
+}
+
+async function saveUsageLedgerEntryForExistingSession(
+  existing: UsageLedgerEntry,
+  session: CheckoutSession,
+) {
+  const grossZatoshis =
+    existing.gross_zatoshis ||
+    session.cipherpay_price_zatoshis ||
+    zecToZatoshis(session.cipherpay_price_zec) ||
+    0;
+  const serviceFeeZatoshis =
+    existing.service_fee_zatoshis ||
+    session.service_fee_zatoshis_snapshot ||
+    calculateServiceFeeZatoshis(grossZatoshis, session.service_fee_bps_snapshot);
+  const cycle = await ensureBillingCycleForTenant(
+    existing.tenant_id,
+    existing.billing_period,
+  );
+  const nextEntry: UsageLedgerEntry = {
+    ...existing,
+    gross_zatoshis: grossZatoshis,
+    service_fee_bps: session.service_fee_bps_snapshot,
+    service_fee_zatoshis: serviceFeeZatoshis,
+    billing_cycle_id: cycle.billing_cycle_id,
+  };
+  const saved = await putUsageLedgerEntry(nextEntry);
+  await reconcileBillingCycle(saved.billing_cycle_id);
+  return saved;
 }
 
 async function ensureBillingCycleForTenant(tenantId: string, billingPeriod: string) {
@@ -135,26 +165,7 @@ export async function reconcileBillingCycle(billingCycleId: string) {
 export async function ensureUsageLedgerEntryForSession(session: CheckoutSession) {
   const existing = await getUsageLedgerEntryBySession(session.session_id);
   if (existing) {
-    const grossZatoshis =
-      existing.gross_zatoshis ||
-      session.cipherpay_price_zatoshis ||
-      zecToZatoshis(session.cipherpay_price_zec) ||
-      0;
-    const serviceFeeZatoshis =
-      existing.service_fee_zatoshis ||
-      session.service_fee_zatoshis_snapshot ||
-      calculateServiceFeeZatoshis(grossZatoshis, session.service_fee_bps_snapshot);
-    const cycle = await ensureBillingCycleForTenant(existing.tenant_id, existing.billing_period);
-    const nextEntry: UsageLedgerEntry = {
-      ...existing,
-      gross_zatoshis: grossZatoshis,
-      service_fee_bps: session.service_fee_bps_snapshot,
-      service_fee_zatoshis: serviceFeeZatoshis,
-      billing_cycle_id: cycle.billing_cycle_id,
-    };
-    const saved = await putUsageLedgerEntry(nextEntry);
-    await reconcileBillingCycle(saved.billing_cycle_id);
-    return saved;
+    return saveUsageLedgerEntryForExistingSession(existing, session);
   }
 
   const recognizedAt = session.registered_at || session.confirmed_at || nowIso();
@@ -180,7 +191,24 @@ export async function ensureUsageLedgerEntryForSession(session: CheckoutSession)
     status: "billable",
   };
 
-  const saved = await putUsageLedgerEntry(entry);
+  let saved: UsageLedgerEntry;
+  try {
+    saved = await putUsageLedgerEntryIfAbsent(entry);
+  } catch (error) {
+    if (error instanceof Error && error.name === "UsageLedgerSessionConflictError") {
+      const existingAfterConflict = await getUsageLedgerEntryBySession(
+        session.session_id,
+      );
+      if (existingAfterConflict) {
+        return saveUsageLedgerEntryForExistingSession(
+          existingAfterConflict,
+          session,
+        );
+      }
+    }
+
+    throw error;
+  }
   await reconcileBillingCycle(cycle.billing_cycle_id);
   return saved;
 }

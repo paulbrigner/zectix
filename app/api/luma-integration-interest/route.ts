@@ -1,10 +1,12 @@
 import { SESv2Client, SendEmailCommand } from "@aws-sdk/client-sesv2";
+import { consumeLumaIntegrationInterestRateLimit } from "@/lib/app-state/state";
 import {
   buildLumaIntegrationInterestEmail,
   getLumaIntegrationInterestEmailConfig,
   parseLumaIntegrationInterestSubmission,
 } from "@/lib/luma-integration-interest";
 import { jsonError, jsonOk } from "@/lib/http";
+import { getTrustedIpAddress } from "@/lib/request-security";
 
 export const runtime = "nodejs";
 
@@ -21,6 +23,16 @@ function getSesClient() {
 }
 
 export async function POST(request: Request) {
+  const ipAddress = getTrustedIpAddress(request);
+  const rateLimit = await consumeLumaIntegrationInterestRateLimit({ ipAddress });
+  if (!rateLimit.ok) {
+    return jsonError(rateLimit.reason || "Too many submissions.", 429, {
+      headers: {
+        "retry-after": String(rateLimit.retry_after_seconds || 600),
+      },
+    });
+  }
+
   let payload: unknown;
 
   try {

@@ -197,6 +197,7 @@ export function makeCheckoutSession(
     confirmed_at: null,
     registered_at: null,
     refunded_at: null,
+    version: 0,
     created_at: "2026-03-24T12:00:00.000Z",
     updated_at: "2026-03-24T12:00:00.000Z",
     ...overrides,

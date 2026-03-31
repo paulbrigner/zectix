@@ -24,7 +24,8 @@ describe("tenant auth helpers", () => {
     expect(isTenantEmailAuthEnabled()).toBe(true);
   });
 
-  it("falls back to the admin auth sender and secrets", () => {
+  it("falls back to the admin auth sender and secrets in development", () => {
+    vi.stubEnv("NODE_ENV", "development");
     vi.stubEnv("TENANT_AUTH_FROM_EMAIL", "");
     vi.stubEnv("TENANT_SESSION_SECRET", "");
     vi.stubEnv("TENANT_MAGIC_LINK_SECRET", "");
@@ -34,6 +35,20 @@ describe("tenant auth helpers", () => {
 
     expect(getTenantAuthFromEmail()).toBe("auth@zectix.com");
     expect(isTenantEmailAuthEnabled()).toBe(true);
+  });
+
+  it("requires tenant signing secrets in production", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("TENANT_AUTH_FROM_EMAIL", "");
+    vi.stubEnv("TENANT_SESSION_SECRET", "");
+    vi.stubEnv("TENANT_MAGIC_LINK_SECRET", "");
+    vi.stubEnv("ADMIN_AUTH_FROM_EMAIL", "auth@zectix.com");
+    vi.stubEnv("ADMIN_SESSION_SECRET", "admin-session-secret");
+    vi.stubEnv("ADMIN_MAGIC_LINK_SECRET", "admin-magic-secret");
+
+    expect(() => isTenantEmailAuthEnabled()).toThrow(
+      "TENANT_SESSION_SECRET is required in production.",
+    );
   });
 
   it("creates and validates tenant session tokens until expiration", () => {

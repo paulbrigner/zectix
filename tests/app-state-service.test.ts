@@ -204,6 +204,15 @@ describe("webhook service", () => {
 
     expect(result).toBeNull();
     expect(mockPutWebhookDelivery).toHaveBeenCalledTimes(1);
+    expect(mockPutWebhookDelivery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        request_body_json: {
+          summary_version: 1,
+          top_level_keys: ["invoice_id"],
+        },
+        request_headers_json: null,
+      }),
+    );
     expect(mockUpdateSession).not.toHaveBeenCalled();
   });
 
@@ -251,11 +260,29 @@ describe("webhook service", () => {
       txid: "txid_1",
     });
 
-    expect(mockUpdateSession).toHaveBeenCalledWith(
-      "session_123",
+    expect(mockPutWebhookDelivery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        request_body_json: {
+          summary_version: 1,
+          top_level_keys: ["event", "invoice_id", "timestamp"],
+          timestamp: "2026-03-24T12:00:00.000Z",
+        },
+        request_headers_json: null,
+      }),
+    );
+    expect(mockUpdateSession).toHaveBeenCalledTimes(1);
+    expect(mockUpdateSession.mock.calls[0]?.[0]).toBe("session_123");
+    const updatePatch = mockUpdateSession.mock.calls[0]?.[1];
+    expect(typeof updatePatch).toBe("function");
+    expect(updatePatch(session)).toEqual(
       expect.objectContaining({
         status: "detected",
         last_txid: "txid_1",
+        last_payload_json: {
+          summary_version: 1,
+          top_level_keys: ["event", "invoice_id", "timestamp"],
+          timestamp: "2026-03-24T12:00:00.000Z",
+        },
       }),
     );
     expect(mockEnsureRegistrationTaskForSession).toHaveBeenCalledWith(updatedSession);
@@ -344,6 +371,12 @@ describe("webhook service", () => {
         tenant_id: "tenant_123",
         event_api_id: "event_123",
         event_type: "event.updated",
+        request_body_json: {
+          summary_version: 1,
+          top_level_keys: ["data", "type"],
+          data_keys: ["id"],
+        },
+        request_headers_json: null,
       }),
     );
     expect(mockHandleCalendarRefreshWebhook).toHaveBeenCalledWith("calendar_123");

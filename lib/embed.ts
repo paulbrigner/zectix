@@ -29,8 +29,16 @@ function asInteger(value: unknown) {
 }
 
 function getEmbedSecret() {
+  const dedicatedSecret = process.env.EMBED_SESSION_SECRET?.trim();
+  if (dedicatedSecret) {
+    return dedicatedSecret;
+  }
+
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("EMBED_SESSION_SECRET is required in production.");
+  }
+
   const candidates = [
-    process.env.EMBED_SESSION_SECRET,
     process.env.SESSION_VIEWER_SECRET,
     process.env.TENANT_SESSION_SECRET,
     process.env.ADMIN_SESSION_SECRET,

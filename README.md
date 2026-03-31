@@ -169,11 +169,15 @@ Optional tenant auth:
 - `TENANT_AUTH_FROM_EMAIL`
 - `TENANT_MAGIC_LINK_SECRET`
 
-Tenant auth falls back to the admin email sender and secrets when the tenant-specific values are unset, so staging and production can share the same SES path if desired.
+Tenant auth may fall back to the admin email sender and signing secrets in development. Production requires dedicated tenant auth secrets.
 
 Optional session viewer protection:
 
 - `SESSION_VIEWER_SECRET`
+
+Optional embed token protection:
+
+- `EMBED_SESSION_SECRET`
 
 Optional secret-store settings:
 
