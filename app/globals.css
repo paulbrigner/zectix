@@ -617,6 +617,67 @@ select {
   gap: 1rem;
 }
 
+.console-tab-bar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  border-radius: 24px;
+  background: linear-gradient(
+    180deg,
+    rgba(248, 250, 252, 0.92),
+    rgba(255, 255, 255, 0.94)
+  );
+}
+
+.console-tab-link {
+  display: grid;
+  gap: 0.18rem;
+  min-width: 0;
+  padding: 0.95rem 1rem;
+  border: 1px solid transparent;
+  border-radius: 18px;
+  color: var(--color-gray-600);
+  text-decoration: none;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.console-tab-link:hover,
+.console-tab-link:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(17, 24, 39, 0.08);
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.console-tab-link-active {
+  border-color: rgba(17, 24, 39, 0.08);
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.08);
+  color: var(--color-gray-900);
+}
+
+.console-tab-link-label {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-gray-900);
+}
+
+.console-tab-link-copy {
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: var(--color-gray-600);
+}
+
+.console-tab-panel {
+  display: grid;
+  gap: 1.5rem;
+}
+
 .console-anchor-target {
   scroll-margin-top: 6.5rem;
 }
@@ -745,6 +806,16 @@ select {
 
 .tenant-checklist-item p {
   margin: 0;
+}
+
+.tenant-checklist-banner {
+  margin: 0 0 1rem;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid rgba(217, 119, 6, 0.18);
+  border-radius: 16px;
+  background: rgba(255, 251, 235, 0.84);
+  color: #9a3412;
+  font-weight: 600;
 }
 
 .tenant-checklist-item-complete {
