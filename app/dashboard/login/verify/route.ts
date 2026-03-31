@@ -8,9 +8,13 @@ import {
 import { tenantSessionCookieOptions } from "@/lib/tenant-auth-server";
 import {
   consumeTenantMagicLinkToken,
+  getTenant,
   putAdminAuditEvent,
 } from "@/lib/app-state/state";
-import { listSelfServeTenantsForEmail } from "@/lib/tenancy/service";
+import {
+  listSelfServeTenantsForEmail,
+  updateTenantContactEmail,
+} from "@/lib/tenancy/service";
 import { appPath } from "@/lib/app-paths";
 import { redirectToPath } from "@/lib/http";
 import { createRequestId, logEvent } from "@/lib/observability";
@@ -39,12 +43,43 @@ export async function GET(request: Request) {
 
   const token = new URL(request.url).searchParams.get("token");
   let email: string | null = null;
+  let confirmedTenantSettingsPath: string | null = null;
 
   try {
     const tokenHash = createTenantMagicLinkTokenHash(String(token || ""));
     const record = await consumeTenantMagicLinkToken(tokenHash);
     const notExpired = record?.expires_at && Date.parse(record.expires_at) > Date.now();
-    if (record?.email && notExpired) {
+    if (
+      record?.purpose === "confirm_contact_email" &&
+      record?.tenant_id &&
+      record.next_contact_email &&
+      notExpired
+    ) {
+      const tenant = await getTenant(record.tenant_id);
+      if (tenant) {
+        const updatedTenant = await updateTenantContactEmail(
+          tenant.tenant_id,
+          record.next_contact_email,
+        );
+        email = updatedTenant.contact_email;
+        await putAdminAuditEvent({
+          event_type: "tenant.dashboard.confirm_contact_email",
+          actor_ip: actorIp,
+          actor_origin: actorOrigin,
+          request_headers_json: null,
+          metadata_json: {
+            request_id: requestId,
+            next_contact_email: updatedTenant.contact_email,
+            previous_contact_email: record.previous_contact_email,
+            tenant_id: updatedTenant.tenant_id,
+            tenant_slug: updatedTenant.slug,
+          },
+        });
+        confirmedTenantSettingsPath = appPath(
+          `/dashboard/${encodeURIComponent(updatedTenant.slug)}/settings?email_updated=1`,
+        );
+      }
+    } else if (record?.email && notExpired) {
       const tenants = await listSelfServeTenantsForEmail(record.email);
       if (tenants.length > 0) {
         email = record.email;
@@ -94,5 +129,5 @@ export async function GET(request: Request) {
     method: "magic_link",
   });
 
-  return redirectToPath(appPath("/dashboard"));
+  return redirectToPath(confirmedTenantSettingsPath || appPath("/dashboard"));
 }

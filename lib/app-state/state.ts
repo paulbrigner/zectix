@@ -976,6 +976,13 @@ function normalizeTenantMagicLinkRecord(value: unknown) {
   const email = normalizeEmailAddress(asString(item?.email) || "");
   const expiresAt = asIsoTimestamp(item?.expires_at);
   const createdAt = asIsoTimestamp(item?.created_at);
+  const tenantId = asString(item?.tenant_id);
+  const nextContactEmail = normalizeEmailAddress(
+    asString(item?.next_contact_email) || "",
+  );
+  const previousContactEmail = normalizeEmailAddress(
+    asString(item?.previous_contact_email) || "",
+  );
 
   if (!tokenHash || !email || !expiresAt || !createdAt) {
     return null;
@@ -986,6 +993,13 @@ function normalizeTenantMagicLinkRecord(value: unknown) {
     email,
     expires_at: expiresAt,
     created_at: createdAt,
+    next_contact_email: nextContactEmail || null,
+    previous_contact_email: previousContactEmail || null,
+    purpose:
+      item?.purpose === "confirm_contact_email"
+        ? ("confirm_contact_email" as const)
+        : ("signin" as const),
+    tenant_id: tenantId || null,
   };
 }
 
@@ -2478,16 +2492,29 @@ export async function putTenantMagicLinkToken({
   tokenHash,
   email,
   expiresAt,
+  nextContactEmail,
+  previousContactEmail,
+  purpose,
+  tenantId,
 }: {
   tokenHash: string;
   email: string;
   expiresAt: string;
+  nextContactEmail?: string | null;
+  previousContactEmail?: string | null;
+  purpose?: "signin" | "confirm_contact_email";
+  tenantId?: string | null;
 }) {
   const record = {
     token_hash: tokenHash,
     email: normalizeEmailAddress(email),
     expires_at: expiresAt,
     created_at: nowIso(),
+    next_contact_email: normalizeEmailAddress(nextContactEmail || "") || null,
+    previous_contact_email:
+      normalizeEmailAddress(previousContactEmail || "") || null,
+    purpose: purpose || "signin",
+    tenant_id: tenantId || null,
   };
 
   await getDynamoDocumentClient().send(
@@ -2537,6 +2564,28 @@ export async function listTenantMagicLinkTokensByEmail(email: string) {
       .filter(
         (record): record is TenantMagicLinkRecord =>
           record !== null && record.email === normalizedEmail,
+      );
+  } catch (error) {
+    if (isMissingLocalStateError(error)) {
+      return [] as TenantMagicLinkRecord[];
+    }
+
+    throw error;
+  }
+}
+
+export async function listTenantMagicLinkTokensByTenantId(tenantId: string) {
+  if (!tenantId) {
+    return [] as TenantMagicLinkRecord[];
+  }
+
+  try {
+    const items = await queryPartition("TENANT_MAGIC_LINK");
+    return items
+      .map(normalizeTenantMagicLinkRecord)
+      .filter(
+        (record): record is TenantMagicLinkRecord =>
+          record !== null && record.tenant_id === tenantId,
       );
   } catch (error) {
     if (isMissingLocalStateError(error)) {

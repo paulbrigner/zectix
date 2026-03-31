@@ -661,6 +661,20 @@ select {
   color: var(--color-gray-900);
 }
 
+.console-tab-link-disabled {
+  border-style: dashed;
+  background: rgba(148, 163, 184, 0.12);
+  color: var(--color-gray-400);
+  cursor: not-allowed;
+  pointer-events: none;
+  box-shadow: none;
+}
+
+.console-tab-link-disabled .console-tab-link-label,
+.console-tab-link-disabled .console-tab-link-copy {
+  color: var(--color-gray-400);
+}
+
 .console-tab-link-label {
   font-size: 1rem;
   font-weight: 700;

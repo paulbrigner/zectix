@@ -28,6 +28,7 @@ import {
   listRegistrationTasksByTenant,
   listSessionsByTenant,
   listTenantMagicLinkTokensByEmail,
+  listTenantMagicLinkTokensByTenantId,
   listTenantsByContactEmail,
   listTicketMirrorsByEvent,
   listUsageLedgerEntriesByTenantCycle,
@@ -170,6 +171,14 @@ export class OutstandingBillingBalanceError extends Error {
     );
     this.name = "OutstandingBillingBalanceError";
   }
+}
+
+function isIgnorableSecretDeletionError(error: unknown) {
+  return (
+    error instanceof Error &&
+    (error.name === "AccessDeniedException" ||
+      error.message.includes("secretsmanager:DeleteSecret"))
+  );
 }
 
 async function loadEventSyncSnapshot(
@@ -323,6 +332,13 @@ function deriveTenantOnboardingStatus(input: {
   cipherpayConnections: CipherPayConnection[];
   events: EventMirror[];
 }) {
+  if (
+    input.tenant.onboarding_status === "completed" ||
+    Boolean(input.tenant.onboarding_completed_at)
+  ) {
+    return "completed" as const;
+  }
+
   const hasPublishedCheckoutEvent = input.events.some((event) => {
     const startAtMs = new Date(event.start_at).getTime();
     return Number.isFinite(startAtMs) && startAtMs >= Date.now() && event.zcash_enabled;
@@ -471,7 +487,7 @@ export async function deleteTenantSelfServeAccount(tenantId: string) {
     webhooks,
     tasks,
     billingCycles,
-    tenantMagicLinks,
+    tenantSpecificMagicLinks,
   ] = await Promise.all([
     listCalendarConnectionsByTenant(tenantId),
     listCipherPayConnectionsByTenant(tenantId),
@@ -479,8 +495,19 @@ export async function deleteTenantSelfServeAccount(tenantId: string) {
     listWebhookDeliveriesByTenant(tenantId, 1000),
     listRegistrationTasksByTenant(tenantId, 1000),
     listBillingCyclesByTenant(tenantId),
-    listTenantMagicLinkTokensByEmail(tenant.contact_email),
+    listTenantMagicLinkTokensByTenantId(tenantId),
   ]);
+  const genericTenantMagicLinks = await listTenantMagicLinkTokensByEmail(
+    tenant.contact_email,
+  );
+  const tenantMagicLinks = Array.from(
+    new Map(
+      [...tenantSpecificMagicLinks, ...genericTenantMagicLinks].map((record) => [
+        record.token_hash,
+        record,
+      ]),
+    ).values(),
+  );
 
   const eventsByCalendar = new Map<string, EventMirror[]>(
     await Promise.all(
@@ -589,7 +616,18 @@ export async function deleteTenantSelfServeAccount(tenantId: string) {
   );
 
   for (const ref of secretRefs) {
-    await secretStore.deleteSecret(ref);
+    try {
+      await secretStore.deleteSecret(ref);
+    } catch (error) {
+      if (isIgnorableSecretDeletionError(error)) {
+        console.warn(
+          `Skipping secret deletion for ${ref} because the runtime cannot delete Secrets Manager entries.`,
+        );
+        continue;
+      }
+
+      throw error;
+    }
   }
 
   await deleteTenantRecord(tenant);
