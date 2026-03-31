@@ -5,8 +5,31 @@ import { ConsoleDisclosure } from "@/components/ConsoleDisclosure";
 import type { TenantOpsDetail } from "@/lib/tenancy/service";
 import { buildOnboardingChecklist } from "@/lib/tenant-self-serve";
 
+type SearchParamValue = string | string[] | undefined;
+
 function withHash(path: string, hash: string) {
   return `${path}#${hash}`;
+}
+
+function readSearchValue(value: SearchParamValue) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function readOnboardingCompletionNotice(
+  searchParams: Record<string, SearchParamValue>,
+) {
+  if (readSearchValue(searchParams.onboarding_complete) !== "1") {
+    return null;
+  }
+
+  const eventHref = readSearchValue(searchParams.onboarding_event_href) || null;
+  const eventName = readSearchValue(searchParams.onboarding_event_name) || null;
+
+  return {
+    eventHref:
+      eventHref && eventHref.startsWith("/c/") ? eventHref : null,
+    eventName,
+  };
 }
 
 export function TenantConnectionsSetupTab({
@@ -15,6 +38,7 @@ export function TenantConnectionsSetupTab({
   detail,
   eventsBasePath,
   lumaTabPath,
+  searchParams,
   setupTabPath,
 }: {
   connectionsBasePath: string;
@@ -22,9 +46,12 @@ export function TenantConnectionsSetupTab({
   detail: TenantOpsDetail;
   eventsBasePath: string;
   lumaTabPath: string;
+  searchParams: Record<string, SearchParamValue>;
   setupTabPath: string;
 }) {
   const onboardingChecklist = buildOnboardingChecklist(detail);
+  const onboardingCompletionNotice =
+    readOnboardingCompletionNotice(searchParams);
   const completedSteps = onboardingChecklist.filter(
     (item) => item.complete,
   ).length;
@@ -66,6 +93,37 @@ export function TenantConnectionsSetupTab({
 
   return (
     <div className="console-content console-anchor-target" id="setup-checklist">
+      {onboardingCompletionNotice ? (
+        <section
+          className="console-section tenant-onboarding-complete-banner"
+          role="status"
+        >
+          <div className="console-section-header">
+            <div>
+              <p className="console-kpi-label">Onboarding complete</p>
+              <h3>Congratulations, your first public checkout is live.</h3>
+              <p className="subtle-text">
+                Every organizer setup step is complete and public checkout is
+                now active for your published event.
+              </p>
+            </div>
+            {onboardingCompletionNotice.eventHref ? (
+              <Link
+                className="button button-small"
+                href={onboardingCompletionNotice.eventHref}
+              >
+                Open public event
+              </Link>
+            ) : null}
+          </div>
+          {onboardingCompletionNotice.eventName ? (
+            <p className="subtle-text">
+              Public event: {onboardingCompletionNotice.eventName}
+            </p>
+          ) : null}
+        </section>
+      ) : null}
+
       <div className="console-section-header">
         <div>
           <h3>Setup checklist</h3>

@@ -120,6 +120,7 @@ export function TenantConnectionsWorkspace({
               detail={detail}
               eventsBasePath={eventsBasePath}
               lumaTabPath={lumaTabPath}
+              searchParams={searchParams}
               setupTabPath={setupTabPath}
             />
           ) : null}
