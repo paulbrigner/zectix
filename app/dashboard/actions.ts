@@ -2,6 +2,7 @@
 
 import { redirect, unstable_rethrow } from "next/navigation";
 import { asBoolean, asString } from "@/lib/app-state/utils";
+import { safeRedirectPath } from "@/lib/http";
 import {
   getCalendarConnection,
   getCipherPayConnection,
@@ -34,9 +35,15 @@ type TenantSelfServeDetail = NonNullable<
   Awaited<ReturnType<typeof getTenantSelfServeDetailBySlug>>
 >;
 
+function safeDashboardRedirectPath(path: string | null | undefined, fallback: string) {
+  return safeRedirectPath(path, fallback, {
+    allowedPrefixes: ["/dashboard"],
+  });
+}
+
 function redirectTo(formData: FormData, fallback: string) {
   const next = asString(formData.get("redirect_to"));
-  redirect(next || fallback);
+  redirect(safeDashboardRedirectPath(next, fallback));
 }
 
 function redirectToWithQuery(base: string, params: URLSearchParams) {
@@ -157,6 +164,68 @@ async function auditTenantDashboardAction(input: {
   });
 }
 
+async function auditTenantDashboardActionFailure(input: {
+  action: string;
+  beforeDetail: TenantSelfServeDetail | null;
+  context?: Record<string, unknown>;
+  error: unknown;
+  sessionEmail: string;
+  tenantId: string;
+}) {
+  await putAdminAuditEvent({
+    event_type: `tenant.dashboard.${input.action}.failed`,
+    actor_ip: null,
+    actor_origin: null,
+    request_headers_json: null,
+    metadata_json: {
+      action: input.action,
+      actor_email: input.sessionEmail,
+      before_summary: summarizeTenantDashboardMutation(input.beforeDetail),
+      error:
+        input.error instanceof Error
+          ? input.error.message
+          : "Unknown dashboard mutation failure.",
+      tenant_id: input.tenantId,
+      ...input.context,
+    },
+  });
+}
+
+async function runAuditedTenantDashboardMutation<T>(input: {
+  action: string;
+  beforeDetail: TenantSelfServeDetail | null;
+  context?: Record<string, unknown> | ((result: T) => Record<string, unknown>);
+  mutation: () => Promise<T>;
+  sessionEmail: string;
+  tenantId: string;
+  tenantSlug: string;
+}) {
+  try {
+    const result = await input.mutation();
+    await auditTenantDashboardAction({
+      action: input.action,
+      beforeDetail: input.beforeDetail,
+      context:
+        typeof input.context === "function" ? input.context(result) : input.context,
+      sessionEmail: input.sessionEmail,
+      tenantId: input.tenantId,
+      tenantSlug: input.tenantSlug,
+    });
+    return result;
+  } catch (error) {
+    unstable_rethrow(error);
+    await auditTenantDashboardActionFailure({
+      action: input.action,
+      beforeDetail: input.beforeDetail,
+      context: typeof input.context === "function" ? undefined : input.context,
+      error,
+      sessionEmail: input.sessionEmail,
+      tenantId: input.tenantId,
+    });
+    throw error;
+  }
+}
+
 function resolvePublicEventNotice(
   detail: NonNullable<Awaited<ReturnType<typeof getTenantSelfServeDetailBySlug>>>,
   preferredEventApiId?: string | null,
@@ -212,19 +281,20 @@ export async function createCalendarConnectionAction(formData: FormData) {
     await requireTenantMutationContext(tenantSlug);
   const displayName = String(formData.get("display_name") || "");
   const slug = asString(formData.get("slug"));
-  await createCalendarConnection({
-    tenant_id: tenant.tenant_id,
-    display_name: displayName,
-    slug,
-    luma_api_key: String(formData.get("luma_api_key") || ""),
-  });
-  await auditTenantDashboardAction({
+  await runAuditedTenantDashboardMutation({
     action: "create_calendar_connection",
     beforeDetail,
     context: {
       calendar_display_name: displayName,
       calendar_slug: slug,
     },
+    mutation: () =>
+      createCalendarConnection({
+        tenant_id: tenant.tenant_id,
+        display_name: displayName,
+        slug,
+        luma_api_key: String(formData.get("luma_api_key") || ""),
+      }),
     sessionEmail,
     tenantId: tenant.tenant_id,
     tenantSlug: tenant.slug,
@@ -239,13 +309,13 @@ export async function validateAndSyncCalendarAction(formData: FormData) {
     await requireTenantMutationContext(tenantSlug);
   const calendarConnectionId = String(formData.get("calendar_connection_id") || "");
   await requireCalendarTenantAccess(tenant.tenant_id, calendarConnectionId);
-  await validateAndSyncCalendar(calendarConnectionId);
-  await auditTenantDashboardAction({
+  await runAuditedTenantDashboardMutation({
     action: "validate_and_sync_calendar",
     beforeDetail,
     context: {
       calendar_connection_id: calendarConnectionId,
     },
+    mutation: () => validateAndSyncCalendar(calendarConnectionId),
     sessionEmail,
     tenantId: tenant.tenant_id,
     tenantSlug: tenant.slug,
@@ -259,15 +329,31 @@ export async function syncCalendarEventAction(formData: FormData) {
     await requireTenantMutationContext(tenantSlug);
   const calendarConnectionId = String(formData.get("calendar_connection_id") || "");
   await requireCalendarTenantAccess(tenant.tenant_id, calendarConnectionId);
-  const redirectBase =
-    asString(formData.get("redirect_to")) || `/dashboard/${encodeURIComponent(tenant.slug)}/events`;
+  const redirectBase = safeDashboardRedirectPath(
+    asString(formData.get("redirect_to")),
+    `/dashboard/${encodeURIComponent(tenant.slug)}/events`,
+  );
 
   try {
-    const result = await syncCalendarEventForOps({
-      calendar_connection_id: calendarConnectionId,
-      event_api_id: String(formData.get("event_api_id") || ""),
-      event_name: String(formData.get("event_name") || ""),
-      focus: formData.get("focus") === "upstream" ? "upstream" : "mirrored",
+    const result = await runAuditedTenantDashboardMutation({
+      action: "sync_calendar_event",
+      beforeDetail,
+      context: (reviewResult: Awaited<ReturnType<typeof syncCalendarEventForOps>>) => ({
+        calendar_connection_id: calendarConnectionId,
+        event_api_id: reviewResult.review.event_api_id,
+        focus: reviewResult.review.focus,
+        sync_outcome: reviewResult.review.outcome,
+      }),
+      mutation: () =>
+        syncCalendarEventForOps({
+          calendar_connection_id: calendarConnectionId,
+          event_api_id: String(formData.get("event_api_id") || ""),
+          event_name: String(formData.get("event_name") || ""),
+          focus: formData.get("focus") === "upstream" ? "upstream" : "mirrored",
+        }),
+      sessionEmail,
+      tenantId: tenant.tenant_id,
+      tenantSlug: tenant.slug,
     });
 
     const params = new URLSearchParams();
@@ -282,23 +368,9 @@ export async function syncCalendarEventAction(formData: FormData) {
     params.set("sync_enabled", String(result.review.enabled_ticket_count));
     params.set("sync_public", result.review.public_checkout_enabled ? "1" : "0");
     params.set("sync_at", result.review.happened_at);
-    await auditTenantDashboardAction({
-      action: "sync_calendar_event",
-      beforeDetail,
-      context: {
-        calendar_connection_id: calendarConnectionId,
-        event_api_id: result.review.event_api_id,
-        focus: result.review.focus,
-        sync_outcome: result.review.outcome,
-      },
-      sessionEmail,
-      tenantId: tenant.tenant_id,
-      tenantSlug: tenant.slug,
-    });
     redirectToWithQuery(redirectBase, params);
   } catch (error) {
     unstable_rethrow(error);
-
     const params = new URLSearchParams();
     params.set(
       "sync_error",
@@ -317,16 +389,17 @@ export async function updateCalendarConnectionLumaKeyAction(formData: FormData) 
     await requireTenantMutationContext(tenantSlug);
   const calendarConnectionId = String(formData.get("calendar_connection_id") || "");
   await requireCalendarTenantAccess(tenant.tenant_id, calendarConnectionId);
-  await updateCalendarConnectionLumaKey(
-    calendarConnectionId,
-    String(formData.get("luma_api_key") || ""),
-  );
-  await auditTenantDashboardAction({
+  await runAuditedTenantDashboardMutation({
     action: "update_calendar_luma_key",
     beforeDetail,
     context: {
       calendar_connection_id: calendarConnectionId,
     },
+    mutation: () =>
+      updateCalendarConnectionLumaKey(
+        calendarConnectionId,
+        String(formData.get("luma_api_key") || ""),
+      ),
     sessionEmail,
     tenantId: tenant.tenant_id,
     tenantSlug: tenant.slug,
@@ -340,13 +413,13 @@ export async function disableCalendarConnectionAction(formData: FormData) {
     await requireTenantMutationContext(tenantSlug);
   const calendarConnectionId = String(formData.get("calendar_connection_id") || "");
   await requireCalendarTenantAccess(tenant.tenant_id, calendarConnectionId);
-  await disableCalendarConnection(calendarConnectionId);
-  await auditTenantDashboardAction({
+  await runAuditedTenantDashboardMutation({
     action: "disable_calendar_connection",
     beforeDetail,
     context: {
       calendar_connection_id: calendarConnectionId,
     },
+    mutation: () => disableCalendarConnection(calendarConnectionId),
     sessionEmail,
     tenantId: tenant.tenant_id,
     tenantSlug: tenant.slug,
@@ -370,14 +443,18 @@ export async function activatePublicCheckoutAction(formData: FormData) {
     .slice(0, activationStepIndex)
     .every((item) => item.complete);
 
-  if (prerequisitesReady && detail.tenant.status !== "active") {
-    await setTenantStatus(tenant.tenant_id, "active");
-  }
-  await auditTenantDashboardAction({
+  await runAuditedTenantDashboardMutation({
     action: "activate_public_checkout",
     beforeDetail: detail,
     context: {
       prerequisites_ready: prerequisitesReady,
+    },
+    mutation: async () => {
+      if (prerequisitesReady && detail.tenant.status !== "active") {
+        await setTenantStatus(tenant.tenant_id, "active");
+      }
+
+      return null;
     },
     sessionEmail,
     tenantId: tenant.tenant_id,
@@ -394,23 +471,26 @@ export async function createCipherPayConnectionAction(formData: FormData) {
   const calendarConnectionId = String(formData.get("calendar_connection_id") || "");
   await requireCalendarTenantAccess(tenant.tenant_id, calendarConnectionId);
   const network = formData.get("network") === "mainnet" ? "mainnet" : "testnet";
-  const connection = await createCipherPayConnection({
-    tenant_id: tenant.tenant_id,
-    calendar_connection_id: calendarConnectionId,
-    network,
-    api_base_url: asString(formData.get("api_base_url")),
-    checkout_base_url: asString(formData.get("checkout_base_url")),
-    cipherpay_api_key: String(formData.get("cipherpay_api_key") || ""),
-    cipherpay_webhook_secret: String(formData.get("cipherpay_webhook_secret") || ""),
-  });
-  await validateCipherPayConnection(connection.cipherpay_connection_id);
-  await auditTenantDashboardAction({
+  await runAuditedTenantDashboardMutation({
     action: "create_cipherpay_connection",
     beforeDetail,
-    context: {
+    context: (connection: Awaited<ReturnType<typeof createCipherPayConnection>>) => ({
       calendar_connection_id: calendarConnectionId,
       cipherpay_connection_id: connection.cipherpay_connection_id,
       network,
+    }),
+    mutation: async () => {
+      const connection = await createCipherPayConnection({
+        tenant_id: tenant.tenant_id,
+        calendar_connection_id: calendarConnectionId,
+        network,
+        api_base_url: asString(formData.get("api_base_url")),
+        checkout_base_url: asString(formData.get("checkout_base_url")),
+        cipherpay_api_key: String(formData.get("cipherpay_api_key") || ""),
+        cipherpay_webhook_secret: String(formData.get("cipherpay_webhook_secret") || ""),
+      });
+      await validateCipherPayConnection(connection.cipherpay_connection_id);
+      return connection;
     },
     sessionEmail,
     tenantId: tenant.tenant_id,
@@ -426,13 +506,13 @@ export async function validateCipherPayConnectionAction(formData: FormData) {
     await requireTenantMutationContext(tenantSlug);
   const cipherpayConnectionId = String(formData.get("cipherpay_connection_id") || "");
   await requireCipherPayTenantAccess(tenant.tenant_id, cipherpayConnectionId);
-  await validateCipherPayConnection(cipherpayConnectionId);
-  await auditTenantDashboardAction({
+  await runAuditedTenantDashboardMutation({
     action: "validate_cipherpay_connection",
     beforeDetail,
     context: {
       cipherpay_connection_id: cipherpayConnectionId,
     },
+    mutation: () => validateCipherPayConnection(cipherpayConnectionId),
     sessionEmail,
     tenantId: tenant.tenant_id,
     tenantSlug: tenant.slug,
@@ -448,21 +528,7 @@ export async function updateCalendarEmbedSettingsAction(formData: FormData) {
   await requireCalendarTenantAccess(tenant.tenant_id, calendarConnectionId);
   const embedEnabled = asBoolean(formData.get("embed_enabled"));
   const embedShowBranding = asBoolean(formData.get("embed_show_branding"));
-  await updateCalendarEmbedSettings({
-    calendar_connection_id: calendarConnectionId,
-    embed_enabled: embedEnabled,
-    embed_allowed_origins: String(formData.get("embed_allowed_origins") || ""),
-    embed_default_height_px: asString(formData.get("embed_default_height_px")),
-    embed_show_branding: embedShowBranding,
-    embed_theme: {
-      accent_color: asString(formData.get("embed_accent_color")),
-      background_color: asString(formData.get("embed_background_color")),
-      surface_color: asString(formData.get("embed_surface_color")),
-      text_color: asString(formData.get("embed_text_color")),
-      radius_px: asString(formData.get("embed_radius_px")),
-    },
-  });
-  await auditTenantDashboardAction({
+  await runAuditedTenantDashboardMutation({
     action: "update_calendar_embed_settings",
     beforeDetail,
     context: {
@@ -470,6 +536,21 @@ export async function updateCalendarEmbedSettingsAction(formData: FormData) {
       embed_enabled: embedEnabled,
       embed_show_branding: embedShowBranding,
     },
+    mutation: () =>
+      updateCalendarEmbedSettings({
+        calendar_connection_id: calendarConnectionId,
+        embed_enabled: embedEnabled,
+        embed_allowed_origins: String(formData.get("embed_allowed_origins") || ""),
+        embed_default_height_px: asString(formData.get("embed_default_height_px")),
+        embed_show_branding: embedShowBranding,
+        embed_theme: {
+          accent_color: asString(formData.get("embed_accent_color")),
+          background_color: asString(formData.get("embed_background_color")),
+          surface_color: asString(formData.get("embed_surface_color")),
+          text_color: asString(formData.get("embed_text_color")),
+          radius_px: asString(formData.get("embed_radius_px")),
+        },
+      }),
     sessionEmail,
     tenantId: tenant.tenant_id,
     tenantSlug: tenant.slug,
@@ -479,7 +560,10 @@ export async function updateCalendarEmbedSettingsAction(formData: FormData) {
 
 export async function submitSupportRequestAction(formData: FormData) {
   const sessionEmail = await requireTenantPageAccess();
-  const redirectBase = asString(formData.get("redirect_to")) || "/dashboard/help";
+  const redirectBase = safeDashboardRedirectPath(
+    asString(formData.get("redirect_to")),
+    "/dashboard/help",
+  );
   const params = new URLSearchParams();
   const allowedTenants = await listSelfServeTenantsForEmail(sessionEmail);
   const requestedTenantSlug = asString(formData.get("tenant_slug"));
@@ -523,8 +607,10 @@ export async function setTicketAssertionsAction(formData: FormData) {
     await requireTenantMutationContext(tenantSlug);
   const calendarConnectionId = String(formData.get("calendar_connection_id") || "");
   await requireCalendarTenantAccess(tenant.tenant_id, calendarConnectionId);
-  const redirectBase =
-    asString(formData.get("redirect_to")) || `/dashboard/${encodeURIComponent(tenant.slug)}/events`;
+  const redirectBase = safeDashboardRedirectPath(
+    asString(formData.get("redirect_to")),
+    `/dashboard/${encodeURIComponent(tenant.slug)}/events`,
+  );
   const wasComplete = onboardingChecklistComplete(beforeDetail);
   const eventApiId = String(formData.get("event_api_id") || "");
   const ticketTypeApiId = String(formData.get("ticket_type_api_id") || "");
@@ -532,22 +618,7 @@ export async function setTicketAssertionsAction(formData: FormData) {
     formData.get("public_checkout_requested_present") != null
       ? asBoolean(formData.get("public_checkout_requested"))
       : undefined;
-  await setTicketOperatorAssertions({
-    event_api_id: eventApiId,
-    ticket_type_api_id: ticketTypeApiId,
-    confirmed_fixed_price: true,
-    confirmed_no_approval_required: true,
-    confirmed_no_extra_required_questions: true,
-    public_checkout_requested: publicCheckoutRequested,
-  });
-  const params = new URLSearchParams();
-  await appendOnboardingCompletionNotice(params, {
-    eventApiId,
-    sessionEmail,
-    tenantSlug: tenant.slug,
-    wasComplete,
-  });
-  await auditTenantDashboardAction({
+  await runAuditedTenantDashboardMutation({
     action: "set_ticket_assertions",
     beforeDetail,
     context: {
@@ -556,9 +627,25 @@ export async function setTicketAssertionsAction(formData: FormData) {
       public_checkout_requested: publicCheckoutRequested,
       ticket_type_api_id: ticketTypeApiId,
     },
+    mutation: () =>
+      setTicketOperatorAssertions({
+        event_api_id: eventApiId,
+        ticket_type_api_id: ticketTypeApiId,
+        confirmed_fixed_price: true,
+        confirmed_no_approval_required: true,
+        confirmed_no_extra_required_questions: true,
+        public_checkout_requested: publicCheckoutRequested,
+      }),
     sessionEmail,
     tenantId: tenant.tenant_id,
     tenantSlug: tenant.slug,
+  });
+  const params = new URLSearchParams();
+  await appendOnboardingCompletionNotice(params, {
+    eventApiId,
+    sessionEmail,
+    tenantSlug: tenant.slug,
+    wasComplete,
   });
   redirectToWithQuery(redirectBase, params);
 }
@@ -569,24 +656,14 @@ export async function setEventPublicCheckoutAction(formData: FormData) {
     await requireTenantMutationContext(tenantSlug);
   const calendarConnectionId = String(formData.get("calendar_connection_id") || "");
   await requireCalendarTenantAccess(tenant.tenant_id, calendarConnectionId);
-  const redirectBase =
-    asString(formData.get("redirect_to")) || `/dashboard/${encodeURIComponent(tenant.slug)}/events`;
+  const redirectBase = safeDashboardRedirectPath(
+    asString(formData.get("redirect_to")),
+    `/dashboard/${encodeURIComponent(tenant.slug)}/events`,
+  );
   const wasComplete = onboardingChecklistComplete(beforeDetail);
   const eventApiId = String(formData.get("event_api_id") || "");
   const publicCheckoutRequested = asBoolean(formData.get("public_checkout_requested"));
-  await setEventPublicCheckoutRequested({
-    calendar_connection_id: calendarConnectionId,
-    event_api_id: eventApiId,
-    public_checkout_requested: publicCheckoutRequested,
-  });
-  const params = new URLSearchParams();
-  await appendOnboardingCompletionNotice(params, {
-    eventApiId,
-    sessionEmail,
-    tenantSlug: tenant.slug,
-    wasComplete,
-  });
-  await auditTenantDashboardAction({
+  await runAuditedTenantDashboardMutation({
     action: "set_event_public_checkout",
     beforeDetail,
     context: {
@@ -594,9 +671,22 @@ export async function setEventPublicCheckoutAction(formData: FormData) {
       event_api_id: eventApiId,
       public_checkout_requested: publicCheckoutRequested,
     },
+    mutation: () =>
+      setEventPublicCheckoutRequested({
+        calendar_connection_id: calendarConnectionId,
+        event_api_id: eventApiId,
+        public_checkout_requested: publicCheckoutRequested,
+      }),
     sessionEmail,
     tenantId: tenant.tenant_id,
     tenantSlug: tenant.slug,
+  });
+  const params = new URLSearchParams();
+  await appendOnboardingCompletionNotice(params, {
+    eventApiId,
+    sessionEmail,
+    tenantSlug: tenant.slug,
+    wasComplete,
   });
   redirectToWithQuery(redirectBase, params);
 }

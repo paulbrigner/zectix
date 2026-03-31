@@ -2,6 +2,7 @@
 
 import { redirect, unstable_rethrow } from "next/navigation";
 import { asBoolean, asNonNegativeInteger, asString } from "@/lib/app-state/utils";
+import { safeRedirectPath } from "@/lib/http";
 import {
   createBillingAdjustment,
   updateBillingCycleState,
@@ -28,9 +29,15 @@ import {
   validateCipherPayConnection,
 } from "@/lib/tenancy/service";
 
+function safeOpsRedirectPath(path: string | null | undefined, fallback: string) {
+  return safeRedirectPath(path, fallback, {
+    allowedPrefixes: ["/ops"],
+  });
+}
+
 function redirectTo(formData: FormData, fallback: string) {
   const next = asString(formData.get("redirect_to"));
-  redirect(next || fallback);
+  redirect(safeOpsRedirectPath(next, fallback));
 }
 
 function redirectToWithQuery(base: string, params: URLSearchParams) {
@@ -170,9 +177,10 @@ export async function validateAndSyncCalendarAction(formData: FormData) {
 export async function syncCalendarEventAction(formData: FormData) {
   await requireOpsPageAccess();
   const tenantId = String(formData.get("tenant_id") || "");
-  const redirectBase =
-    asString(formData.get("redirect_to")) ||
-    `/ops/tenants/${encodeURIComponent(tenantId)}/events`;
+  const redirectBase = safeOpsRedirectPath(
+    asString(formData.get("redirect_to")),
+    `/ops/tenants/${encodeURIComponent(tenantId)}/events`,
+  );
 
   try {
     const result = await syncCalendarEventForOps({

@@ -23,7 +23,9 @@ const LOCALLY_EXPIRABLE_SESSION_STATUSES = new Set<CipherPaySessionStatus>([
 ]);
 
 export const ZATOSHIS_PER_ZEC = 100_000_000;
-const EMAIL_ADDRESS_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const EMAIL_LOCAL_PART_PATTERN = /^[a-z0-9!#$%&'*+/=?^_`{|}~.-]+$/i;
+const EMAIL_DOMAIN_LABEL_PATTERN = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i;
+const EMAIL_TLD_PATTERN = /^(?:[a-z]{2,63}|xn--[a-z0-9-]{2,59})$/i;
 
 export function nowIso() {
   return new Date().toISOString();
@@ -95,7 +97,40 @@ export function normalizeEmailAddress(value: string | null | undefined) {
 
 export function isValidEmailAddress(value: string | null | undefined) {
   const normalized = normalizeEmailAddress(value);
-  return normalized.length > 0 && normalized.length <= 320 && EMAIL_ADDRESS_PATTERN.test(normalized);
+  if (normalized.length === 0 || normalized.length > 320) {
+    return false;
+  }
+
+  const parts = normalized.split("@");
+  if (parts.length !== 2) {
+    return false;
+  }
+
+  const [localPart, domain] = parts;
+  if (!localPart || !domain || localPart.length > 64 || domain.length > 255) {
+    return false;
+  }
+
+  if (
+    localPart.startsWith(".") ||
+    localPart.endsWith(".") ||
+    localPart.includes("..") ||
+    !EMAIL_LOCAL_PART_PATTERN.test(localPart)
+  ) {
+    return false;
+  }
+
+  const labels = domain.split(".");
+  if (labels.length < 2 || labels.some((label) => label.length === 0)) {
+    return false;
+  }
+
+  const topLevelDomain = labels[labels.length - 1] || "";
+  if (!EMAIL_TLD_PATTERN.test(topLevelDomain)) {
+    return false;
+  }
+
+  return labels.every((label) => EMAIL_DOMAIN_LABEL_PATTERN.test(label));
 }
 
 export function normalizeCurrencyCode(value: unknown, fallback = "USD") {
