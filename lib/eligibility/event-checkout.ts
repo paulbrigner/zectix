@@ -2,7 +2,7 @@ import type { EventMirrorStatus } from "@/lib/app-state/types";
 
 export type EventCheckoutInput = {
   enabled_ticket_count: number;
-  public_checkout_requested: boolean;
+  requested_ticket_count: number;
   sync_status: EventMirrorStatus;
 };
 
@@ -35,13 +35,6 @@ export function evaluateEventCheckoutState(
     };
   }
 
-  if (!input.public_checkout_requested) {
-    return {
-      zcash_enabled: false,
-      zcash_enabled_reason: "Public checkout is turned off for this event.",
-    };
-  }
-
   if (input.enabled_ticket_count > 0) {
     return {
       zcash_enabled: true,
@@ -49,8 +42,16 @@ export function evaluateEventCheckoutState(
     };
   }
 
+  if (input.requested_ticket_count > 0) {
+    return {
+      zcash_enabled: false,
+      zcash_enabled_reason:
+        "No tickets are currently enabled for public Zcash checkout.",
+    };
+  }
+
   return {
     zcash_enabled: false,
-    zcash_enabled_reason: "No tickets are currently enabled for public Zcash checkout.",
+    zcash_enabled_reason: "Turn on public checkout for at least one ticket.",
   };
 }

@@ -358,10 +358,11 @@ export async function syncCalendarConnection(calendarConnectionId: string) {
         event_api_id: event.api_id,
         luma_api_key: lumaApiKey,
       });
-      const publicCheckoutRequested = existing?.public_checkout_requested ?? false;
       const eventCheckoutState = evaluateEventCheckoutState({
         enabled_ticket_count: tickets.filter((ticket) => ticket.zcash_enabled).length,
-        public_checkout_requested: publicCheckoutRequested,
+        requested_ticket_count: tickets.filter(
+          (ticket) => ticket.public_checkout_requested,
+        ).length,
         sync_status: "active",
       });
       const nextEvent: EventMirror = {
@@ -380,7 +381,9 @@ export async function syncCalendarConnection(calendarConnectionId: string) {
         location_label: event.location_label,
         location_note: event.location_note,
         sync_status: "active",
-        public_checkout_requested: publicCheckoutRequested,
+        public_checkout_requested: tickets.some(
+          (ticket) => ticket.public_checkout_requested,
+        ),
         zcash_enabled: eventCheckoutState.zcash_enabled,
         zcash_enabled_reason: eventCheckoutState.zcash_enabled_reason,
         last_synced_at: timestamp,
@@ -409,7 +412,7 @@ export async function syncCalendarConnection(calendarConnectionId: string) {
           sync_status: "hidden",
           ...evaluateEventCheckoutState({
             enabled_ticket_count: 0,
-            public_checkout_requested: existing.public_checkout_requested,
+            requested_ticket_count: 0,
             sync_status: "hidden",
           }),
           last_synced_at: timestamp,

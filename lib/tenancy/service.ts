@@ -96,14 +96,21 @@ async function getSecretPreview(ref: string | null): Promise<SecretPreview> {
 }
 
 function buildEventCheckoutState(
-  event: Pick<EventMirror, "public_checkout_requested" | "sync_status">,
-  tickets: Pick<TicketMirror, "zcash_enabled">[],
+  event: Pick<EventMirror, "sync_status">,
+  tickets: Pick<TicketMirror, "public_checkout_requested" | "zcash_enabled">[],
 ) {
-  return evaluateEventCheckoutState({
-    enabled_ticket_count: tickets.filter((ticket) => ticket.zcash_enabled).length,
-    public_checkout_requested: event.public_checkout_requested,
-    sync_status: event.sync_status,
-  });
+  const requestedTicketCount = tickets.filter(
+    (ticket) => ticket.public_checkout_requested,
+  ).length;
+
+  return {
+    public_checkout_requested: requestedTicketCount > 0,
+    ...evaluateEventCheckoutState({
+      enabled_ticket_count: tickets.filter((ticket) => ticket.zcash_enabled).length,
+      requested_ticket_count: requestedTicketCount,
+      sync_status: event.sync_status,
+    }),
+  };
 }
 
 export type EventSyncFocus = "mirrored" | "upstream";
@@ -803,11 +810,9 @@ export async function setEventPublicCheckoutRequested(input: {
   const tickets = await listTicketMirrorsByEvent(event.event_api_id);
   const nextEvent: EventMirror = {
     ...event,
-    public_checkout_requested: input.public_checkout_requested,
     ...buildEventCheckoutState(
       {
         ...event,
-        public_checkout_requested: input.public_checkout_requested,
       },
       tickets,
     ),

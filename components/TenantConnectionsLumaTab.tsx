@@ -8,9 +8,11 @@ import {
 import { ConsoleConfirmDialog } from "@/components/ConsoleConfirmDialog";
 import { ConsoleDisclosure } from "@/components/ConsoleDisclosure";
 import { ConsoleFieldLabel } from "@/components/ConsoleFieldLabel";
+import { ConsoleForm } from "@/components/ConsoleForm";
 import { ConsoleFormPendingNote } from "@/components/ConsoleFormPendingNote";
 import { ConsoleInfoTip } from "@/components/ConsoleInfoTip";
 import { LocalDateTime } from "@/components/LocalDateTime";
+import { ConsoleSection } from "@/components/ConsoleSection";
 import { ConsoleSubmitButton } from "@/components/ConsoleSubmitButton";
 import { selectUpcomingEvents } from "@/lib/embed";
 import type { TenantOpsDetail } from "@/lib/tenancy/service";
@@ -45,20 +47,13 @@ export function TenantConnectionsLumaTab({
 
   return (
     <div className="console-content">
-      <section
-        className="console-section console-anchor-target"
+      <ConsoleSection
+        className="console-anchor-target"
+        description="Add a calendar, validate it, and keep the managed webhook healthy. Mirroring and public inventory depend on this layer working cleanly."
         id="luma-calendars"
+        title="Luma calendars"
+        titleAs="h3"
       >
-        <div className="console-section-header">
-          <div>
-            <h3>Luma calendars</h3>
-            <p className="subtle-text">
-              Add a calendar, validate it, and keep the managed webhook healthy.
-              Mirroring and public inventory depend on this layer working
-              cleanly.
-            </p>
-          </div>
-        </div>
 
         <div className="console-anchor-target" id="connect-luma-calendar">
           <ConsoleDisclosure
@@ -66,10 +61,7 @@ export function TenantConnectionsLumaTab({
             description="Save the Luma API key first. Connect and sync will verify access, register the managed event webhook, and refresh mirrored inventory for that calendar."
             title="Add calendar connection"
           >
-            <form
-              action={createCalendarConnectionAction}
-              className="console-content"
-            >
+            <ConsoleForm action={createCalendarConnectionAction}>
               <input
                 name="tenant_slug"
                 type="hidden"
@@ -122,7 +114,7 @@ export function TenantConnectionsLumaTab({
                 />
               </div>
               <ConsoleFormPendingNote pendingLabel="Saving this calendar connection..." />
-            </form>
+            </ConsoleForm>
           </ConsoleDisclosure>
         </div>
 
@@ -388,10 +380,7 @@ export function TenantConnectionsLumaTab({
                     description="Replace the saved Luma API key for this calendar connection."
                     title="Replace Luma API key"
                   >
-                    <form
-                      action={updateCalendarConnectionLumaKeyAction}
-                      className="console-content"
-                    >
+                    <ConsoleForm action={updateCalendarConnectionLumaKeyAction}>
                       <input
                         name="calendar_connection_id"
                         type="hidden"
@@ -427,14 +416,14 @@ export function TenantConnectionsLumaTab({
                         />
                       </div>
                       <ConsoleFormPendingNote pendingLabel="Saving the new Luma API key..." />
-                    </form>
+                    </ConsoleForm>
                   </ConsoleDisclosure>
                 </article>
               );
             })}
           </div>
         )}
-      </section>
+      </ConsoleSection>
     </div>
   );
 }
