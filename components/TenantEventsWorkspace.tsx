@@ -1,6 +1,5 @@
 import Link from "next/link";
 import {
-  setEventPublicCheckoutAction,
   setTicketAssertionsAction,
   syncCalendarEventAction,
   validateAndSyncCalendarAction,
@@ -15,6 +14,7 @@ import {
 } from "@/components/ConsoleTable";
 import { ConsoleFormPendingNote } from "@/components/ConsoleFormPendingNote";
 import { LocalDateTime } from "@/components/LocalDateTime";
+import { StatusBadge } from "@/components/StatusBadge";
 import { ConsoleSubmitButton } from "@/components/ConsoleSubmitButton";
 import { ConsoleSwitch } from "@/components/ConsoleSwitch";
 import { formatFiatAmount } from "@/lib/app-state/utils";
@@ -113,10 +113,6 @@ function readSyncNotice(
     ticketsAdded: readIntSearchValue(searchParams.sync_added),
     ticketsRemoved: readIntSearchValue(searchParams.sync_removed),
   };
-}
-
-function pillClassName(tone: TenantEventWorkspaceTone) {
-  return `console-mini-pill console-mini-pill-${tone}`;
 }
 
 function focusLabel(focus: "mirrored" | "upstream") {
@@ -356,27 +352,21 @@ export function TenantEventsWorkspace({
               <p className="subtle-text">{syncNoticeCopy(syncNotice)}</p>
             </div>
             <div className="console-mini-pill-row">
-              <span
-                className={pillClassName(
-                  syncNotice.focus === "upstream" ? "warning" : "info",
-                )}
+              <StatusBadge
+                tone={syncNotice.focus === "upstream" ? "warning" : "info"}
               >
                 {focusLabel(syncNotice.focus)}
-              </span>
+              </StatusBadge>
               {syncNotice.syncStatus ? (
-                <span className={pillClassName("info")}>
-                  {syncNotice.syncStatus}
-                </span>
+                <StatusBadge tone="info">{syncNotice.syncStatus}</StatusBadge>
               ) : null}
-              <span
-                className={pillClassName(
-                  syncNotice.publicCheckoutEnabled ? "success" : "muted",
-                )}
+              <StatusBadge
+                tone={syncNotice.publicCheckoutEnabled ? "success" : "muted"}
               >
                 {syncNotice.publicCheckoutEnabled
                   ? "Public checkout enabled"
                   : "Public checkout hidden"}
-              </span>
+              </StatusBadge>
             </div>
           </div>
 
@@ -617,14 +607,14 @@ export function TenantEventsWorkspace({
                         </span>
                       </ConsoleTableCell>
                       <ConsoleTableCell className="tenant-events-cell-source">
-                        <span className={pillClassName(sourceTone(row))}>
+                        <StatusBadge tone={sourceTone(row)}>
                           {sourceLabel(row)}
-                        </span>
+                        </StatusBadge>
                       </ConsoleTableCell>
                       <ConsoleTableCell className="tenant-events-cell-checkout">
-                        <span className={pillClassName(row.public_status_tone)}>
+                        <StatusBadge tone={row.public_status_tone}>
                           {row.public_status_label}
-                        </span>
+                        </StatusBadge>
                       </ConsoleTableCell>
                       <ConsoleTableCell className="tenant-events-cell-tickets">
                         {row.source === "mirrored" ? (
@@ -689,19 +679,15 @@ export function TenantEventsWorkspace({
                 )}
                 <div className="tenant-event-copy tenant-events-detail-copy">
                   <div className="console-mini-pill-row tenant-events-detail-pills">
-                    <span className={pillClassName(sourceTone(selectedRow))}>
+                    <StatusBadge tone={sourceTone(selectedRow)}>
                       {sourceLabel(selectedRow)}
-                    </span>
-                    <span
-                      className={pillClassName(selectedRow.public_status_tone)}
-                    >
+                    </StatusBadge>
+                    <StatusBadge tone={selectedRow.public_status_tone}>
                       {selectedRow.public_status_label}
-                    </span>
-                    <span
-                      className={pillClassName(selectedRow.sync_status_tone)}
-                    >
+                    </StatusBadge>
+                    <StatusBadge tone={selectedRow.sync_status_tone}>
                       {selectedRow.sync_status_label}
-                    </span>
+                    </StatusBadge>
                   </div>
                   <h3>{selectedRow.event_name}</h3>
                   <p className="subtle-text">
@@ -856,70 +842,6 @@ export function TenantEventsWorkspace({
                 </form>
               </div>
 
-              {selectedRow.source === "mirrored" &&
-              selectedRow.mirrored_event ? (
-                <section className="tenant-events-publish-section">
-                  <div className="console-section-header">
-                    <div>
-                      <h2>Event visibility</h2>
-                      <p className="subtle-text">
-                        Decide whether this event should appear on public
-                        checkout at all. At least one ticket also needs to be
-                        allowed for the event to go live.
-                      </p>
-                    </div>
-                  </div>
-
-                  <form
-                    action={setEventPublicCheckoutAction}
-                    className="tenant-event-publish-form"
-                  >
-                    <input
-                      name="calendar_connection_id"
-                      type="hidden"
-                      value={selectedRow.calendar.calendar_connection_id}
-                    />
-                    <input
-                      name="tenant_slug"
-                      type="hidden"
-                      value={detail.tenant.slug}
-                    />
-                    <input
-                      name="event_api_id"
-                      type="hidden"
-                      value={selectedRow.event_id}
-                    />
-                    <input
-                      name="redirect_to"
-                      type="hidden"
-                      value={selectedHref}
-                    />
-                    <input
-                      name="public_checkout_requested_present"
-                      type="hidden"
-                      value="1"
-                    />
-
-                    <ConsoleSwitch
-                      className="tenant-ticket-review-check"
-                      defaultChecked={
-                        selectedRow.mirrored_event.public_checkout_requested
-                      }
-                      label="Allow this event on public checkout"
-                      name="public_checkout_requested"
-                      pendingLabel="Saving event visibility..."
-                      submitOnChange
-                    />
-
-                    <p className="subtle-text">
-                      {selectedRow.mirrored_event.public_checkout_requested
-                        ? "This event can go live once at least one ticket is also allowed on public checkout."
-                        : "This event will stay hidden even if tickets are individually allowed."}
-                    </p>
-                  </form>
-                </section>
-              ) : null}
-
               {selectedRow.source === "upstream" ? (
                 <div className="console-preview-empty">
                   <strong>Import to start ticket review</strong>
@@ -936,8 +858,10 @@ export function TenantEventsWorkspace({
                       <h2>Ticket review</h2>
                       <p className="subtle-text">
                         Choose which mirrored tickets should appear on public
-                        checkout. Your signup disclosures already cover the
-                        supported checkout restrictions.
+                        checkout. As soon as at least one ticket is allowed, the
+                        event itself becomes public automatically. Your signup
+                        disclosures already cover the supported checkout
+                        restrictions.
                       </p>
                     </div>
                   </div>
@@ -977,13 +901,9 @@ export function TenantEventsWorkspace({
                         <ConsoleTableCell>
                           {ticketReviewLabel(ticket) ? (
                             <div className="console-mini-pill-row console-ticket-review-pills">
-                              <span
-                                className={pillClassName(
-                                  ticketReviewTone(ticket),
-                                )}
-                              >
+                              <StatusBadge tone={ticketReviewTone(ticket)}>
                                 {ticketReviewLabel(ticket)}
-                              </span>
+                              </StatusBadge>
                             </div>
                           ) : null}
                           <p className="subtle-text console-table-note">

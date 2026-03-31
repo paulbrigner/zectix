@@ -703,7 +703,7 @@ describe("syncCalendarEventForOps", () => {
 });
 
 describe("setEventPublicCheckoutRequested", () => {
-  it("keeps an event hidden when public checkout is turned off", async () => {
+  it("does not override ticket-driven visibility when tickets are already enabled", async () => {
     const event = makeEventMirror({
       calendar_connection_id: "calendar_123",
       event_api_id: "event_123",
@@ -729,9 +729,9 @@ describe("setEventPublicCheckoutRequested", () => {
     expect(mockPutEventMirror).toHaveBeenCalledWith(
       expect.objectContaining({
         event_api_id: event.event_api_id,
-        public_checkout_requested: false,
-        zcash_enabled: false,
-        zcash_enabled_reason: "Public checkout is turned off for this event.",
+        public_checkout_requested: true,
+        zcash_enabled: true,
+        zcash_enabled_reason: "At least one ticket is enabled for Zcash checkout.",
       }),
     );
   });
@@ -786,8 +786,9 @@ describe("setTicketOperatorAssertions", () => {
     expect(mockPutEventMirror).toHaveBeenCalledWith(
       expect.objectContaining({
         event_api_id: event.event_api_id,
+        public_checkout_requested: false,
         zcash_enabled: false,
-        zcash_enabled_reason: "No tickets are currently enabled for public Zcash checkout.",
+        zcash_enabled_reason: "Turn on public checkout for at least one ticket.",
       }),
     );
   });

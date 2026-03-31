@@ -15,11 +15,9 @@ export type TenantOnboardingChecklistItem = {
   stepId:
     | "draft_organizer_created"
     | "connect_luma_calendar"
-    | "validate_sync_luma"
     | "attach_cipherpay"
-    | "validate_cipherpay"
-    | "activate_public_checkout"
-    | "publish_event_and_ticket";
+    | "publish_event_and_ticket"
+    | "activate_public_checkout";
 };
 
 export type TenantEventWorkspaceFilter =
@@ -117,10 +115,6 @@ function primaryBlockerForMirroredEvent(
     return "No ticket tiers mirrored";
   }
 
-  if (!event.public_checkout_requested) {
-    return event.zcash_enabled_reason || "Public checkout is turned off for this event.";
-  }
-
   if (needsAttentionCount > 0) {
     return `${needsAttentionCount} ticket${needsAttentionCount === 1 ? "" : "s"} need review`;
   }
@@ -196,14 +190,10 @@ export function summarizeCalendarInventory(
 export function buildOnboardingChecklist(
   detail: TenantOpsDetail,
 ): TenantOnboardingChecklistItem[] {
-  const hasCalendar = detail.calendars.length > 0;
-  const hasValidatedCalendar = detail.calendars.some(
+  const hasConnectedAndSyncedCalendar = detail.calendars.some(
     (calendar) => calendar.status === "active" && Boolean(calendar.last_validated_at),
   );
   const hasCipherPayConnection = detail.cipherpay_connections.length > 0;
-  const hasValidatedCipherPay = detail.cipherpay_connections.some(
-    (connection) => connection.status === "active",
-  );
   const livePublicEvents = detail.events
     .flatMap((entry) => entry.events)
     .filter((event) => {
@@ -233,19 +223,11 @@ export function buildOnboardingChecklist(
     },
     {
       stepId: "connect_luma_calendar",
-      label: "Connect at least one Luma calendar",
-      complete: hasCalendar,
-      description: hasCalendar
-        ? `${detail.calendars.length} calendar connection${detail.calendars.length === 1 ? "" : "s"} configured`
-        : "Add a calendar connection to start mirroring inventory.",
-    },
-    {
-      stepId: "validate_sync_luma",
-      label: "Validate and sync Luma",
-      complete: hasValidatedCalendar,
-      description: hasValidatedCalendar
-        ? "At least one calendar was validated and mirrored."
-        : "Run Connect and sync once the Luma key is saved.",
+      label: "Connect and sync at least one Luma calendar",
+      complete: hasConnectedAndSyncedCalendar,
+      description: hasConnectedAndSyncedCalendar
+        ? "At least one calendar is connected, validated, and mirrored."
+        : "Save a Luma calendar and run Connect and sync once.",
     },
     {
       stepId: "attach_cipherpay",
@@ -256,12 +238,13 @@ export function buildOnboardingChecklist(
         : "Save a CipherPay account for the calendar you want to use for checkout.",
     },
     {
-      stepId: "validate_cipherpay",
-      label: "Validate CipherPay",
-      complete: hasValidatedCipherPay,
-      description: hasValidatedCipherPay
-        ? "At least one CipherPay configuration is marked active."
-        : "Save a CipherPay connection to validate it automatically for organizer checkout.",
+      stepId: "publish_event_and_ticket",
+      label: "Publish at least one event and ticket",
+      complete: livePublicEvents.length > 0,
+      description:
+        livePublicEvents.length > 0
+          ? `${livePublicEvents.length} public event${livePublicEvents.length === 1 ? "" : "s"} live with ${livePublicTicketCount} ticket${livePublicTicketCount === 1 ? "" : "s"} available`
+          : "Turn on public checkout for at least one ticket in an upcoming event. The event will publish automatically.",
     },
     {
       stepId: "activate_public_checkout",
@@ -270,16 +253,7 @@ export function buildOnboardingChecklist(
       description:
         detail.tenant.status === "active"
           ? "Public calendar routes can resolve for active calendars."
-          : "A draft organization stays dark publicly until it is activated.",
-    },
-    {
-      stepId: "publish_event_and_ticket",
-      label: "Publish at least one event and ticket",
-      complete: livePublicEvents.length > 0,
-      description:
-        livePublicEvents.length > 0
-          ? `${livePublicEvents.length} public event${livePublicEvents.length === 1 ? "" : "s"} live with ${livePublicTicketCount} ticket${livePublicTicketCount === 1 ? "" : "s"} available`
-          : "Turn on public checkout for at least one upcoming event and one ticket in the Events workspace.",
+          : "Activate the organizer once your first event and ticket are ready to go live.",
     },
   ];
 }
@@ -405,11 +379,7 @@ function eventNeedsAttention(row: TenantEventWorkspaceRow) {
     return true;
   }
 
-  if (!row.mirrored_event?.public_checkout_requested) {
-    return false;
-  }
-
-  return row.needs_attention_count > 0 || row.public_status_label !== "Live";
+  return row.needs_attention_count > 0;
 }
 
 export function buildTenantEventWorkspaceRows(

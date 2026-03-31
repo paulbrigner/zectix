@@ -4,7 +4,9 @@ import {
 } from "@/app/dashboard/actions";
 import { ConsoleDisclosure } from "@/components/ConsoleDisclosure";
 import { ConsoleFieldLabel } from "@/components/ConsoleFieldLabel";
+import { ConsoleForm } from "@/components/ConsoleForm";
 import { ConsoleFormPendingNote } from "@/components/ConsoleFormPendingNote";
+import { ConsoleSection } from "@/components/ConsoleSection";
 import { ConsoleSubmitButton } from "@/components/ConsoleSubmitButton";
 import type { TenantOpsDetail } from "@/lib/tenancy/service";
 
@@ -64,20 +66,13 @@ export function TenantConnectionsCipherPayTab({
 
   return (
     <div className="console-content">
-      <section
-        className="console-section console-anchor-target"
+      <ConsoleSection
+        className="console-anchor-target"
+        description="Each calendar uses one live CipherPay account for checkout. Saving a new connection for a calendar replaces that calendar's current live checkout connection."
         id="connect-cipherpay"
+        title="CipherPay checkout"
+        titleAs="h3"
       >
-        <div className="console-section-header">
-          <div>
-            <h3>CipherPay checkout</h3>
-            <p className="subtle-text">
-              Each calendar uses one live CipherPay account for checkout. Saving
-              a new connection for a calendar replaces that calendar&apos;s
-              current live checkout connection.
-            </p>
-          </div>
-        </div>
 
         <ConsoleDisclosure
           defaultOpen={
@@ -86,10 +81,7 @@ export function TenantConnectionsCipherPayTab({
           description="Leave the base URLs blank unless your organization uses custom CipherPay endpoints."
           title="Add or replace a checkout connection"
         >
-          <form
-            action={createCipherPayConnectionAction}
-            className="console-content"
-          >
+          <ConsoleForm action={createCipherPayConnectionAction}>
             <input
               name="tenant_slug"
               type="hidden"
@@ -193,7 +185,7 @@ export function TenantConnectionsCipherPayTab({
               />
             </div>
             <ConsoleFormPendingNote pendingLabel="Saving and validating your CipherPay connection..." />
-          </form>
+          </ConsoleForm>
         </ConsoleDisclosure>
 
         {!currentCipherPayConnections.length ? (
@@ -231,7 +223,7 @@ export function TenantConnectionsCipherPayTab({
                     {previews?.webhook.preview || "missing"}
                   </p>
                   {connection.status !== "active" ? (
-                    <form action={validateCipherPayConnectionAction}>
+                    <ConsoleForm action={validateCipherPayConnectionAction}>
                       <input
                         name="cipherpay_connection_id"
                         type="hidden"
@@ -255,7 +247,7 @@ export function TenantConnectionsCipherPayTab({
                         />
                       </div>
                       <ConsoleFormPendingNote pendingLabel="Validating this CipherPay connection..." />
-                    </form>
+                    </ConsoleForm>
                   ) : null}
                 </article>
               ),
@@ -295,7 +287,7 @@ export function TenantConnectionsCipherPayTab({
             </div>
           </ConsoleDisclosure>
         ) : null}
-      </section>
+      </ConsoleSection>
     </div>
   );
 }

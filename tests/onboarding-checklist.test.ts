@@ -76,12 +76,10 @@ describe("buildOnboardingChecklist", () => {
       false,
       false,
       false,
-      false,
-      false,
     ]);
   });
 
-  it("marks the connect calendar step complete once any calendar exists", () => {
+  it("requires a connected and synced calendar for the Luma step", () => {
     const checklist = buildOnboardingChecklist(
       makeDetail({
         tenant: makeTenant({
@@ -99,13 +97,10 @@ describe("buildOnboardingChecklist", () => {
 
     expect(
       checklist.find((item) => item.stepId === "connect_luma_calendar")?.complete,
-    ).toBe(true);
-    expect(
-      checklist.find((item) => item.stepId === "validate_sync_luma")?.complete,
     ).toBe(false);
   });
 
-  it("requires an active, validated calendar for the sync validation step", () => {
+  it("marks the Luma step complete once a calendar is connected and synced", () => {
     const checklist = buildOnboardingChecklist(
       makeDetail({
         calendars: [
@@ -118,12 +113,12 @@ describe("buildOnboardingChecklist", () => {
     );
 
     expect(
-      checklist.find((item) => item.stepId === "validate_sync_luma")?.complete,
+      checklist.find((item) => item.stepId === "connect_luma_calendar")?.complete,
     ).toBe(true);
   });
 
-  it("tracks CipherPay attachment and validation separately", () => {
-    const attachedOnly = buildOnboardingChecklist(
+  it("treats saving a CipherPay connection as the full checkout-account step", () => {
+    const checklist = buildOnboardingChecklist(
       makeDetail({
         cipherpayConnections: [
           makeCipherPayConnection({
@@ -135,24 +130,7 @@ describe("buildOnboardingChecklist", () => {
     );
 
     expect(
-      attachedOnly.find((item) => item.stepId === "attach_cipherpay")?.complete,
-    ).toBe(true);
-    expect(
-      attachedOnly.find((item) => item.stepId === "validate_cipherpay")?.complete,
-    ).toBe(false);
-
-    const validated = buildOnboardingChecklist(
-      makeDetail({
-        cipherpayConnections: [
-          makeCipherPayConnection({
-            status: "active",
-          }),
-        ],
-      }),
-    );
-
-    expect(
-      validated.find((item) => item.stepId === "validate_cipherpay")?.complete,
+      checklist.find((item) => item.stepId === "attach_cipherpay")?.complete,
     ).toBe(true);
   });
 
@@ -229,6 +207,18 @@ describe("buildOnboardingChecklist", () => {
 
     expect(publishStep?.complete).toBe(true);
     expect(publishStep?.description).toContain("1 public event live with 1 ticket available");
+  });
+
+  it("places publishing before public checkout activation", () => {
+    const checklist = buildOnboardingChecklist(makeDetail());
+
+    expect(checklist.map((item) => item.stepId)).toEqual([
+      "draft_organizer_created",
+      "connect_luma_calendar",
+      "attach_cipherpay",
+      "publish_event_and_ticket",
+      "activate_public_checkout",
+    ]);
   });
 
   it("ignores past public events when deciding whether publishing is complete", () => {

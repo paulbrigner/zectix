@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ConsoleSection } from "@/components/ConsoleSection";
 import type { TenantOpsDetail } from "@/lib/tenancy/service";
 import { buildOnboardingChecklist } from "@/lib/tenant-self-serve";
 import { TenantConnectionsCipherPayTab } from "@/components/TenantConnectionsCipherPayTab";
@@ -84,16 +85,10 @@ export function TenantConnectionsWorkspace({
 
   return (
     <div className="console-page-body">
-      <section className="console-section">
-        <div className="console-section-header">
-          <div>
-            <h2>Connections</h2>
-            <p className="subtle-text">
-              Complete setup and manage your Luma and CipherPay connections
-              without mixing onboarding steps with everyday event review.
-            </p>
-          </div>
-        </div>
+      <ConsoleSection
+        description="Complete setup and manage your Luma and CipherPay connections without mixing onboarding steps with everyday event review."
+        title="Connections"
+      >
 
         <nav
           aria-label="Connections sections"
@@ -143,7 +138,7 @@ export function TenantConnectionsWorkspace({
             />
           ) : null}
         </div>
-      </section>
+      </ConsoleSection>
     </div>
   );
 }

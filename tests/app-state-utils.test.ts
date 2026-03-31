@@ -90,11 +90,11 @@ describe("app-state utilities", () => {
     expect(hiddenTicket.zcash_enabled_reason).toMatch(/turned off/i);
 
     const hiddenEvent = evaluateEventCheckoutState({
-      enabled_ticket_count: 2,
-      public_checkout_requested: false,
+      enabled_ticket_count: 0,
+      requested_ticket_count: 0,
       sync_status: "active",
     });
     expect(hiddenEvent.zcash_enabled).toBe(false);
-    expect(hiddenEvent.zcash_enabled_reason).toMatch(/turned off/i);
+    expect(hiddenEvent.zcash_enabled_reason).toMatch(/at least one ticket/i);
   });
 });

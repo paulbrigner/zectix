@@ -1,16 +1,16 @@
 import { LocalDateTime } from "@/components/LocalDateTime";
 import { ConsoleDisclosure } from "@/components/ConsoleDisclosure";
+import { ConsoleSection } from "@/components/ConsoleSection";
+import { StatusBadge, type StatusBadgeTone } from "@/components/StatusBadge";
 import type { BillingAdjustment, BillingCycle } from "@/lib/app-state/types";
 import { formatZecAmount } from "@/lib/app-state/utils";
 import type { TenantOpsDetail } from "@/lib/tenancy/service";
-
-type BillingTone = "success" | "warning" | "danger" | "info" | "muted";
 
 function humanizeBillingLabel(value: string) {
   return value.replaceAll("_", " ");
 }
 
-function billingTone(value: string): BillingTone {
+function billingTone(value: string): StatusBadgeTone {
   switch (value) {
     case "active":
     case "paid":
@@ -27,10 +27,6 @@ function billingTone(value: string): BillingTone {
     default:
       return "muted";
   }
-}
-
-function pillClassName(tone: BillingTone) {
-  return `console-mini-pill console-mini-pill-${tone}`;
 }
 
 function settlementSummary(cycle: BillingCycle | null) {
@@ -107,9 +103,11 @@ function renderAdjustmentList(adjustments: BillingAdjustment[]) {
               <p className="console-kpi-label">{adjustment.type}</p>
               <strong>{formatZecAmount(adjustment.amount_zatoshis)}</strong>
             </div>
-            <span className={pillClassName(adjustment.type === "credit" ? "info" : "warning")}>
+            <StatusBadge
+              tone={adjustment.type === "credit" ? "info" : "warning"}
+            >
               {humanizeBillingLabel(adjustment.type)}
-            </span>
+            </StatusBadge>
           </div>
           <p className="subtle-text">{adjustment.reason}</p>
           <p className="subtle-text">
@@ -142,15 +140,10 @@ export function TenantBillingWorkspace({
 
   return (
     <div className="console-page-body">
-      <section className="console-section">
-        <div className="console-section-header">
-          <div>
-            <h2>Billing</h2>
-            <p className="subtle-text">
-              ZEC-native platform fees accrue when a paid registration is recognized in Luma. Billing cycles stay separate from public checkout visibility and settlement is still operator-managed.
-            </p>
-          </div>
-        </div>
+      <ConsoleSection
+        description="ZEC-native platform fees accrue when a paid registration is recognized in Luma. Billing cycles stay separate from public checkout visibility and settlement is still operator-managed."
+        title="Billing"
+      >
 
         <div className="billing-summary-grid">
           <article className="console-detail-card billing-summary-card billing-summary-card-accent">
@@ -163,12 +156,14 @@ export function TenantBillingWorkspace({
               )}
             </p>
             <div className="console-mini-pill-row">
-              <span className={pillClassName(billingTone(detail.tenant.billing_status))}>
+              <StatusBadge tone={billingTone(detail.tenant.billing_status)}>
                 {humanizeBillingLabel(detail.tenant.billing_status)}
-              </span>
-              <span className={pillClassName(currentOutstanding > 0 ? "warning" : "success")}>
+              </StatusBadge>
+              <StatusBadge
+                tone={currentOutstanding > 0 ? "warning" : "success"}
+              >
                 threshold {formatZecAmount(detail.tenant.settlement_threshold_zatoshis)}
-              </span>
+              </StatusBadge>
             </div>
           </article>
 
@@ -186,9 +181,9 @@ export function TenantBillingWorkspace({
               )}
             </p>
             {currentCycle ? (
-              <span className={pillClassName(billingTone(currentCycle.status))}>
+              <StatusBadge tone={billingTone(currentCycle.status)}>
                 {humanizeBillingLabel(currentCycle.status)}
-              </span>
+              </StatusBadge>
             ) : null}
           </article>
 
@@ -200,17 +195,12 @@ export function TenantBillingWorkspace({
             </p>
           </article>
         </div>
-      </section>
+      </ConsoleSection>
 
-      <section className="console-section">
-        <div className="console-section-header">
-          <div>
-            <h2>Current cycle</h2>
-            <p className="subtle-text">
-              A quick view of the live cycle, including balance breakdown, settlement notes, and manual adjustments.
-            </p>
-          </div>
-        </div>
+      <ConsoleSection
+        description="A quick view of the live cycle, including balance breakdown, settlement notes, and manual adjustments."
+        title="Current cycle"
+      >
 
         {currentCycle ? (
           <>
@@ -325,17 +315,12 @@ export function TenantBillingWorkspace({
             </p>
           </div>
         )}
-      </section>
+      </ConsoleSection>
 
-      <section className="console-section">
-        <div className="console-section-header">
-          <div>
-            <h2>Cycle history</h2>
-            <p className="subtle-text">
-              Previous cycles stay collapsed until you need their settlement references, adjustments, or period details.
-            </p>
-          </div>
-        </div>
+      <ConsoleSection
+        description="Previous cycles stay collapsed until you need their settlement references, adjustments, or period details."
+        title="Cycle history"
+      >
 
         {!historyCycles.length ? (
           <div className="console-preview-empty">
@@ -427,7 +412,7 @@ export function TenantBillingWorkspace({
             })}
           </div>
         )}
-      </section>
+      </ConsoleSection>
     </div>
   );
 }
