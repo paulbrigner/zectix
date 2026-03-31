@@ -184,13 +184,6 @@ export function TenantSettingsWorkspace({
             ) : (
               <ConsoleConfirmDialog
                 action={deleteTenantAccountAction}
-                body={
-                  <p className="subtle-text">
-                    This permanently deletes the organizer account, mirrored events,
-                    checkout sessions, billing history, and active webhook access for{" "}
-                    {detail.tenant.name}.
-                  </p>
-                }
                 confirmLabel="Delete account"
                 description="This permanently deletes the account and all associated organizer data."
                 title={`Delete ${detail.tenant.name}?`}
