@@ -6,6 +6,9 @@ describe("http helpers", () => {
     const response = jsonOk({ ok: true });
 
     expect(response.status).toBe(200);
+    expect(response.headers.get("cache-control")).toBe(
+      "private, no-store, max-age=0, must-revalidate",
+    );
     await expect(response.json()).resolves.toEqual({ ok: true });
   });
 
@@ -13,6 +16,9 @@ describe("http helpers", () => {
     const response = jsonError("Forbidden", 403);
 
     expect(response.status).toBe(403);
+    expect(response.headers.get("cache-control")).toBe(
+      "private, no-store, max-age=0, must-revalidate",
+    );
     await expect(response.json()).resolves.toEqual({ error: "Forbidden" });
   });
 
@@ -21,6 +27,23 @@ describe("http helpers", () => {
 
     expect(response.status).toBe(303);
     expect(response.headers.get("location")).toBe("/ops/login?error=invalid_password");
+    expect(response.headers.get("cache-control")).toBe(
+      "private, no-store, max-age=0, must-revalidate",
+    );
+  });
+
+  it("preserves an explicit cache policy when one is provided", async () => {
+    const response = jsonOk(
+      { ok: true },
+      {
+        headers: {
+          "Cache-Control": "public, max-age=60",
+        },
+      },
+    );
+
+    expect(response.headers.get("cache-control")).toBe("public, max-age=60");
+    await expect(response.json()).resolves.toEqual({ ok: true });
   });
 
   it("keeps redirect targets internal and within allowed prefixes", () => {
