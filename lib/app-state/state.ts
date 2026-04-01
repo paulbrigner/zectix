@@ -573,11 +573,6 @@ function normalizeTicketMirror(value: unknown): TicketMirror | null {
     public_checkout_requested: asBoolean(item?.public_checkout_requested, false),
     zcash_enabled: asBoolean(item?.zcash_enabled),
     zcash_enabled_reason: asString(item?.zcash_enabled_reason),
-    confirmed_fixed_price: asBoolean(item?.confirmed_fixed_price),
-    confirmed_no_approval_required: asBoolean(item?.confirmed_no_approval_required),
-    confirmed_no_extra_required_questions: asBoolean(
-      item?.confirmed_no_extra_required_questions,
-    ),
     automatic_eligibility_status:
       item?.automatic_eligibility_status === "eligible" ? "eligible" : "ineligible",
     automatic_eligibility_reasons: Array.isArray(item?.automatic_eligibility_reasons)

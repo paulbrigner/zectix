@@ -114,10 +114,6 @@ function baseTicketMirror(
     active: input.active,
     price_source: input.price_source,
     public_checkout_requested: existing?.public_checkout_requested ?? false,
-    confirmed_fixed_price: existing?.confirmed_fixed_price || false,
-    confirmed_no_approval_required: existing?.confirmed_no_approval_required || false,
-    confirmed_no_extra_required_questions:
-      existing?.confirmed_no_extra_required_questions || false,
     zcash_enabled: existing?.zcash_enabled || false,
     zcash_enabled_reason: existing?.zcash_enabled_reason || null,
     automatic_eligibility_status:

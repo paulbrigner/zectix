@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { isIP } from "node:net";
 import {
   deleteBillingAdjustmentRecord,
   deleteBillingCycleRecord,
@@ -142,6 +143,73 @@ export type EventSyncOutcome =
   | "hidden"
   | "canceled"
   | "missing";
+
+function isPrivateIpAddress(hostname: string) {
+  const version = isIP(hostname);
+  if (version === 4) {
+    const [a = 0, b = 0] = hostname.split(".").map((segment) => Number(segment));
+    return (
+      a === 10 ||
+      a === 127 ||
+      (a === 169 && b === 254) ||
+      (a === 172 && b >= 16 && b <= 31) ||
+      (a === 192 && b === 168)
+    );
+  }
+
+  if (version === 6) {
+    const value = hostname.toLowerCase();
+    return (
+      value === "::1" ||
+      value.startsWith("fc") ||
+      value.startsWith("fd") ||
+      value.startsWith("fe80:")
+    );
+  }
+
+  return false;
+}
+
+function normalizeCipherPayBaseUrl(
+  value: string | null | undefined,
+  fieldLabel: string,
+) {
+  const trimmed = value?.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  let parsed: URL;
+  try {
+    parsed = new URL(trimmed);
+  } catch {
+    throw new Error(`${fieldLabel} must be a valid URL.`);
+  }
+
+  if (parsed.protocol !== "https:") {
+    throw new Error(`${fieldLabel} must use https.`);
+  }
+  if (parsed.username || parsed.password) {
+    throw new Error(`${fieldLabel} cannot include URL credentials.`);
+  }
+  if (parsed.search || parsed.hash) {
+    throw new Error(`${fieldLabel} cannot include query or hash components.`);
+  }
+
+  const hostname = parsed.hostname.toLowerCase();
+  if (
+    hostname === "localhost" ||
+    hostname.endsWith(".localhost") ||
+    hostname.endsWith(".local") ||
+    hostname.endsWith(".internal") ||
+    hostname.endsWith(".internal.") ||
+    isPrivateIpAddress(hostname)
+  ) {
+    throw new Error(`${fieldLabel} must use a public hostname.`);
+  }
+
+  return parsed.origin;
+}
 
 export type FocusedEventSyncReview = {
   tenant_id: string;
@@ -781,6 +849,12 @@ export async function createCipherPayConnection(input: {
 }) {
   const timestamp = nowIso();
   const defaults = cipherPayDefaultsForNetwork(input.network);
+  const apiBaseUrl =
+    normalizeCipherPayBaseUrl(input.api_base_url, "API base URL") ||
+    defaults.apiBaseUrl;
+  const checkoutBaseUrl =
+    normalizeCipherPayBaseUrl(input.checkout_base_url, "Checkout base URL") ||
+    defaults.checkoutBaseUrl;
   const existingConnection = await getCipherPayConnectionByCalendar(
     input.calendar_connection_id,
   );
@@ -803,8 +877,8 @@ export async function createCipherPayConnection(input: {
     ? {
         ...existingConnection,
         network: input.network,
-        api_base_url: input.api_base_url?.trim() || defaults.apiBaseUrl,
-        checkout_base_url: input.checkout_base_url?.trim() || defaults.checkoutBaseUrl,
+        api_base_url: apiBaseUrl,
+        checkout_base_url: checkoutBaseUrl,
         cipherpay_api_secret_ref: apiSecretRef,
         cipherpay_webhook_secret_ref: webhookSecretRef,
         status: "pending_validation",
@@ -817,8 +891,8 @@ export async function createCipherPayConnection(input: {
         tenant_id: input.tenant_id,
         calendar_connection_id: input.calendar_connection_id,
         network: input.network,
-        api_base_url: input.api_base_url?.trim() || defaults.apiBaseUrl,
-        checkout_base_url: input.checkout_base_url?.trim() || defaults.checkoutBaseUrl,
+        api_base_url: apiBaseUrl,
+        checkout_base_url: checkoutBaseUrl,
         cipherpay_api_secret_ref: apiSecretRef,
         cipherpay_webhook_secret_ref: webhookSecretRef,
         status: "pending_validation",
@@ -996,9 +1070,6 @@ export async function updateCalendarEmbedSettings(input: {
 export async function setTicketOperatorAssertions(input: {
   event_api_id: string;
   ticket_type_api_id: string;
-  confirmed_fixed_price: boolean;
-  confirmed_no_approval_required: boolean;
-  confirmed_no_extra_required_questions: boolean;
   public_checkout_requested?: boolean;
 }) {
   const ticket = await getTicketMirror(input.event_api_id, input.ticket_type_api_id);

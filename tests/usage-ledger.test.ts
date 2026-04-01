@@ -34,7 +34,7 @@ vi.mock("@/lib/app-state/state", () => ({
   updateBillingCycle: mockUpdateBillingCycle,
 }));
 
-const { ensureUsageLedgerEntryForSession } = await import(
+const { ensureUsageLedgerEntryForSession, renderBillingReportCsv } = await import(
   "@/lib/billing/usage-ledger"
 );
 
@@ -188,5 +188,30 @@ describe("ensureUsageLedgerEntryForSession", () => {
       }),
     );
     expect(saved.usage_entry_id).toBe(existingEntry.usage_entry_id);
+  });
+});
+
+describe("renderBillingReportCsv", () => {
+  it("neutralizes spreadsheet formulas in tenant-controlled fields", () => {
+    const csv = renderBillingReportCsv([
+      {
+        tenant_id: "tenant_123",
+        tenant_name: "=HYPERLINK(\"http://attacker.example\",\"click\")",
+        billing_cycle_id: "tenant_123:2026-03",
+        billing_period: "2026-03",
+        period_start: "2026-03-01T00:00:00.000Z",
+        period_end: "2026-03-31T23:59:59.999Z",
+        status: "open",
+        session_count: 1,
+        gross_zatoshis: 100_000_000,
+        service_fee_zatoshis: 4_500_000,
+        credited_zatoshis: 0,
+        waived_zatoshis: 0,
+        outstanding_zatoshis: 4_500_000,
+      },
+    ]);
+
+    expect(csv).toContain("'=HYPERLINK");
+    expect(csv).not.toContain(",=HYPERLINK");
   });
 });

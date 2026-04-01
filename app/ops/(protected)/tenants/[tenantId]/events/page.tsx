@@ -836,38 +836,10 @@ export default async function TenantEventsPage({
                           <ConsoleSwitch
                             className="tenant-ticket-review-check"
                             defaultChecked={ticket.public_checkout_requested}
-                            description="Turn this off to keep the ticket hidden even if the review assertions are complete."
+                            description="Turn this off to keep the ticket hidden from public checkout."
                             label="Allow this ticket on public checkout"
                             name="public_checkout_requested"
                           />
-                          <label className="console-checkbox tenant-ticket-review-check">
-                            <input
-                              defaultChecked={ticket.confirmed_fixed_price}
-                              name="confirmed_fixed_price"
-                              type="checkbox"
-                            />
-                            <span>Confirm fixed price</span>
-                          </label>
-                          <label className="console-checkbox tenant-ticket-review-check">
-                            <input
-                              defaultChecked={
-                                ticket.confirmed_no_approval_required
-                              }
-                              name="confirmed_no_approval_required"
-                              type="checkbox"
-                            />
-                            <span>No approval required</span>
-                          </label>
-                          <label className="console-checkbox tenant-ticket-review-check">
-                            <input
-                              defaultChecked={
-                                ticket.confirmed_no_extra_required_questions
-                              }
-                              name="confirmed_no_extra_required_questions"
-                              type="checkbox"
-                            />
-                            <span>No extra required questions</span>
-                          </label>
                         </div>
 
                         <div className="console-ticket-review-actions">
@@ -875,7 +847,7 @@ export default async function TenantEventsPage({
                             className="button button-secondary button-small"
                             type="submit"
                           >
-                            Save assertions
+                            Save ticket settings
                           </button>
                         </div>
                       </form>

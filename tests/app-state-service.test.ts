@@ -109,25 +109,7 @@ beforeEach(() => {
 });
 
 describe("checkout service", () => {
-  it("reuses an active tenant-scoped checkout session", async () => {
-    const existingSession = makeCheckoutSession();
-    mockFindLatestSessionForAttendee.mockResolvedValueOnce(existingSession);
-
-    const result = await createCheckoutSession({
-      attendee_email: "jordan@example.com",
-      attendee_name: "Jordan Lee",
-      calendar_slug: "demo-calendar",
-      event_api_id: "event_123",
-      ticket_type_api_id: "ticket_123",
-    });
-
-    expect(mockCreateCipherPayInvoice).not.toHaveBeenCalled();
-    expect(result.session).toBe(existingSession);
-    expect(result.ticket.ticket_type_api_id).toBe("ticket_123");
-  });
-
   it("creates and persists a fresh checkout session with service fee snapshots", async () => {
-    mockFindLatestSessionForAttendee.mockResolvedValueOnce(null);
     mockCreateCipherPayInvoice.mockResolvedValueOnce({
       invoice: {
         invoice_id: "invoice_123",
