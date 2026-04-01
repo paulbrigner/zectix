@@ -1,28 +1,45 @@
+function withDefaultCacheControl(init?: ResponseInit) {
+  const headers = new Headers(init?.headers);
+  if (!headers.has("Cache-Control")) {
+    headers.set("Cache-Control", "private, no-store, max-age=0, must-revalidate");
+  }
+
+  return {
+    ...init,
+    headers,
+  };
+}
+
 export function jsonOk(data: unknown, init?: ResponseInit) {
+  const responseInit = withDefaultCacheControl(init);
   return Response.json(data, {
     status: 200,
-    ...init,
+    ...responseInit,
   });
 }
 
 export function jsonError(message: string, status = 400, init?: ResponseInit) {
+  const responseInit = withDefaultCacheControl(init);
   return Response.json(
     {
       error: message,
     },
     {
       status,
-      ...init,
+      ...responseInit,
     },
   );
 }
 
 export function redirectToPath(path: string, status: 301 | 302 | 303 | 307 | 308 = 303) {
-  return new Response(null, {
-    status,
+  const responseInit = withDefaultCacheControl({
     headers: {
       Location: path,
     },
+  });
+  return new Response(null, {
+    status,
+    headers: responseInit.headers,
   });
 }
 
