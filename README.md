@@ -1,8 +1,8 @@
 # ZecTix
 
-ZecTix is a Next.js 15 managed-service fork for Luma event hosts who want to accept Zcash through CipherPay without custody.
+ZecTix is a Next.js 15 managed service for Luma event hosts who want to accept Zcash through CipherPay without custody.
 
-This fork is multi-tenant and operator-led, with a tenant self-serve dashboard layered on top of the same mirrored inventory and checkout services:
+The app is multi-tenant and operator-led, with a tenant self-serve dashboard layered on top of mirrored inventory and checkout services:
 
 - each organizer gets a `Tenant`
 - each connected Luma calendar is a billable `CalendarConnection`
@@ -16,12 +16,21 @@ The repository is designed to run in two environments:
 - local development with DynamoDB Local and the local secret store
 - AWS deployment with DynamoDB and AWS Secrets Manager
 
+## Disclaimer
+
+This codebase was generated and iterated with Codex GPT-5.4 and later hardened with additional testing, operational safeguards, and deployment controls.
+
+It has not undergone a formal third-party security audit or professional review.
+
+If you plan to use it in production, you should still perform your own engineering, security, and operational review. Use at your own risk.
+
 ## Stack
 
 - Next.js 15 App Router
 - React 19
 - TypeScript
 - Tailwind CSS 4
+- Custom components with Radix UI primitives
 - AWS SDK v3 for DynamoDB and Secrets Manager
 - Luma API
 - CipherPay API and webhooks
@@ -95,15 +104,6 @@ The backend is selected with `SECRET_STORE_BACKEND`.
 Local development stores secret values on disk in a JSON file under `.zectix-local/`.
 
 Production stores only secret references in DynamoDB and resolves the actual values from AWS Secrets Manager.
-
-## Eligibility Model
-
-Only tickets that pass both layers are eligible for public Zcash checkout:
-
-- automatic checks: active, fixed-price, supported currency
-- operator assertions: no approval required, no extra mandatory registration questions, fixed price confirmed
-
-If a ticket does not pass both layers, it stays out of public checkout.
 
 ## Local Development
 
@@ -254,3 +254,12 @@ npm run typecheck
 ## Related Docs
 
 - [`RUNBOOK.md`](./RUNBOOK.md)
+
+## License
+
+All code in this workspace is licensed under either of:
+
+- Apache License, Version 2.0 (see `LICENSE-APACHE` or <http://www.apache.org/licenses/LICENSE-2.0>)
+- MIT license (see `LICENSE-MIT` or <http://opensource.org/licenses/MIT>)
+
+at your option.
