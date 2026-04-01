@@ -889,6 +889,40 @@ describe("createCipherPayConnection", () => {
     expect(result.cipherpay_api_secret_ref).toBe("secret://api-existing");
     expect(result.cipherpay_webhook_secret_ref).toBe("secret://webhook-existing");
   });
+
+  it("rejects private api base URLs", async () => {
+    await expect(
+      createCipherPayConnection({
+        tenant_id: "tenant_123",
+        calendar_connection_id: "calendar_123",
+        network: "testnet",
+        api_base_url: "https://169.254.169.254",
+        checkout_base_url: "",
+        cipherpay_api_key: "cpay_sk_new",
+        cipherpay_webhook_secret: "whsec_new",
+      }),
+    ).rejects.toThrow("API base URL must use a public hostname.");
+  });
+
+  it("normalizes valid custom base URLs to origins", async () => {
+    mockGetCipherPayConnectionByCalendar.mockResolvedValue(null);
+    mockSetSecret
+      .mockResolvedValueOnce("secret://api-new")
+      .mockResolvedValueOnce("secret://webhook-new");
+
+    const result = await createCipherPayConnection({
+      tenant_id: "tenant_123",
+      calendar_connection_id: "calendar_123",
+      network: "testnet",
+      api_base_url: "https://cipherpay.example.com/custom/path",
+      checkout_base_url: "https://checkout.example.com/pay",
+      cipherpay_api_key: "cpay_sk_new",
+      cipherpay_webhook_secret: "whsec_new",
+    });
+
+    expect(result.api_base_url).toBe("https://cipherpay.example.com");
+    expect(result.checkout_base_url).toBe("https://checkout.example.com");
+  });
 });
 
 describe("validateCipherPayConnection", () => {
@@ -1130,7 +1164,6 @@ describe("setTicketOperatorAssertions", () => {
       event_api_id: "event_123",
       ticket_type_api_id: "ticket_123",
       public_checkout_requested: true,
-      confirmed_fixed_price: false,
       zcash_enabled: false,
     });
     const event = makeEventMirror({
@@ -1142,9 +1175,6 @@ describe("setTicketOperatorAssertions", () => {
     const nextTicket = {
       ...ticket,
       public_checkout_requested: false,
-      confirmed_fixed_price: true,
-      confirmed_no_approval_required: true,
-      confirmed_no_extra_required_questions: true,
       zcash_enabled: false,
       zcash_enabled_reason: "Public checkout is turned off for this ticket.",
     };
@@ -1156,9 +1186,6 @@ describe("setTicketOperatorAssertions", () => {
     await setTicketOperatorAssertions({
       event_api_id: ticket.event_api_id,
       ticket_type_api_id: ticket.ticket_type_api_id,
-      confirmed_fixed_price: true,
-      confirmed_no_approval_required: true,
-      confirmed_no_extra_required_questions: true,
       public_checkout_requested: false,
     });
 

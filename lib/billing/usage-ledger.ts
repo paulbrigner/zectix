@@ -350,11 +350,16 @@ export async function getBillingReportRows(billingPeriod: string) {
 
 function csvEscape(value: string | number) {
   const text = String(value);
-  if (!text.includes(",") && !text.includes("\"") && !text.includes("\n")) {
-    return text;
+  const formulaSafeText = /^[=+\-@]/.test(text) ? `'${text}` : text;
+  if (
+    !formulaSafeText.includes(",") &&
+    !formulaSafeText.includes("\"") &&
+    !formulaSafeText.includes("\n")
+  ) {
+    return formulaSafeText;
   }
 
-  return `"${text.replaceAll("\"", "\"\"")}"`;
+  return `"${formulaSafeText.replaceAll("\"", "\"\"")}"`;
 }
 
 export function renderBillingReportCsv(rows: BillingReportRow[]) {

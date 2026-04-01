@@ -6,9 +6,6 @@ type TicketEligibilityInput = Pick<
   | "active"
   | "currency"
   | "amount"
-  | "confirmed_fixed_price"
-  | "confirmed_no_approval_required"
-  | "confirmed_no_extra_required_questions"
   | "public_checkout_requested"
 >;
 
@@ -36,26 +33,7 @@ export function evaluateTicketEligibility(
   }
 
   const automaticEligible = automaticReasons.length === 0;
-  const operatorEligible =
-    ticket.confirmed_fixed_price &&
-    ticket.confirmed_no_approval_required &&
-    ticket.confirmed_no_extra_required_questions;
-
-  if (!ticket.confirmed_fixed_price) {
-    automaticReasons.push("Operator has not confirmed the ticket is fixed-price.");
-  }
-
-  if (!ticket.confirmed_no_approval_required) {
-    automaticReasons.push("Operator has not confirmed the ticket bypasses approval.");
-  }
-
-  if (!ticket.confirmed_no_extra_required_questions) {
-    automaticReasons.push(
-      "Operator has not confirmed the registration flow avoids extra required questions.",
-    );
-  }
-
-  const zcashEnabled = automaticEligible && operatorEligible;
+  const zcashEnabled = automaticEligible;
   const requestedForPublicCheckout = ticket.public_checkout_requested;
 
   return {
@@ -66,6 +44,6 @@ export function evaluateTicketEligibility(
       ? "Public checkout is turned off for this ticket."
       : zcashEnabled
         ? "Enabled for public Zcash checkout."
-        : automaticReasons[0] || "Ticket still needs operator confirmation.",
+        : automaticReasons[0] || "Ticket is not eligible for public Zcash checkout.",
   };
 }

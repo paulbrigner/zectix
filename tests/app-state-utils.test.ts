@@ -62,7 +62,7 @@ describe("app-state utilities", () => {
     ).toBe("pending");
   });
 
-  it("computes service fees and ticket eligibility with operator assertions", () => {
+  it("computes service fees and automatic ticket eligibility", () => {
     expect(calculateServiceFeeZatoshis(zecToZatoshis(25), 450)).toBe(112_500_000);
 
     vi.stubEnv("SUPPORTED_TICKET_CURRENCIES", "USD,EUR");
@@ -73,11 +73,11 @@ describe("app-state utilities", () => {
 
     const ineligible = evaluateTicketEligibility(
       makeTicketMirror({
-        confirmed_no_approval_required: false,
+        active: false,
       }),
     );
     expect(ineligible.zcash_enabled).toBe(false);
-    expect(ineligible.automatic_eligibility_reasons.join(" ")).toMatch(/approval/i);
+    expect(ineligible.automatic_eligibility_reasons.join(" ")).toMatch(/not active/i);
   });
 
   it("supports intentional hide overrides for tickets and events", () => {

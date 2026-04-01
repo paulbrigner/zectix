@@ -362,11 +362,7 @@ export function ticketNeedsAttention(ticket: TicketMirror) {
     return true;
   }
 
-  return (
-    !ticket.confirmed_fixed_price ||
-    !ticket.confirmed_no_approval_required ||
-    !ticket.confirmed_no_extra_required_questions
-  );
+  return false;
 }
 
 export function upcomingEnabledEvents(events: EventMirror[]) {

@@ -935,9 +935,6 @@ export async function setTicketAssertionsAction(formData: FormData) {
       setTicketOperatorAssertions({
         event_api_id: eventApiId,
         ticket_type_api_id: ticketTypeApiId,
-        confirmed_fixed_price: true,
-        confirmed_no_approval_required: true,
-        confirmed_no_extra_required_questions: true,
         public_checkout_requested: publicCheckoutRequested,
       }),
     sessionEmail,

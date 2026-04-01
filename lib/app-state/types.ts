@@ -156,9 +156,6 @@ export type TicketMirror = {
   public_checkout_requested: boolean;
   zcash_enabled: boolean;
   zcash_enabled_reason: string | null;
-  confirmed_fixed_price: boolean;
-  confirmed_no_approval_required: boolean;
-  confirmed_no_extra_required_questions: boolean;
   automatic_eligibility_status: "eligible" | "ineligible";
   automatic_eligibility_reasons: string[];
   created_at: string;

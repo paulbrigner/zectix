@@ -6,7 +6,6 @@ import {
   updateSession,
   updateWebhookDelivery,
   putSession,
-  findLatestSessionForAttendee,
 } from "@/lib/app-state/state";
 import type { CheckoutSession, WebhookDelivery } from "@/lib/app-state/types";
 import {
@@ -66,18 +65,6 @@ function shouldAttemptInlineRegistration(session: CheckoutSession) {
   return session.status === "detected" || session.status === "confirmed";
 }
 
-function canReuseCheckoutSession(session: CheckoutSession) {
-  if (session.status === "expired" || session.status === "refunded") {
-    return false;
-  }
-
-  if (!session.cipherpay_expires_at) {
-    return true;
-  }
-
-  return new Date(session.cipherpay_expires_at).getTime() > Date.now();
-}
-
 export async function resolveCipherPayWebhookContext(invoiceId: string | null) {
   if (!invoiceId) {
     return {
@@ -133,41 +120,6 @@ export async function createCheckoutSession(input: CreateCheckoutInput) {
   );
   if (!cipherPayConnection) {
     throw new Error("An active CipherPay connection is required for this calendar.");
-  }
-
-  const existingSession = await findLatestSessionForAttendee({
-    tenantId: calendarData.tenant.tenant_id,
-    calendarConnectionId: calendarData.calendar.calendar_connection_id,
-    eventApiId: input.event_api_id,
-    ticketTypeApiId: input.ticket_type_api_id,
-    attendeeEmail: input.attendee_email,
-  });
-
-  if (existingSession && canReuseCheckoutSession(existingSession)) {
-    logEvent("info", "checkout.reused", {
-      session_id: existingSession.session_id,
-      invoice_id: existingSession.cipherpay_invoice_id,
-      tenant_id: existingSession.tenant_id,
-      event_api_id: existingSession.event_api_id,
-    });
-
-    return {
-      tenant: calendarData.tenant,
-      calendar: calendarData.calendar,
-      event: eventPageData.event,
-      ticket,
-      session: existingSession,
-      invoice: {
-        invoice_id: existingSession.cipherpay_invoice_id,
-        memo_code: existingSession.cipherpay_memo_code,
-        payment_address: existingSession.cipherpay_payment_address,
-        zcash_uri: existingSession.cipherpay_zcash_uri,
-        price_zec: existingSession.cipherpay_price_zec,
-        expires_at: existingSession.cipherpay_expires_at,
-        checkout_url: existingSession.checkout_url,
-        status: existingSession.status,
-      },
-    };
   }
 
   const { invoice, checkout_url } = await createCipherPayInvoice(cipherPayClient, {
