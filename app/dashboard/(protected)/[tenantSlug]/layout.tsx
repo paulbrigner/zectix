@@ -1,7 +1,9 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { TenantWorkspaceNav } from "@/components/TenantWorkspaceNav";
 import { getTenantBySlug } from "@/lib/app-state/state";
+import { appPath } from "@/lib/app-paths";
 import { normalizeEmailAddress } from "@/lib/app-state/utils";
 import { hasCompletedTenantOnboarding } from "@/lib/tenant-self-serve";
 import { requireTenantPageAccess } from "@/lib/tenant-auth-server";
@@ -18,7 +20,10 @@ export default async function TenantScopedLayout({
   const email = await requireTenantPageAccess();
   const { tenantSlug } = await params;
   const tenant = await getTenantBySlug(tenantSlug);
-  if (!tenant || normalizeEmailAddress(tenant.contact_email) !== normalizeEmailAddress(email)) {
+  if (
+    !tenant ||
+    normalizeEmailAddress(tenant.contact_email) !== normalizeEmailAddress(email)
+  ) {
     notFound();
   }
 
@@ -27,18 +32,36 @@ export default async function TenantScopedLayout({
 
   return (
     <>
-      <header className="console-section tenant-workspace-header">
-        <div className="tenant-workspace-header-top">
+      <header className="console-section tenant-dashboard-header">
+        <div className="tenant-dashboard-header-top">
           <div>
             <p className="eyebrow">Organization</p>
             <h2>{tenant.name}</h2>
           </div>
-        </div>
 
-        <TenantWorkspaceNav
-          basePath={basePath}
-          onboardingIncomplete={onboardingIncomplete}
-        />
+          <div className="tenant-dashboard-header-actions">
+            <TenantWorkspaceNav
+              basePath={basePath}
+              onboardingIncomplete={onboardingIncomplete}
+            />
+            <div className="tenant-dashboard-utilities">
+              <Link
+                className="tenant-dashboard-utility-link"
+                href="/dashboard/help"
+              >
+                Help
+              </Link>
+              <form action={appPath("/api/dashboard/logout")} method="post">
+                <button
+                  className="tenant-dashboard-utility-link tenant-dashboard-utility-link-strong"
+                  type="submit"
+                >
+                  Sign out
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
       </header>
 
       {children}
