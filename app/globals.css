@@ -518,11 +518,13 @@ select {
   pointer-events: none;
 }
 
-.tenant-workspace-header {
+.tenant-workspace-header,
+.tenant-dashboard-header {
   gap: 1.25rem;
 }
 
-.tenant-workspace-header-top {
+.tenant-workspace-header-top,
+.tenant-dashboard-header-top {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -535,6 +537,61 @@ select {
 
 .tenant-workspace-nav {
   margin: 0;
+  flex-wrap: wrap;
+  gap: 0.95rem;
+}
+
+.tenant-workspace-nav .console-nav-link,
+.tenant-workspace-nav .console-nav-link-disabled {
+  min-height: auto;
+  padding: 0 0 0.35rem;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+
+.tenant-workspace-nav .console-nav-link-active {
+  border-bottom-color: var(--accent);
+  color: var(--color-gray-900);
+}
+
+.tenant-workspace-nav .console-nav-link-disabled {
+  color: var(--color-gray-400);
+}
+
+.tenant-dashboard-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1rem 1.25rem;
+}
+
+.tenant-dashboard-utilities {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.tenant-dashboard-utility-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.tenant-dashboard-utility-link-strong {
+  color: var(--color-gray-900);
 }
 
 .organizer-shell-actions {
@@ -4494,13 +4551,9 @@ select {
     justify-content: flex-start;
   }
 
-  .tenant-workspace-nav {
-    flex-wrap: wrap;
-  }
-
   .tenant-workspace-nav .console-nav-link {
-    flex: 1 1 calc(50% - 0.75rem);
-    justify-content: center;
+    flex: 0 0 auto;
+    justify-content: flex-start;
   }
 }
 
@@ -4574,6 +4627,7 @@ select {
 
   .feed-header,
   .tenant-workspace-header-top,
+  .tenant-dashboard-header-top,
   .checkout-hero-header,
   .checkout-page-header,
   .console-section-header,
@@ -4644,13 +4698,9 @@ select {
     justify-content: flex-start;
   }
 
-  .tenant-workspace-nav {
-    gap: var(--space-3);
-  }
-
   .tenant-workspace-nav .console-nav-link {
-    flex: 1 1 100%;
-    min-height: 2.85rem;
+    flex: 0 0 auto;
+    min-height: auto;
   }
 
   .feed-header .button-row,
@@ -4692,6 +4742,12 @@ select {
     flex: 0 0 auto;
     width: auto;
     min-width: 7rem;
+  }
+
+  .tenant-dashboard-header-actions,
+  .tenant-dashboard-utilities {
+    width: 100%;
+    justify-content: flex-start;
   }
 
   .tenant-events-filter-actions {
