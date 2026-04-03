@@ -35,6 +35,12 @@ function invalidWebhookSummary(invalidWebhooks: number) {
   } immediate review.`;
 }
 
+function calendarStatusPillClassName(status: string) {
+  return status === "active"
+    ? "console-mini-pill console-mini-pill-success"
+    : "console-mini-pill";
+}
+
 export function TenantOverviewWorkspace({
   detail,
 }: {
@@ -127,7 +133,7 @@ export function TenantOverviewWorkspace({
                       <h3>{connectionHealth}</h3>
                     </div>
                     <div className="console-mini-pill-row">
-                      <span className="console-mini-pill">
+                      <span className={calendarStatusPillClassName(calendar.status)}>
                         {calendar.status}
                       </span>
                       <span

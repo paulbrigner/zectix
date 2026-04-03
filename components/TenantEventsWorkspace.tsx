@@ -550,17 +550,11 @@ export function TenantEventsWorkspace({
                   <ConsoleTableHeader className="tenant-events-cell-when">
                     When
                   </ConsoleTableHeader>
-                  <ConsoleTableHeader className="tenant-events-cell-source">
-                    Source
-                  </ConsoleTableHeader>
                   <ConsoleTableHeader className="tenant-events-cell-checkout">
                     Checkout
                   </ConsoleTableHeader>
                   <ConsoleTableHeader className="tenant-events-cell-tickets">
                     Tickets
-                  </ConsoleTableHeader>
-                  <ConsoleTableHeader className="tenant-events-cell-sync">
-                    Last sync
                   </ConsoleTableHeader>
                 </ConsoleTableRow>
               </ConsoleTableHead>
@@ -599,11 +593,6 @@ export function TenantEventsWorkspace({
                           <LocalDateTime iso={row.start_at} />
                         </span>
                       </ConsoleTableCell>
-                      <ConsoleTableCell className="tenant-events-cell-source">
-                        <StatusBadge tone={sourceTone(row)}>
-                          {sourceLabel(row)}
-                        </StatusBadge>
-                      </ConsoleTableCell>
                       <ConsoleTableCell className="tenant-events-cell-checkout">
                         <StatusBadge tone={row.public_status_tone}>
                           {row.public_status_label}
@@ -619,19 +608,6 @@ export function TenantEventsWorkspace({
                           </div>
                         ) : (
                           <span className="subtle-text">Import first</span>
-                        )}
-                      </ConsoleTableCell>
-                      <ConsoleTableCell className="tenant-events-cell-sync">
-                        {row.last_synced_at ? (
-                          <span className="tenant-events-time">
-                            <LocalDateTime iso={row.last_synced_at} />
-                          </span>
-                        ) : (
-                          <span className="subtle-text">
-                            {row.source === "upstream"
-                              ? "Upstream only"
-                              : "Not yet synced"}
-                          </span>
                         )}
                       </ConsoleTableCell>
                     </ConsoleTableRow>
