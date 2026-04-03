@@ -11,10 +11,14 @@ function isTenantScopedDashboardRoute(pathname: string) {
   );
 }
 
+function isHelpRoute(pathname: string) {
+  return pathname === "/dashboard/help";
+}
+
 export function DashboardProtectedHeader() {
   const pathname = usePathname();
 
-  if (isTenantScopedDashboardRoute(pathname)) {
+  if (isTenantScopedDashboardRoute(pathname) || isHelpRoute(pathname)) {
     return null;
   }
 

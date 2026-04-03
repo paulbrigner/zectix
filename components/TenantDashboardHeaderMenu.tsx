@@ -17,6 +17,10 @@ type NavItem = {
   label: string;
 };
 
+function tenantSlugFromBasePath(basePath: string) {
+  return basePath.split("/").filter(Boolean)[1] || "";
+}
+
 function isItemActive(pathname: string, href: string, basePath: string) {
   return pathname === href || (href !== basePath && pathname.startsWith(`${href}/`));
 }
@@ -62,6 +66,10 @@ export function TenantDashboardHeaderMenu({
   const searchKey = searchParams.toString();
   const connectionsHref = `${basePath}/connections`;
   const settingsHref = `${basePath}/settings`;
+  const tenantSlug = tenantSlugFromBasePath(basePath);
+  const helpHref = tenantSlug
+    ? `/dashboard/help?tenant=${encodeURIComponent(tenantSlug)}&from=${encodeURIComponent(pathname)}`
+    : "/dashboard/help";
   const activeConnectionsTab =
     searchParams.get("tab") === "cipherpay" ? "cipherpay" : "luma";
   const connectionsSubItems: NavItem[] = [
@@ -259,7 +267,7 @@ export function TenantDashboardHeaderMenu({
 
             <Link
               className={menuEntryClassName(pathname === "/dashboard/help", false)}
-              href="/dashboard/help"
+              href={helpHref}
               onClick={closeMenu}
             >
               Help

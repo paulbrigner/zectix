@@ -1,8 +1,7 @@
 import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
-import { TenantDashboardHeaderMenu } from "@/components/TenantDashboardHeaderMenu";
+import { TenantDashboardShellHeader } from "@/components/TenantDashboardShellHeader";
 import { getTenantBySlug } from "@/lib/app-state/state";
-import { appPath } from "@/lib/app-paths";
 import { normalizeEmailAddress } from "@/lib/app-state/utils";
 import { hasCompletedTenantOnboarding } from "@/lib/tenant-self-serve";
 import { requireTenantPageAccess } from "@/lib/tenant-auth-server";
@@ -31,20 +30,11 @@ export default async function TenantScopedLayout({
 
   return (
     <>
-      <header className="console-section tenant-dashboard-header">
-        <div className="tenant-dashboard-header-top">
-          <div>
-            <p className="eyebrow">Organization</p>
-            <h2>{tenant.name}</h2>
-          </div>
-
-          <TenantDashboardHeaderMenu
-            basePath={basePath}
-            logoutAction={appPath("/api/dashboard/logout")}
-            onboardingIncomplete={onboardingIncomplete}
-          />
-        </div>
-      </header>
+      <TenantDashboardShellHeader
+        basePath={basePath}
+        onboardingIncomplete={onboardingIncomplete}
+        organizationName={tenant.name}
+      />
 
       {children}
     </>
