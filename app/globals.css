@@ -4674,7 +4674,8 @@ select {
   }
 
   .tenant-dashboard-header-actions {
-    width: 100%;
+    width: auto;
+    flex: 0 0 auto;
     justify-content: flex-end;
   }
 
@@ -4761,12 +4762,16 @@ select {
 
   .feed-header,
   .tenant-workspace-header-top,
-  .tenant-dashboard-header-top,
   .checkout-hero-header,
   .checkout-page-header,
   .console-section-header,
   .checkout-status-header {
     flex-direction: column;
+  }
+
+  .tenant-dashboard-header-top {
+    flex-direction: row;
+    align-items: flex-start;
   }
 
   .checkout-hero-actions {
@@ -4879,7 +4884,8 @@ select {
   }
 
   .tenant-dashboard-header-actions {
-    width: 100%;
+    width: auto;
+    flex: 0 0 auto;
     justify-content: flex-end;
   }
 
