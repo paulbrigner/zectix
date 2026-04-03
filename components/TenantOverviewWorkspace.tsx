@@ -52,6 +52,7 @@ export function TenantOverviewWorkspace({
 }) {
   const summary = buildWorkspaceOverview(detail);
   const recentSessions = recentSessionsForDashboard(detail.sessions);
+  const singleCalendarOverview = detail.calendars.length === 1;
   const primaryCalendar = detail.calendars[0] || null;
   const primaryCalendarPreview = primaryCalendar
     ? detail.calendar_secret_previews.get(primaryCalendar.calendar_connection_id)
@@ -62,6 +63,93 @@ export function TenantOverviewWorkspace({
         Boolean(primaryCalendarPreview?.luma.has_value),
       )
     : "Not connected";
+
+  const recentCheckoutsContent = !recentSessions.length ? (
+    <div className="console-preview-empty">
+      <strong>No checkout sessions yet</strong>
+      <p className="subtle-text">
+        Sessions will appear here after someone starts a public checkout.
+      </p>
+    </div>
+  ) : (
+    <ConsoleTable>
+      <ConsoleTableHead>
+        <ConsoleTableRow>
+          <ConsoleTableHeader>Event</ConsoleTableHeader>
+          <ConsoleTableHeader>Attendee</ConsoleTableHeader>
+          <ConsoleTableHeader>Payment</ConsoleTableHeader>
+          <ConsoleTableHeader>Registration</ConsoleTableHeader>
+          <ConsoleTableHeader>Amount</ConsoleTableHeader>
+          <ConsoleTableHeader>Updated</ConsoleTableHeader>
+          <ConsoleTableHeader>Action</ConsoleTableHeader>
+        </ConsoleTableRow>
+      </ConsoleTableHead>
+      <ConsoleTableBody>
+        {recentSessions.map((session) => {
+          const viewerToken = createSessionViewerToken(
+            session.session_id,
+            session.attendee_email,
+          );
+
+          return (
+            <ConsoleTableRow key={session.session_id}>
+              <ConsoleTableCell>
+                <strong>{session.event_name}</strong>
+                <p className="subtle-text console-table-note">
+                  {session.ticket_type_name || "No ticket label"}
+                </p>
+              </ConsoleTableCell>
+              <ConsoleTableCell>
+                <strong>{session.attendee_name}</strong>
+                <p className="subtle-text console-table-note">
+                  {session.attendee_email}
+                </p>
+              </ConsoleTableCell>
+              <ConsoleTableCell>
+                <ConsoleStatusPill status={session.status} />
+              </ConsoleTableCell>
+              <ConsoleTableCell>
+                <span
+                  className={registrationStatusClassName(
+                    session.registration_status,
+                  )}
+                >
+                  {session.registration_status}
+                </span>
+                {session.registration_error ? (
+                  <p className="subtle-text console-table-note">
+                    {session.registration_error}
+                  </p>
+                ) : null}
+              </ConsoleTableCell>
+              <ConsoleTableCell>
+                {formatFiatAmount(session.amount, session.currency)}
+              </ConsoleTableCell>
+              <ConsoleTableCell>
+                {session.updated_at ? (
+                  <LocalDateTime iso={session.updated_at} />
+                ) : (
+                  "n/a"
+                )}
+              </ConsoleTableCell>
+              <ConsoleTableCell>
+                <Link
+                  className="button button-secondary button-small"
+                  href={
+                    viewerToken
+                      ? `/checkout/${encodeURIComponent(session.session_id)}?t=${encodeURIComponent(viewerToken)}`
+                      : `/checkout/${encodeURIComponent(session.session_id)}`
+                  }
+                >
+                  Open
+                </Link>
+              </ConsoleTableCell>
+            </ConsoleTableRow>
+          );
+        })}
+      </ConsoleTableBody>
+    </ConsoleTable>
+  );
 
   return (
     <div className="console-page-body">
@@ -119,17 +207,13 @@ export function TenantOverviewWorkspace({
         ) : detail.calendars.length === 1 ? (
           (() => {
             const calendar = detail.calendars[0];
-            const previews = detail.calendar_secret_previews.get(
-              calendar.calendar_connection_id,
-            );
-            const activeConnection =
-              detail.active_cipherpay_connections_by_calendar.get(
-                calendar.calendar_connection_id,
-              ) || null;
-            const inventory = summarizeCalendarInventory(detail, calendar);
             const connectionHealth = calendarConnectionHealthLabel(
               calendar,
-              Boolean(previews?.luma.has_value),
+              Boolean(
+                detail.calendar_secret_previews.get(
+                  calendar.calendar_connection_id,
+                )?.luma.has_value,
+              ),
             );
 
             return (
@@ -159,28 +243,10 @@ export function TenantOverviewWorkspace({
                   </div>
                 </div>
 
-                <dl className="tenant-summary-list">
-                  <div>
-                    <dt>Luma</dt>
-                    <dd>{previews?.luma.preview || "No key saved yet"}</dd>
-                  </div>
-                  <div>
-                    <dt>CipherPay</dt>
-                    <dd>
-                      {activeConnection
-                        ? `${activeConnection.network} · ${activeConnection.status}`
-                        : "Not connected"}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>Inventory</dt>
-                    <dd>
-                      {inventory.futureMirroredEvents.length} future event
-                      {inventory.futureMirroredEvents.length === 1 ? "" : "s"} ·{" "}
-                      {inventory.enabledEvents.length} live
-                    </dd>
-                  </div>
-                </dl>
+                <div className="tenant-summary-checkouts">
+                  <h4>Recent checkouts</h4>
+                  {recentCheckoutsContent}
+                </div>
               </div>
             );
           })()
@@ -263,104 +329,16 @@ export function TenantOverviewWorkspace({
         )}
       </section>
 
-      <section className="console-section">
+      {!singleCalendarOverview ? (
+        <section className="console-section">
         <div className="console-section-header">
           <div>
             <h2>Recent checkouts</h2>
-            <p className="subtle-text">
-              The newest attendee sessions, so you can spot payment or
-              registration issues quickly.
-            </p>
           </div>
         </div>
-
-        {!recentSessions.length ? (
-          <div className="console-preview-empty">
-            <strong>No checkout sessions yet</strong>
-            <p className="subtle-text">
-              Sessions will appear here after someone starts a public checkout.
-            </p>
-          </div>
-        ) : (
-          <ConsoleTable>
-            <ConsoleTableHead>
-              <ConsoleTableRow>
-                <ConsoleTableHeader>Event</ConsoleTableHeader>
-                <ConsoleTableHeader>Attendee</ConsoleTableHeader>
-                <ConsoleTableHeader>Payment</ConsoleTableHeader>
-                <ConsoleTableHeader>Registration</ConsoleTableHeader>
-                <ConsoleTableHeader>Amount</ConsoleTableHeader>
-                <ConsoleTableHeader>Updated</ConsoleTableHeader>
-                <ConsoleTableHeader>Action</ConsoleTableHeader>
-              </ConsoleTableRow>
-            </ConsoleTableHead>
-            <ConsoleTableBody>
-              {recentSessions.map((session) => {
-                const viewerToken = createSessionViewerToken(
-                  session.session_id,
-                  session.attendee_email,
-                );
-
-                return (
-                  <ConsoleTableRow key={session.session_id}>
-                    <ConsoleTableCell>
-                      <strong>{session.event_name}</strong>
-                      <p className="subtle-text console-table-note">
-                        {session.ticket_type_name || "No ticket label"}
-                      </p>
-                    </ConsoleTableCell>
-                    <ConsoleTableCell>
-                      <strong>{session.attendee_name}</strong>
-                      <p className="subtle-text console-table-note">
-                        {session.attendee_email}
-                      </p>
-                    </ConsoleTableCell>
-                    <ConsoleTableCell>
-                      <ConsoleStatusPill status={session.status} />
-                    </ConsoleTableCell>
-                    <ConsoleTableCell>
-                      <span
-                        className={registrationStatusClassName(
-                          session.registration_status,
-                        )}
-                      >
-                        {session.registration_status}
-                      </span>
-                      {session.registration_error ? (
-                        <p className="subtle-text console-table-note">
-                          {session.registration_error}
-                        </p>
-                      ) : null}
-                    </ConsoleTableCell>
-                    <ConsoleTableCell>
-                      {formatFiatAmount(session.amount, session.currency)}
-                    </ConsoleTableCell>
-                    <ConsoleTableCell>
-                      {session.updated_at ? (
-                        <LocalDateTime iso={session.updated_at} />
-                      ) : (
-                        "n/a"
-                      )}
-                    </ConsoleTableCell>
-                    <ConsoleTableCell>
-                      <Link
-                        className="button button-secondary button-small"
-                        href={
-                          viewerToken
-                            ? `/checkout/${encodeURIComponent(session.session_id)}?t=${encodeURIComponent(viewerToken)}`
-                            : `/checkout/${encodeURIComponent(session.session_id)}`
-                        }
-                      >
-                        Open
-                      </Link>
-                    </ConsoleTableCell>
-                  </ConsoleTableRow>
-                );
-              })}
-            </ConsoleTableBody>
-          </ConsoleTable>
-        )}
+        {recentCheckoutsContent}
       </section>
+      ) : null}
     </div>
   );
 }
