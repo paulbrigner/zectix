@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { ConsoleInfoTip } from "@/components/ConsoleInfoTip";
 import { EmbedSnippetCopyButton } from "@/components/EmbedSnippetCopyButton";
+import { EmbedBrandingFooter } from "@/components/EmbedBrandingFooter";
 import { LocalDateTime } from "@/components/LocalDateTime";
 import styles from "./TenantEmbedWorkspace.module.css";
 
@@ -21,28 +22,26 @@ type PreviewTicket = {
 };
 
 type CalendarEmbedEntry = {
-  allowedOrigin: string;
   calendarName: string;
-  defaultHeightPx: number;
   events: CalendarPreviewEvent[];
   hiddenEventCount: number;
   id: string;
   kind: "calendar";
   label: string;
+  showBranding: boolean;
   snippet: string;
   title: string;
 };
 
 type EventEmbedEntry = {
-  allowedOrigin: string;
   calendarName: string;
   coverUrl: string | null;
-  defaultHeightPx: number;
   eventName: string;
   hiddenTicketCount: number;
   id: string;
   kind: "event";
   label: string;
+  showBranding: boolean;
   snippet: string;
   startAt: string;
   summary: string;
@@ -125,12 +124,6 @@ export function TenantEmbedPreviewPicker({
                 <div className={styles.previewShell}>
                   <div className={styles.previewActionCard}>
                     <div>
-                      <div className={styles.previewMetaRow}>
-                        <span className={styles.previewBadge}>Calendar page</span>
-                        <span className={styles.previewBadgeMuted}>
-                          {selectedEntry.calendarName}
-                        </span>
-                      </div>
                       <h4>{selectedEntry.calendarName}</h4>
                     </div>
                     <button
@@ -180,23 +173,7 @@ export function TenantEmbedPreviewPicker({
                     ) : null}
                   </div>
 
-                  <div className={styles.previewInfoGrid}>
-                    <div className={styles.previewInfoCard}>
-                      <span className={styles.eyebrow}>Default height</span>
-                      <strong>{selectedEntry.defaultHeightPx}px</strong>
-                      <p className="subtle-text">
-                        Hosts can still override this when they need a taller or
-                        shorter embed shell.
-                      </p>
-                    </div>
-                    <div className={styles.previewInfoCard}>
-                      <span className={styles.eyebrow}>Allowed host</span>
-                      <strong>{selectedEntry.allowedOrigin}</strong>
-                      <p className="subtle-text">
-                        The iframe can only render on approved host origins.
-                      </p>
-                    </div>
-                  </div>
+                  {selectedEntry.showBranding ? <EmbedBrandingFooter /> : null}
                 </div>
               ) : (
                 <div className={styles.previewShell}>
@@ -220,12 +197,6 @@ export function TenantEmbedPreviewPicker({
                     )}
 
                     <div className={styles.previewCopy}>
-                      <div className={styles.previewMetaRow}>
-                        <span className={styles.previewBadge}>Event page</span>
-                        <span className={styles.previewBadgeMuted}>
-                          {selectedEntry.calendarName}
-                        </span>
-                      </div>
                       <h4>{selectedEntry.eventName}</h4>
                       <p className={styles.previewTime}>
                         <LocalDateTime iso={selectedEntry.startAt} />
@@ -285,23 +256,7 @@ export function TenantEmbedPreviewPicker({
                     ) : null}
                   </div>
 
-                  <div className={styles.previewInfoGrid}>
-                    <div className={styles.previewInfoCard}>
-                      <span className={styles.eyebrow}>Default height</span>
-                      <strong>{selectedEntry.defaultHeightPx}px</strong>
-                      <p className="subtle-text">
-                        Hosts can still override this when they need a taller or
-                        shorter embed shell.
-                      </p>
-                    </div>
-                    <div className={styles.previewInfoCard}>
-                      <span className={styles.eyebrow}>Allowed host</span>
-                      <strong>{selectedEntry.allowedOrigin}</strong>
-                      <p className="subtle-text">
-                        The iframe can only render on approved host origins.
-                      </p>
-                    </div>
-                  </div>
+                  {selectedEntry.showBranding ? <EmbedBrandingFooter /> : null}
                 </div>
               )}
             </div>

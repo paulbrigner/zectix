@@ -31,10 +31,6 @@ function summarizeDescription(value: string | null) {
   return plainText.length > 170 ? `${plainText.slice(0, 167)}...` : plainText;
 }
 
-function primaryOrigin(origins: string[]) {
-  return origins[0] || "https://events.example.com";
-}
-
 function previewStatusClassName(embedReady: boolean) {
   return `${styles.statusPill} ${embedReady ? styles.statusReady : ""}`.trim();
 }
@@ -108,11 +104,7 @@ export function TenantEmbedWorkspace({
               const embedEntries = calendarSnippetReady
                 ? [
                     {
-                      allowedOrigin: primaryOrigin(
-                        calendar.embed_allowed_origins,
-                      ),
                       calendarName: calendar.display_name,
-                      defaultHeightPx: calendar.embed_default_height_px,
                       events: embedExampleEvents.slice(0, 3).map((event) => {
                         const eventTickets =
                           detail.tickets_by_event.get(event.event_api_id) || [];
@@ -138,6 +130,7 @@ export function TenantEmbedWorkspace({
                       id: `calendar:${calendar.calendar_connection_id}`,
                       kind: "calendar" as const,
                       label: "Calendar embed",
+                      showBranding: calendar.embed_show_branding,
                       snippet: buildEmbedSnippet(
                         appUrl(buildEmbedCalendarUrl(calendar.slug)) ||
                           buildEmbedCalendarUrl(calendar.slug),
@@ -158,12 +151,8 @@ export function TenantEmbedWorkspace({
                         pickPreviewTickets(eventTickets);
 
                       return {
-                        allowedOrigin: primaryOrigin(
-                          calendar.embed_allowed_origins,
-                        ),
                         calendarName: calendar.display_name,
                         coverUrl: event.cover_url,
-                        defaultHeightPx: calendar.embed_default_height_px,
                         eventName: event.name,
                         hiddenTicketCount: Math.max(
                           eventTickets.length - previewDisplayTickets.length,
@@ -172,6 +161,7 @@ export function TenantEmbedWorkspace({
                         id: `event:${event.event_api_id}`,
                         kind: "event" as const,
                         label: "Event embed",
+                        showBranding: calendar.embed_show_branding,
                         snippet: buildEmbedSnippet(
                           url,
                           `${detail.tenant.name} checkout for ${event.name}`,
@@ -222,15 +212,6 @@ export function TenantEmbedWorkspace({
                     </div>
                   </div>
 
-                  {calendarSnippetReady ? (
-                    <TenantEmbedPreviewPicker entries={embedEntries} />
-                  ) : (
-                    <p className="subtle-text">
-                      Turn on embedding and add at least one allowed origin to
-                      generate copy-ready HTML.
-                    </p>
-                  )}
-
                   <ConsoleDisclosure
                     defaultOpen={!calendarSnippetReady}
                     lockedOpen={!calendarSnippetReady}
@@ -258,37 +239,37 @@ export function TenantEmbedWorkspace({
 
                       <div className={styles.settingsSummaryGrid}>
                         <div className={styles.settingsSummaryCard}>
-                          <span className={styles.eyebrow}>Embed mode</span>
+                          <span className={styles.eyebrow}>Embedding</span>
                           <strong>
-                            {calendar.embed_enabled ? "Enabled" : "Disabled"}
+                            {calendar.embed_enabled ? "On" : "Off"}
                           </strong>
                           <p className="subtle-text">
-                            Turn on iframe rendering for this calendar&apos;s
-                            event checkout entry pages.
+                            Turn this on when you want to place this calendar on
+                            your own website.
                           </p>
                         </div>
                         <div className={styles.settingsSummaryCard}>
-                          <span className={styles.eyebrow}>Allowed origins</span>
+                          <span className={styles.eyebrow}>Allowed sites</span>
                           <strong>
                             {calendar.embed_allowed_origins.length === 0
-                              ? "Needs at least one"
-                              : `${calendar.embed_allowed_origins.length} configured`}
+                              ? "Not set yet"
+                              : `${calendar.embed_allowed_origins.length} saved`}
                           </strong>
                           <p className="subtle-text">
-                            Host allowlists stay near the save action because
-                            they gate whether embeds can publish.
+                            Add the website addresses where this embed is
+                            allowed to appear.
                           </p>
                         </div>
                         <div className={styles.settingsSummaryCard}>
-                          <span className={styles.eyebrow}>Outputs</span>
+                          <span className={styles.eyebrow}>Available copies</span>
                           <strong>
                             {embedExampleEvents.length > 0
                               ? "Calendar and event"
                               : "Calendar only"}
                           </strong>
                           <p className="subtle-text">
-                            Copy actions stay compact above, while settings can
-                            collapse once embeds are ready.
+                            Copy a full calendar embed, plus event embeds for
+                            any upcoming public events.
                           </p>
                         </div>
                       </div>
@@ -297,7 +278,7 @@ export function TenantEmbedWorkspace({
                         <ConsoleSwitch
                           className="embed-toggle-card"
                           defaultChecked={calendar.embed_enabled}
-                          description="Turn on iframe rendering for this calendar's event checkout entry pages."
+                          description="Allow this calendar to appear as an embed on approved websites."
                           label="Enable embedding"
                           name="embed_enabled"
                         />
@@ -305,14 +286,14 @@ export function TenantEmbedWorkspace({
                         <ConsoleSwitch
                           className="embed-toggle-card"
                           defaultChecked={calendar.embed_show_branding}
-                          description="Keep the compact ZecTix and CipherPay branding footer visible inside the iframe."
+                          description="Show the ZecTix and CipherPay footer inside the embed."
                           label="Show branding"
                           name="embed_show_branding"
                         />
 
                         <label className="console-field embed-settings-height-card">
                           <ConsoleFieldLabel
-                            info="Recommended iframe height in pixels for generated snippets. Hosts can still override this."
+                            info="Choose the starting height for copied embed code. You can still adjust it later on your site if needed."
                             label="Default iframe height"
                           />
                           <input
@@ -329,9 +310,9 @@ export function TenantEmbedWorkspace({
                         <div className="embed-settings-section-head">
                           <h4>Allowed origins</h4>
                           <p className="subtle-text">
-                            Enter one site origin per line, for example{" "}
-                            <code>https://events.example.com</code>. Only these
-                            origins can host the iframe.
+                            Enter one website address per line, for example{" "}
+                            <code>https://events.example.com</code>. Only the
+                            sites listed here can display the embed.
                           </p>
                         </div>
                         <textarea
@@ -346,13 +327,13 @@ export function TenantEmbedWorkspace({
 
                       <ConsoleDisclosure
                         className={styles.nestedDisclosure}
-                        description="Accent, surface, text, branding, and radius controls can stay tucked away until someone wants to tune the visual polish."
+                        description="Optional style changes for colors and rounded corners."
                         title="Appearance overrides"
                       >
                         <div className="public-field-grid embed-theme-grid">
                           <label className="console-field">
                             <ConsoleFieldLabel
-                              info="Optional accent color override for embedded buttons and highlights."
+                              info="Optional button and highlight color inside the embed."
                               label="Accent color"
                               optional
                             />
@@ -366,7 +347,7 @@ export function TenantEmbedWorkspace({
                           </label>
                           <label className="console-field">
                             <ConsoleFieldLabel
-                              info="Optional page background color for the embedded shell."
+                              info="Optional page background color inside the embed."
                               label="Background color"
                               optional
                             />
@@ -382,7 +363,7 @@ export function TenantEmbedWorkspace({
                           </label>
                           <label className="console-field">
                             <ConsoleFieldLabel
-                              info="Optional card surface color for the embedded shell."
+                              info="Optional card background color inside the embed."
                               label="Surface color"
                               optional
                             />
@@ -396,7 +377,7 @@ export function TenantEmbedWorkspace({
                           </label>
                           <label className="console-field">
                             <ConsoleFieldLabel
-                              info="Optional high-contrast text color override for the embed shell."
+                              info="Optional text color for headings and body copy."
                               label="Text color"
                               optional
                             />
@@ -410,7 +391,7 @@ export function TenantEmbedWorkspace({
                           </label>
                           <label className="console-field">
                             <ConsoleFieldLabel
-                              info="Optional border radius for embedded cards, in pixels."
+                              info="Optional corner roundness for cards inside the embed."
                               label="Corner radius"
                               optional
                             />
@@ -431,14 +412,20 @@ export function TenantEmbedWorkspace({
                           label="Save embed settings"
                           pendingLabel="Saving embed settings..."
                         />
-                        <p className="subtle-text">
-                          Keep the save action visually anchored at the bottom
-                          of settings so it is easy to find after changes.
-                        </p>
                       </div>
                       <ConsoleFormPendingNote pendingLabel="Saving your embed settings..." />
                     </form>
                   </ConsoleDisclosure>
+
+                  {calendarSnippetReady ? (
+                    <TenantEmbedPreviewPicker entries={embedEntries} />
+                  ) : (
+                    <p className="subtle-text">
+                      Turn on embedding and add at least one allowed origin to
+                      generate copy-ready HTML.
+                    </p>
+                  )}
+
                 </article>
               );
             })}
