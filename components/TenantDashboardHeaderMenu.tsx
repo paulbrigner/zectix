@@ -70,6 +70,7 @@ export function TenantDashboardHeaderMenu({
   const helpHref = tenantSlug
     ? `/dashboard/help?tenant=${encodeURIComponent(tenantSlug)}&from=${encodeURIComponent(pathname)}`
     : "/dashboard/help";
+  const showConnectionsSubmenu = !onboardingIncomplete;
   const activeConnectionsTab =
     searchParams.get("tab") === "cipherpay" ? "cipherpay" : "luma";
   const connectionsSubItems: NavItem[] = [
@@ -83,7 +84,8 @@ export function TenantDashboardHeaderMenu({
     { disabled: onboardingIncomplete, href: `${basePath}/embed`, label: "Embed" },
     { disabled: onboardingIncomplete, href: `${basePath}/billing`, label: "Billing" },
   ];
-  const showingConnectionsSubmenu = pathname === connectionsHref;
+  const showingConnectionsSubmenu =
+    showConnectionsSubmenu && pathname === connectionsHref;
 
   function isConnectionsSubitemActive(label: string) {
     if (!showingConnectionsSubmenu) {
@@ -138,7 +140,7 @@ export function TenantDashboardHeaderMenu({
                   </Link>
                 )}
 
-                {isConnectionsItem ? (
+                {isConnectionsItem && showConnectionsSubmenu ? (
                   <div
                     aria-hidden={!showingConnectionsSubmenu}
                     className={`tenant-dashboard-subnav${
@@ -216,28 +218,30 @@ export function TenantDashboardHeaderMenu({
                   >
                     {item.label}
                   </Link>
-                  <div className="tenant-dashboard-menu-subgroup">
-                    {connectionsSubItems.map((subitem) => {
-                      const subitemActive = isConnectionsSubitemActive(
-                        subitem.label,
-                      );
+                  {showConnectionsSubmenu ? (
+                    <div className="tenant-dashboard-menu-subgroup">
+                      {connectionsSubItems.map((subitem) => {
+                        const subitemActive = isConnectionsSubitemActive(
+                          subitem.label,
+                        );
 
-                      return (
-                        <Link
-                          aria-current={subitemActive ? "page" : undefined}
-                          className={`${menuEntryClassName(
-                            subitemActive,
-                            false,
-                          )} tenant-dashboard-menu-entry-submenu`}
-                          href={subitem.href}
-                          key={subitem.href}
-                          onClick={closeMenu}
-                        >
-                          {subitem.label}
-                        </Link>
-                      );
-                    })}
-                  </div>
+                        return (
+                          <Link
+                            aria-current={subitemActive ? "page" : undefined}
+                            className={`${menuEntryClassName(
+                              subitemActive,
+                              false,
+                            )} tenant-dashboard-menu-entry-submenu`}
+                            href={subitem.href}
+                            key={subitem.href}
+                            onClick={closeMenu}
+                          >
+                            {subitem.label}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  ) : null}
                 </div>
               ) : (
                 <Link

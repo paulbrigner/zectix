@@ -1225,7 +1225,7 @@ select {
 }
 
 .tenant-events-workspace-detail-open {
-  grid-template-columns: minmax(0, 1.7fr) minmax(320px, 0.82fr);
+  grid-template-columns: 1fr;
 }
 
 .tenant-events-table-panel,
@@ -1236,8 +1236,7 @@ select {
 }
 
 .tenant-events-detail-panel {
-  position: sticky;
-  top: 1rem;
+  position: static;
 }
 
 .tenant-events-filter-form {
