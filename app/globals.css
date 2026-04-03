@@ -571,6 +571,13 @@ select {
   min-width: 0;
 }
 
+.tenant-dashboard-nav-stack {
+  display: grid;
+  justify-items: end;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
 .tenant-dashboard-nav {
   display: flex;
   flex-wrap: wrap;
@@ -605,6 +612,33 @@ select {
   color: var(--color-gray-400);
   cursor: not-allowed;
   pointer-events: none;
+}
+
+.tenant-dashboard-subnav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.85rem;
+  margin: 0;
+}
+
+.tenant-dashboard-subnav-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 0 0.2rem;
+  border-bottom: 2px solid transparent;
+  color: var(--color-gray-500);
+  font-size: 0.88rem;
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.tenant-dashboard-subnav-link-active {
+  border-bottom-color: var(--accent);
+  color: var(--color-gray-900);
 }
 
 .tenant-dashboard-menu {
@@ -664,6 +698,17 @@ select {
   display: none;
 }
 
+.tenant-dashboard-menu-submenu-shell {
+  display: grid;
+  gap: 0.1rem;
+}
+
+.tenant-dashboard-menu-subgroup {
+  display: grid;
+  gap: 0.1rem;
+  padding-left: 0.85rem;
+}
+
 .tenant-dashboard-menu-divider {
   display: none;
   height: 1px;
@@ -701,6 +746,14 @@ select {
 
 .tenant-dashboard-menu-entry-strong {
   color: var(--color-gray-900);
+}
+
+.tenant-dashboard-menu-entry-submenu {
+  min-height: 2.2rem;
+  padding-top: 0.45rem;
+  padding-bottom: 0.45rem;
+  font-size: 0.9rem;
+  font-weight: 500;
 }
 
 .tenant-dashboard-menu-form {
@@ -4679,7 +4732,7 @@ select {
     justify-content: flex-end;
   }
 
-  .tenant-dashboard-nav {
+  .tenant-dashboard-nav-stack {
     display: none;
   }
 
