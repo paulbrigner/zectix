@@ -281,14 +281,22 @@ export function TenantEventsWorkspace({
   const eventsPath = `${tenantBasePath}/events`;
   const syncNotice = readSyncNotice(searchParams);
   const rows = buildTenantEventWorkspaceRows(detail);
-  const searchQuery = (readSearchValue(searchParams.q) || "").trim();
-  const stateFilter = readWorkspaceFilter(searchParams.state);
-  const rawCalendarFilter = readSearchValue(searchParams.calendar) || "all";
-  const calendarFilter =
-    rawCalendarFilter === "all" ||
-    detail.calendars.some(
-      (calendar) => calendar.calendar_connection_id === rawCalendarFilter,
-    )
+  const singleCalendarMode = detail.calendars.length <= 1;
+  const searchQuery = singleCalendarMode
+    ? ""
+    : (readSearchValue(searchParams.q) || "").trim();
+  const stateFilter = singleCalendarMode
+    ? "all"
+    : readWorkspaceFilter(searchParams.state);
+  const rawCalendarFilter = singleCalendarMode
+    ? "all"
+    : readSearchValue(searchParams.calendar) || "all";
+  const calendarFilter = singleCalendarMode
+    ? "all"
+    : rawCalendarFilter === "all" ||
+        detail.calendars.some(
+          (calendar) => calendar.calendar_connection_id === rawCalendarFilter,
+        )
       ? rawCalendarFilter
       : "all";
   const filters = {
@@ -466,72 +474,79 @@ export function TenantEventsWorkspace({
           className="console-section console-anchor-target tenant-events-table-panel"
           id="event-review-queue"
         >
-          <form className="tenant-events-filter-form" method="get">
-            <div className="tenant-events-filter-grid">
-              <label className="console-field">
-                <span>Search</span>
-                <input
-                  className="console-input"
-                  defaultValue={searchQuery}
-                  name="q"
-                  placeholder="Search event, calendar, or location"
-                  type="search"
-                />
-              </label>
-              <label className="console-field">
-                <span>Status</span>
-                <select
-                  className="console-input"
-                  defaultValue={stateFilter}
-                  name="state"
-                >
-                  <option value="all">All upcoming events</option>
-                  <option value="live">Live publicly</option>
-                  <option value="hidden">Hidden mirrored events</option>
-                </select>
-              </label>
-              <label className="console-field">
-                <span>Calendar</span>
-                <select
-                  className="console-input"
-                  defaultValue={calendarFilter}
-                  name="calendar"
-                >
-                  <option value="all">All calendars</option>
-                  {detail.calendars.map((calendar) => (
-                    <option
-                      key={calendar.calendar_connection_id}
-                      value={calendar.calendar_connection_id}
-                    >
-                      {calendar.display_name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
+          {singleCalendarMode ? null : (
+            <form className="tenant-events-filter-form" method="get">
+              <div className="tenant-events-filter-grid">
+                <label className="console-field">
+                  <span>Search</span>
+                  <input
+                    className="console-input"
+                    defaultValue={searchQuery}
+                    name="q"
+                    placeholder="Search event, calendar, or location"
+                    type="search"
+                  />
+                </label>
+                <label className="console-field">
+                  <span>Status</span>
+                  <select
+                    className="console-input"
+                    defaultValue={stateFilter}
+                    name="state"
+                  >
+                    <option value="all">All upcoming events</option>
+                    <option value="live">Live publicly</option>
+                    <option value="hidden">Hidden mirrored events</option>
+                  </select>
+                </label>
+                <label className="console-field">
+                  <span>Calendar</span>
+                  <select
+                    className="console-input"
+                    defaultValue={calendarFilter}
+                    name="calendar"
+                  >
+                    <option value="all">All calendars</option>
+                    {detail.calendars.map((calendar) => (
+                      <option
+                        key={calendar.calendar_connection_id}
+                        value={calendar.calendar_connection_id}
+                      >
+                        {calendar.display_name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
 
-            <div className="button-row tenant-events-filter-actions">
-              <button
-                className="button button-secondary button-small"
-                type="submit"
-              >
-                Apply filters
-              </button>
-              <Link
-                className="button button-secondary button-small"
-                href={eventsPath}
-              >
-                Reset
-              </Link>
-            </div>
-          </form>
+              <div className="button-row tenant-events-filter-actions">
+                <button
+                  className="button button-secondary button-small"
+                  type="submit"
+                >
+                  Apply filters
+                </button>
+                <Link
+                  className="button button-secondary button-small"
+                  href={eventsPath}
+                >
+                  Reset
+                </Link>
+              </div>
+            </form>
+          )}
 
           {!visibleRows.length ? (
             <div className="console-preview-empty">
-              <strong>No events match the current filters</strong>
+              <strong>
+                {singleCalendarMode
+                  ? "No events available yet"
+                  : "No events match the current filters"}
+              </strong>
               <p className="subtle-text">
-                Try clearing a filter or broadening the search to bring more
-                events back into view.
+                {singleCalendarMode
+                  ? "Events will appear here after your Luma calendar finishes syncing."
+                  : "Try clearing a filter or broadening the search to bring more events back into view."}
               </p>
             </div>
           ) : (
