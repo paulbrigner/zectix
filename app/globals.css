@@ -565,43 +565,46 @@ select {
 .tenant-dashboard-header-actions {
   display: flex;
   flex-wrap: nowrap;
-  align-items: flex-end;
+  align-items: flex-start;
   justify-content: flex-end;
   gap: 1rem;
+  flex: 1 1 48rem;
   min-width: 0;
 }
 
 .tenant-dashboard-nav-stack {
-  display: grid;
-  align-content: start;
-  justify-items: end;
-  gap: 0.35rem;
+  position: relative;
+  flex: 1 1 auto;
+  width: min(100%, 48rem);
+  padding-bottom: 1.8rem;
   min-width: 0;
 }
 
 .tenant-dashboard-nav {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: flex-end;
-  gap: 0.95rem;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  align-items: start;
+  justify-items: stretch;
+  gap: 0.6rem;
   margin: 0;
 }
 
 .tenant-dashboard-nav-item {
-  display: grid;
-  align-content: start;
-  justify-items: center;
-  gap: 0.35rem;
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  min-width: 0;
 }
 
 .tenant-dashboard-nav-item-connections {
-  min-width: max-content;
+  position: relative;
 }
 
 .tenant-dashboard-nav-link {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  width: 100%;
   min-height: auto;
   padding: 0 0 0.35rem;
   border: 0;
@@ -632,8 +635,13 @@ select {
   align-items: center;
   justify-content: center;
   gap: 0.85rem;
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  left: 50%;
+  width: max-content;
   margin: 0;
-  min-height: 1.45rem;
+  min-height: 0;
+  transform: translateX(-50%);
 }
 
 .tenant-dashboard-subnav-link {

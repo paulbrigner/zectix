@@ -25,6 +25,16 @@ function registrationStatusClassName(status: string) {
   return "subtle-text";
 }
 
+function invalidWebhookSummary(invalidWebhooks: number) {
+  if (invalidWebhooks <= 0) {
+    return "No invalid webhook deliveries recorded.";
+  }
+
+  return `${invalidWebhooks} invalid webhook ${
+    invalidWebhooks === 1 ? "delivery needs" : "deliveries need"
+  } immediate review.`;
+}
+
 export function TenantOverviewWorkspace({
   detail,
   tenantBasePath,
@@ -65,9 +75,7 @@ export function TenantOverviewWorkspace({
             <p className="console-kpi-label">Registered</p>
             <p className="console-kpi-value">{summary.registeredSessions}</p>
             <p className="subtle-text console-kpi-detail">
-              {summary.invalidWebhooks} invalid webhook{" "}
-              {summary.invalidWebhooks === 1 ? "delivery" : "deliveries"}{" "}
-              recorded
+              {invalidWebhookSummary(summary.invalidWebhooks)}
             </p>
           </article>
         </div>
