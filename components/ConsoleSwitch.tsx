@@ -4,6 +4,28 @@ import * as Switch from "@radix-ui/react-switch";
 import { useEffect, useId, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 
+const busyCursorOwners = new Set<string>();
+
+function syncBusyCursor() {
+  if (typeof document === "undefined") {
+    return;
+  }
+
+  const cursor = busyCursorOwners.size > 0 ? "progress" : "";
+  document.documentElement.style.cursor = cursor;
+  document.body.style.cursor = cursor;
+}
+
+function setBusyCursor(ownerId: string, active: boolean) {
+  if (active) {
+    busyCursorOwners.add(ownerId);
+  } else {
+    busyCursorOwners.delete(ownerId);
+  }
+
+  syncBusyCursor();
+}
+
 export function ConsoleSwitch({
   className,
   defaultChecked = false,
@@ -44,23 +66,11 @@ export function ConsoleSwitch({
   }, [defaultChecked]);
 
   useEffect(() => {
-    if (!showPending) {
-      return;
-    }
-
-    const html = document.documentElement;
-    const body = document.body;
-    const previousHtmlCursor = html.style.cursor;
-    const previousBodyCursor = body.style.cursor;
-
-    html.style.cursor = "progress";
-    body.style.cursor = "progress";
-
+    setBusyCursor(labelId, showPending);
     return () => {
-      html.style.cursor = previousHtmlCursor;
-      body.style.cursor = previousBodyCursor;
+      setBusyCursor(labelId, false);
     };
-  }, [showPending]);
+  }, [labelId, showPending]);
 
   return (
     <div
@@ -138,6 +148,7 @@ export function ConsoleSwitch({
           }
 
           setLocalPending(true);
+          setBusyCursor(labelId, true);
           const submitForm = () => {
             switchRef.current?.form?.requestSubmit();
           };
