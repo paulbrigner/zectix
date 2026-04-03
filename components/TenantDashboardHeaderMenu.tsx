@@ -71,9 +71,9 @@ export function TenantDashboardHeaderMenu({
   const primaryItems: NavItem[] = [
     { disabled: onboardingIncomplete, href: basePath, label: "Overview" },
     { disabled: onboardingIncomplete, href: `${basePath}/events`, label: "Events" },
-    { disabled: onboardingIncomplete, href: `${basePath}/billing`, label: "Billing" },
     { href: connectionsHref, label: "Connections" },
     { disabled: onboardingIncomplete, href: `${basePath}/embed`, label: "Embed" },
+    { disabled: onboardingIncomplete, href: `${basePath}/billing`, label: "Billing" },
   ];
   const showingConnectionsSubmenu = pathname === connectionsHref;
 
