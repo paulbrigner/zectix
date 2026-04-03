@@ -309,8 +309,7 @@
   gap: 0.85rem;
 }
 
-.previewInfoCard,
-.settingsSummaryCard {
+.previewInfoCard {
   display: grid;
   gap: 0.35rem;
   padding: 1rem;
@@ -335,21 +334,11 @@
   gap: 1rem;
 }
 
-.settingsSummaryGrid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.85rem;
-}
-
-.nestedDisclosure {
-  margin-top: 0.25rem;
-}
-
 .settingsActions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 0.85rem;
 }
 
@@ -397,7 +386,6 @@
 }
 
 @media (max-width: 960px) {
-  .settingsSummaryGrid,
   .previewInfoGrid {
     grid-template-columns: 1fr;
   }

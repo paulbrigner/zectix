@@ -1451,7 +1451,7 @@ select {
 
 .embed-settings-top-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.9rem;
   align-items: start;
 }
@@ -4061,6 +4061,7 @@ select {
 .embed-page-shell .payment-panel,
 .embed-page-shell .pass-shell {
   background: var(--surface-card);
+  border-radius: var(--radius-xl);
 }
 
 .embed-page-shell .event-page-copy h1,
@@ -4087,7 +4088,16 @@ select {
 
 .embed-page-shell .public-event-row {
   background: var(--surface-card);
+  border-radius: var(--radius-xl);
   box-shadow: none;
+}
+
+.embed-page-shell .checkout-overview-media {
+  border-radius: var(--radius-xl);
+}
+
+.embed-page-shell .checkout-overview-grid .checkout-key-value {
+  border-radius: var(--radius-md);
 }
 
 .embed-page-shell .public-event-row:hover {
