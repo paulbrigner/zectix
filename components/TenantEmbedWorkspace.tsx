@@ -41,14 +41,16 @@ function previewStatusClassName(embedReady: boolean) {
   return `${styles.statusPill} ${embedReady ? styles.statusReady : ""}`.trim();
 }
 
-function pickPreviewTicket(tickets: readonly TicketMirror[]) {
-  return (
-    tickets.find((ticket) => ticket.zcash_enabled) ||
-    tickets.find((ticket) => ticket.public_checkout_requested) ||
-    tickets.find((ticket) => ticket.active) ||
-    tickets[0] ||
-    null
-  );
+function pickPreviewTickets(tickets: readonly TicketMirror[]) {
+  const groups = [
+    tickets.filter((ticket) => ticket.zcash_enabled),
+    tickets.filter((ticket) => ticket.public_checkout_requested),
+    tickets.filter((ticket) => ticket.active),
+    tickets,
+  ];
+
+  const firstMatchingGroup = groups.find((group) => group.length > 0) || [];
+  return firstMatchingGroup.slice(0, 4);
 }
 
 export function TenantEmbedWorkspace({
@@ -92,7 +94,11 @@ export function TenantEmbedWorkspace({
               const previewTickets = previewEvent
                 ? detail.tickets_by_event.get(previewEvent.event_api_id) || []
                 : [];
-              const previewTicket = pickPreviewTicket(previewTickets);
+              const previewDisplayTickets = pickPreviewTickets(previewTickets);
+              const hiddenPreviewTicketCount = Math.max(
+                previewTickets.length - previewDisplayTickets.length,
+                0,
+              );
               const calendarSnippetReady =
                 calendar.embed_enabled &&
                 calendar.embed_allowed_origins.length > 0;
@@ -120,8 +126,8 @@ export function TenantEmbedWorkspace({
                           : "Needs a few more things"}
                       </h3>
                       <p className="subtle-text">
-                        Lead with the event preview, then keep setup and embed
-                        outputs tucked into a disclosure below it.
+                        Copy a generated snippet first, then compare it against
+                        the embedded event-page preview below.
                       </p>
                     </div>
                     <div className={styles.headStatus}>
@@ -138,122 +144,261 @@ export function TenantEmbedWorkspace({
                   </div>
 
                   <div className={styles.modeRow}>
-                    <button className={styles.modeCard} disabled type="button">
-                      Embed as button
-                    </button>
-                    <button
-                      aria-pressed="true"
-                      className={`${styles.modeCard} ${styles.modeCardActive}`}
-                      disabled
-                      type="button"
-                    >
+                    <div className={`${styles.modeCard} ${styles.modeCardActive}`}>
                       Embed event page
-                    </button>
-                  </div>
-
-                  <div className={styles.previewFrame}>
-                    <div className={styles.previewChrome}>
-                      <span className={styles.previewOrigin}>
-                        {primaryOrigin(calendar.embed_allowed_origins)}
-                      </span>
-                      <span className={styles.previewPath}>{previewUrl}</span>
-                    </div>
-
-                    <div className={styles.previewViewport}>
-                      {previewEvent ? (
-                        <div className={styles.previewShell}>
-                          <div className={styles.previewHero}>
-                            {previewEvent.cover_url ? (
-                              <div className={styles.previewMedia}>
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img
-                                  alt={previewEvent.name}
-                                  src={previewEvent.cover_url}
-                                />
-                              </div>
-                            ) : (
-                              <div
-                                className={`${styles.previewMedia} ${styles.previewMediaFallback}`}
-                              >
-                                <span>
-                                  {previewEvent.name.slice(0, 2).toUpperCase()}
-                                </span>
-                              </div>
-                            )}
-
-                            <div className={styles.previewCopy}>
-                              <div className={styles.previewMetaRow}>
-                                <span className={styles.previewBadge}>
-                                  Event page
-                                </span>
-                                <span className={styles.previewBadgeMuted}>
-                                  {calendar.display_name}
-                                </span>
-                              </div>
-                              <h4>{previewEvent.name}</h4>
-                              <p className={styles.previewTime}>
-                                <LocalDateTime iso={previewEvent.start_at} />
-                              </p>
-                              <p className={styles.previewSummary}>
-                                {summarizeDescription(previewEvent.description)}
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className={styles.previewActionCard}>
-                            <div>
-                              <span className={styles.eyebrow}>Get tickets</span>
-                              <strong className={styles.price}>
-                                {previewTicket
-                                  ? formatFiatAmount(
-                                      previewTicket.amount,
-                                      previewTicket.currency,
-                                    )
-                                  : "Available at checkout"}
-                              </strong>
-                            </div>
-                            <button
-                              className={styles.previewActionButton}
-                              type="button"
-                            >
-                              Open checkout
-                            </button>
-                          </div>
-
-                          <div className={styles.previewInfoGrid}>
-                            <div className={styles.previewInfoCard}>
-                              <span className={styles.eyebrow}>Default height</span>
-                              <strong>{calendar.embed_default_height_px}px</strong>
-                              <p className="subtle-text">
-                                Hosts can still override this when they need a
-                                taller or shorter embed shell.
-                              </p>
-                            </div>
-                            <div className={styles.previewInfoCard}>
-                              <span className={styles.eyebrow}>Allowed host</span>
-                              <strong>{primaryOrigin(calendar.embed_allowed_origins)}</strong>
-                              <p className="subtle-text">
-                                Keep the allowlist near the preview so it is
-                                obvious where the iframe can be published.
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className={styles.emptyPreview}>
-                          <strong>No upcoming event preview yet</strong>
-                          <p className="subtle-text">
-                            Once this calendar has a mirrored event, the live
-                            preview can show the focused event-page embed here.
-                          </p>
-                        </div>
-                      )}
                     </div>
                   </div>
 
                   <ConsoleDisclosure
+                    defaultOpen={calendarSnippetReady}
+                    description="Copy ready-to-paste iframe HTML before checking the live preview below."
+                    title="Generated embeds"
+                  >
+                    {calendarSnippetReady ? (
+                      <div className={styles.snippetList}>
+                        <div className={styles.snippetRow}>
+                          <div className={styles.snippetCopy}>
+                            <span className={styles.eyebrow}>
+                              Calendar embed
+                            </span>
+                            <span className={styles.snippetTitle}>
+                              {calendar.display_name}
+                            </span>
+                            <span className={styles.snippetPath}>
+                              {appUrl(buildEmbedCalendarUrl(calendar.slug)) ||
+                                buildEmbedCalendarUrl(calendar.slug)}
+                            </span>
+                          </div>
+                          <EmbedSnippetCopyButton
+                            value={buildEmbedSnippet(
+                              appUrl(buildEmbedCalendarUrl(calendar.slug)) ||
+                                buildEmbedCalendarUrl(calendar.slug),
+                              `${detail.tenant.name} calendar for ${calendar.display_name}`,
+                              calendar.embed_default_height_px,
+                            )}
+                          />
+                        </div>
+
+                        {embedExampleEvents.map((event) => {
+                          const relativeUrl = buildEmbedEventUrl(
+                            calendar.slug,
+                            event.event_api_id,
+                          );
+                          const url = appUrl(relativeUrl) || relativeUrl;
+
+                          return (
+                            <div
+                              className={styles.snippetRow}
+                              key={event.event_api_id}
+                            >
+                              <div className={styles.snippetCopy}>
+                                <span className={styles.eyebrow}>
+                                  Event embed
+                                </span>
+                                <span className={styles.snippetTitle}>
+                                  {event.name}
+                                </span>
+                                <span className={styles.snippetPath}>
+                                  {url}
+                                </span>
+                              </div>
+                              <EmbedSnippetCopyButton
+                                value={buildEmbedSnippet(
+                                  url,
+                                  `${detail.tenant.name} checkout for ${event.name}`,
+                                  calendar.embed_default_height_px,
+                                )}
+                              />
+                            </div>
+                          );
+                        })}
+
+                        {!embedExampleEvents.length ? (
+                          <p className="subtle-text">
+                            Calendar embed is ready. Event-specific embeds will
+                            appear once this calendar has at least one upcoming
+                            public event.
+                          </p>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <p className="subtle-text">
+                        Turn on embedding and add at least one allowed origin
+                        to generate copy-ready HTML here.
+                      </p>
+                    )}
+                  </ConsoleDisclosure>
+
+                  <section className={styles.previewSection}>
+                    <div className={styles.previewSectionHead}>
+                      <div>
+                        <span className={styles.sectionLabel}>Live preview</span>
+                        <h4 className={styles.previewSectionTitle}>
+                          Embedded event page
+                        </h4>
+                        <p className="subtle-text">
+                          This framed area is the compact iframe experience a
+                          host sees after pasting the generated HTML.
+                        </p>
+                      </div>
+
+                      <div className={styles.previewSectionMeta}>
+                        <p className="subtle-text">
+                          Embed status:{" "}
+                          {embedReady
+                            ? "ready to publish"
+                            : "needs allowed origins and at least one public upcoming event"}
+                        </p>
+                        <ConsoleInfoTip label="How embed mode works">
+                          <p>
+                            The iframe uses the same mirrored event pages as
+                            public checkout, but renders in a compact embedded
+                            shell and emits resize and status events to the
+                            parent window.
+                          </p>
+                        </ConsoleInfoTip>
+                      </div>
+                    </div>
+
+                    <div className={styles.previewFrame}>
+                      <div className={styles.previewChrome}>
+                        <span className={styles.previewOrigin}>
+                          {primaryOrigin(calendar.embed_allowed_origins)}
+                        </span>
+                        <span className={styles.previewPath}>{previewUrl}</span>
+                      </div>
+
+                      <div className={styles.previewViewport}>
+                        {previewEvent ? (
+                          <div className={styles.previewShell}>
+                            <div className={styles.previewHero}>
+                              {previewEvent.cover_url ? (
+                                <div className={styles.previewMedia}>
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img
+                                    alt={previewEvent.name}
+                                    src={previewEvent.cover_url}
+                                  />
+                                </div>
+                              ) : (
+                                <div
+                                  className={`${styles.previewMedia} ${styles.previewMediaFallback}`}
+                                >
+                                  <span>
+                                    {previewEvent.name.slice(0, 2).toUpperCase()}
+                                  </span>
+                                </div>
+                              )}
+
+                              <div className={styles.previewCopy}>
+                                <div className={styles.previewMetaRow}>
+                                  <span className={styles.previewBadge}>
+                                    Event page
+                                  </span>
+                                  <span className={styles.previewBadgeMuted}>
+                                    {calendar.display_name}
+                                  </span>
+                                </div>
+                                <h4>{previewEvent.name}</h4>
+                                <p className={styles.previewTime}>
+                                  <LocalDateTime iso={previewEvent.start_at} />
+                                </p>
+                                <p className={styles.previewSummary}>
+                                  {summarizeDescription(previewEvent.description)}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className={styles.previewActionCard}>
+                              <div className={styles.previewActionHead}>
+                                <div>
+                                  <span className={styles.eyebrow}>
+                                    Ticket options
+                                  </span>
+                                  <strong className={styles.ticketSummary}>
+                                    {previewDisplayTickets.length > 0
+                                      ? `${previewDisplayTickets.length} ticket option${previewDisplayTickets.length === 1 ? "" : "s"} shown`
+                                      : "Ticket options appear here"}
+                                  </strong>
+                                </div>
+                                <button
+                                  className={styles.previewActionButton}
+                                  type="button"
+                                >
+                                  Open checkout
+                                </button>
+                              </div>
+
+                              {previewDisplayTickets.length ? (
+                                <div className={styles.previewTicketList}>
+                                  {previewDisplayTickets.map((ticket) => (
+                                    <div
+                                      className={styles.previewTicketRow}
+                                      key={ticket.ticket_mirror_id}
+                                    >
+                                      <span className={styles.previewTicketName}>
+                                        {ticket.name}
+                                      </span>
+                                      <span className={styles.previewTicketPrice}>
+                                        {formatFiatAmount(
+                                          ticket.amount,
+                                          ticket.currency,
+                                        )}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="subtle-text">
+                                  Ticket tiers will appear here once this event
+                                  has mirrored pricing.
+                                </p>
+                              )}
+
+                              {hiddenPreviewTicketCount > 0 ? (
+                                <p className="subtle-text">
+                                  + {hiddenPreviewTicketCount} more mirrored
+                                  ticket
+                                  {hiddenPreviewTicketCount === 1 ? "" : "s"}
+                                </p>
+                              ) : null}
+                            </div>
+
+                            <div className={styles.previewInfoGrid}>
+                              <div className={styles.previewInfoCard}>
+                                <span className={styles.eyebrow}>Default height</span>
+                                <strong>{calendar.embed_default_height_px}px</strong>
+                                <p className="subtle-text">
+                                  Hosts can still override this when they need a
+                                  taller or shorter embed shell.
+                                </p>
+                              </div>
+                              <div className={styles.previewInfoCard}>
+                                <span className={styles.eyebrow}>Allowed host</span>
+                                <strong>{primaryOrigin(calendar.embed_allowed_origins)}</strong>
+                                <p className="subtle-text">
+                                  Keep the allowlist near the preview so it is
+                                  obvious where the iframe can be published.
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className={styles.emptyPreview}>
+                            <strong>No upcoming event preview yet</strong>
+                            <p className="subtle-text">
+                              Once this calendar has a mirrored event, the live
+                              preview can show the focused event-page embed here.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </section>
+
+                  <ConsoleDisclosure
                     defaultOpen={!calendarSnippetReady}
-                    description="Keep the preview visible up front and fold the editing tools underneath it."
+                    description="Keep the editing controls tucked underneath the generated snippets and live preview."
                     title="Edit settings and snippets"
                   >
                     <div className={styles.disclosureCard}>
@@ -478,103 +623,6 @@ export function TenantEmbedWorkspace({
                           </div>
                           <ConsoleFormPendingNote pendingLabel="Saving your embed settings..." />
                         </form>
-                      </ConsoleDisclosure>
-
-                      <div className="console-inline-action">
-                        <p className="subtle-text">
-                          Embed status:{" "}
-                          {embedReady
-                            ? "ready to publish"
-                            : "needs allowed origins and at least one public upcoming event"}
-                        </p>
-                        <ConsoleInfoTip label="How embed mode works">
-                          <p>
-                            The iframe uses the same mirrored event pages as
-                            public checkout, but renders in a compact embedded
-                            shell and emits resize and status events to the
-                            parent window.
-                          </p>
-                        </ConsoleInfoTip>
-                      </div>
-
-                      <ConsoleDisclosure
-                        defaultOpen={calendarSnippetReady}
-                        description="Copy ready-to-paste iframe HTML for the calendar landing view or any upcoming public event."
-                        title="Generated embeds"
-                      >
-                        {calendarSnippetReady ? (
-                          <div className={styles.snippetList}>
-                            <div className={styles.snippetRow}>
-                              <div className={styles.snippetCopy}>
-                                <span className={styles.eyebrow}>
-                                  Calendar embed
-                                </span>
-                                <span className={styles.snippetTitle}>
-                                  {calendar.display_name}
-                                </span>
-                                <span className={styles.snippetPath}>
-                                  {appUrl(buildEmbedCalendarUrl(calendar.slug)) ||
-                                    buildEmbedCalendarUrl(calendar.slug)}
-                                </span>
-                              </div>
-                              <EmbedSnippetCopyButton
-                                value={buildEmbedSnippet(
-                                  appUrl(buildEmbedCalendarUrl(calendar.slug)) ||
-                                    buildEmbedCalendarUrl(calendar.slug),
-                                  `${detail.tenant.name} calendar for ${calendar.display_name}`,
-                                  calendar.embed_default_height_px,
-                                )}
-                              />
-                            </div>
-
-                            {embedExampleEvents.map((event) => {
-                              const relativeUrl = buildEmbedEventUrl(
-                                calendar.slug,
-                                event.event_api_id,
-                              );
-                              const url = appUrl(relativeUrl) || relativeUrl;
-
-                              return (
-                                <div
-                                  className={styles.snippetRow}
-                                  key={event.event_api_id}
-                                >
-                                  <div className={styles.snippetCopy}>
-                                    <span className={styles.eyebrow}>
-                                      Event embed
-                                    </span>
-                                    <span className={styles.snippetTitle}>
-                                      {event.name}
-                                    </span>
-                                    <span className={styles.snippetPath}>
-                                      {url}
-                                    </span>
-                                  </div>
-                                  <EmbedSnippetCopyButton
-                                    value={buildEmbedSnippet(
-                                      url,
-                                      `${detail.tenant.name} checkout for ${event.name}`,
-                                      calendar.embed_default_height_px,
-                                    )}
-                                  />
-                                </div>
-                              );
-                            })}
-
-                            {!embedExampleEvents.length ? (
-                              <p className="subtle-text">
-                                Calendar embed is ready. Event-specific embeds
-                                will appear once this calendar has at least one
-                                upcoming public event.
-                              </p>
-                            ) : null}
-                          </div>
-                        ) : (
-                          <p className="subtle-text">
-                            Turn on embedding and add at least one allowed
-                            origin to generate copy-ready HTML here.
-                          </p>
-                        )}
                       </ConsoleDisclosure>
                     </div>
                   </ConsoleDisclosure>
