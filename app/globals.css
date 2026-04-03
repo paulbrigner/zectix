@@ -564,36 +564,151 @@ select {
 
 .tenant-dashboard-header-actions {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: flex-end;
   justify-content: flex-end;
-  gap: 1rem 1.25rem;
+  gap: 1rem;
+  min-width: 0;
 }
 
-.tenant-dashboard-utilities {
+.tenant-dashboard-nav {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
-  gap: 0.9rem;
+  justify-content: flex-end;
+  gap: 0.95rem;
+  margin: 0;
 }
 
-.tenant-dashboard-utility-link {
+.tenant-dashboard-nav-link {
   display: inline-flex;
-  align-items: flex-end;
+  align-items: center;
   min-height: auto;
   padding: 0 0 0.35rem;
   border: 0;
   border-bottom: 2px solid transparent;
   background: transparent;
-  color: var(--text-muted);
+  color: var(--color-gray-500);
   font-size: 0.95rem;
   font-weight: 600;
   line-height: 1.2;
   text-decoration: none;
+  white-space: nowrap;
 }
 
-.tenant-dashboard-utility-link-strong {
+.tenant-dashboard-nav-link-active {
+  border-bottom-color: var(--accent);
   color: var(--color-gray-900);
+}
+
+.tenant-dashboard-nav-link-disabled {
+  color: var(--color-gray-400);
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.tenant-dashboard-menu {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.tenant-dashboard-menu summary {
+  list-style: none;
+}
+
+.tenant-dashboard-menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.tenant-dashboard-menu-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.6rem;
+  min-height: 2.6rem;
+  border: 1px solid rgba(17, 24, 39, 0.1);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--color-gray-700);
+  cursor: pointer;
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+}
+
+.tenant-dashboard-menu[open] .tenant-dashboard-menu-trigger {
+  border-color: var(--accent-border);
+  background: var(--accent-subtle);
+  color: var(--accent-text);
+}
+
+.tenant-dashboard-menu-content {
+  position: absolute;
+  top: calc(100% + 0.75rem);
+  right: 0;
+  z-index: 20;
+  display: grid;
+  gap: 0.35rem;
+  width: min(18rem, calc(100vw - 3rem));
+  padding: 0.6rem;
+  border: 1px solid rgba(17, 24, 39, 0.12);
+  border-radius: 20px;
+  background: white;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.16);
+}
+
+.tenant-dashboard-menu-group {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.tenant-dashboard-menu-group-mobile {
+  display: none;
+}
+
+.tenant-dashboard-menu-divider {
+  display: none;
+  height: 1px;
+  background: rgba(17, 24, 39, 0.08);
+  margin: 0.2rem 0;
+}
+
+.tenant-dashboard-menu-entry {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 2.5rem;
+  padding: 0.65rem 0.8rem;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  color: var(--color-gray-700);
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: left;
+  text-decoration: none;
+}
+
+.tenant-dashboard-menu-entry-active {
+  background: var(--accent-subtle);
+  color: var(--accent-text);
+}
+
+.tenant-dashboard-menu-entry-disabled {
+  color: var(--color-gray-400);
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.tenant-dashboard-menu-entry-strong {
+  color: var(--color-gray-900);
+}
+
+.tenant-dashboard-menu-form {
+  margin: 0;
+}
+
+.tenant-dashboard-menu-form .tenant-dashboard-menu-entry {
+  cursor: pointer;
 }
 
 .organizer-shell-actions {
@@ -4557,6 +4672,23 @@ select {
     flex: 0 0 auto;
     justify-content: flex-start;
   }
+
+  .tenant-dashboard-header-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .tenant-dashboard-nav {
+    display: none;
+  }
+
+  .tenant-dashboard-menu-group-mobile {
+    display: grid;
+  }
+
+  .tenant-dashboard-menu-divider {
+    display: block;
+  }
 }
 
 @media (max-width: 1240px) {
@@ -4746,10 +4878,13 @@ select {
     min-width: 7rem;
   }
 
-  .tenant-dashboard-header-actions,
-  .tenant-dashboard-utilities {
+  .tenant-dashboard-header-actions {
     width: 100%;
-    justify-content: flex-start;
+    justify-content: flex-end;
+  }
+
+  .tenant-dashboard-menu-content {
+    width: min(18rem, calc(100vw - 1.5rem));
   }
 
   .tenant-events-filter-actions {
