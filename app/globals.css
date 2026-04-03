@@ -573,6 +573,7 @@ select {
 
 .tenant-dashboard-nav-stack {
   display: grid;
+  align-content: start;
   justify-items: end;
   gap: 0.35rem;
   min-width: 0;
@@ -581,10 +582,21 @@ select {
 .tenant-dashboard-nav {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
+  align-items: flex-start;
   justify-content: flex-end;
   gap: 0.95rem;
   margin: 0;
+}
+
+.tenant-dashboard-nav-item {
+  display: grid;
+  align-content: start;
+  justify-items: center;
+  gap: 0.35rem;
+}
+
+.tenant-dashboard-nav-item-connections {
+  min-width: max-content;
 }
 
 .tenant-dashboard-nav-link {
@@ -616,11 +628,12 @@ select {
 
 .tenant-dashboard-subnav {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: center;
   gap: 0.85rem;
   margin: 0;
+  min-height: 1.45rem;
 }
 
 .tenant-dashboard-subnav-link {
@@ -639,6 +652,11 @@ select {
 .tenant-dashboard-subnav-link-active {
   border-bottom-color: var(--accent);
   color: var(--color-gray-900);
+}
+
+.tenant-dashboard-subnav-hidden {
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .tenant-dashboard-menu {

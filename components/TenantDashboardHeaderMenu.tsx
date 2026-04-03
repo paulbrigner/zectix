@@ -102,53 +102,67 @@ export function TenantDashboardHeaderMenu({
           {primaryItems.map((item) => {
             const active = isItemActive(pathname, item.href, basePath);
             const disabled = Boolean(item.disabled);
-
-            if (disabled) {
-              return (
-                <span
-                  aria-disabled="true"
-                  className={navLinkClassName(active, disabled)}
-                  key={item.href}
-                >
-                  {item.label}
-                </span>
-              );
-            }
+            const isConnectionsItem = item.href === connectionsHref;
 
             return (
-              <Link
-                aria-current={active ? "page" : undefined}
-                className={navLinkClassName(active, disabled)}
-                href={item.href}
+              <div
+                className={`tenant-dashboard-nav-item${
+                  isConnectionsItem
+                    ? " tenant-dashboard-nav-item-connections"
+                    : ""
+                }`}
                 key={item.href}
               >
-                {item.label}
-              </Link>
+                {disabled ? (
+                  <span
+                    aria-disabled="true"
+                    className={navLinkClassName(active, disabled)}
+                  >
+                    {item.label}
+                  </span>
+                ) : (
+                  <Link
+                    aria-current={active ? "page" : undefined}
+                    className={navLinkClassName(active, disabled)}
+                    href={item.href}
+                  >
+                    {item.label}
+                  </Link>
+                )}
+
+                {isConnectionsItem ? (
+                  <div
+                    aria-hidden={!showingConnectionsSubmenu}
+                    className={`tenant-dashboard-subnav${
+                      showingConnectionsSubmenu
+                        ? ""
+                        : " tenant-dashboard-subnav-hidden"
+                    }`}
+                    role="group"
+                  >
+                    {connectionsSubItems.map((subitem) => {
+                      const subitemActive = isConnectionsSubitemActive(
+                        subitem.label,
+                      );
+
+                      return (
+                        <Link
+                          aria-current={subitemActive ? "page" : undefined}
+                          className={subnavLinkClassName(subitemActive)}
+                          href={subitem.href}
+                          key={subitem.href}
+                          tabIndex={showingConnectionsSubmenu ? undefined : -1}
+                        >
+                          {subitem.label}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                ) : null}
+              </div>
             );
           })}
         </nav>
-
-        {showingConnectionsSubmenu ? (
-          <nav
-            aria-label="Connections sections"
-            className="tenant-dashboard-subnav"
-          >
-            {connectionsSubItems.map((item) => {
-              const active = isConnectionsSubitemActive(item.label);
-
-              return (
-                <Link
-                  aria-current={active ? "page" : undefined}
-                  className={subnavLinkClassName(active)}
-                  href={item.href}
-                  key={item.href}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
-        ) : null}
       </div>
 
       <details className="tenant-dashboard-menu" ref={menuRef}>

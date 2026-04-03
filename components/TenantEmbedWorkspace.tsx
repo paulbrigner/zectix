@@ -27,18 +27,6 @@ export function TenantEmbedWorkspace({
 
   return (
     <div className="console-page-body">
-      <section className="console-section">
-        <div className="console-section-header">
-          <div>
-            <h2>Embed</h2>
-            <p className="subtle-text">
-              Generate iframe snippets, set allowlists, and tune the embedded
-              checkout appearance without changing your public hosted flow.
-            </p>
-          </div>
-        </div>
-      </section>
-
       {!detail.calendars.length ? (
         <section className="console-section">
           <div className="console-preview-empty">
