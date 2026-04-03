@@ -115,11 +115,6 @@ export default async function PublicCalendarPage({
                 {embedMode ? data.calendar.display_name : data.tenant.name}
               </span>
             </div>
-            {!embedMode ? (
-              <Link className="public-home-link" href="/">
-                Powered by ZecTix
-              </Link>
-            ) : null}
           </div>
         ) : null}
 
