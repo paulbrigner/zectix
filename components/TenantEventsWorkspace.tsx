@@ -177,7 +177,7 @@ function ticketReviewTone(ticket: TicketMirror): TenantEventWorkspaceTone {
 
 function ticketReviewLabel(ticket: TicketMirror) {
   if (!ticket.public_checkout_requested) {
-    return "Hidden by choice";
+    return null;
   }
 
   if (ticket.zcash_enabled) {
@@ -191,7 +191,7 @@ function ticketReviewLabel(ticket: TicketMirror) {
 
 function ticketReviewCopy(ticket: TicketMirror) {
   if (!ticket.public_checkout_requested) {
-    return "This ticket is intentionally hidden from public checkout.";
+    return null;
   }
 
   if (ticket.automatic_eligibility_reasons.length) {
@@ -840,19 +840,6 @@ export function TenantEventsWorkspace({
                 </div>
               ) : selectedRow.tickets.length ? (
                 <section className="tenant-events-ticket-section">
-                  <div className="console-section-header">
-                    <div>
-                      <h2>Ticket review</h2>
-                      <p className="subtle-text">
-                        Choose which mirrored tickets should appear on public
-                        checkout. As soon as at least one ticket is allowed, the
-                        event itself becomes public automatically. Your signup
-                        disclosures already cover the supported checkout
-                        restrictions.
-                      </p>
-                    </div>
-                  </div>
-
                   <ConsoleTable
                     className="tenant-ticket-review-table-wrap"
                     tableClassName="tenant-ticket-review-table"
@@ -893,9 +880,11 @@ export function TenantEventsWorkspace({
                               </StatusBadge>
                             </div>
                           ) : null}
-                          <p className="subtle-text console-table-note">
-                            {ticketReviewCopy(ticket)}
-                          </p>
+                          {ticketReviewCopy(ticket) ? (
+                            <p className="subtle-text console-table-note">
+                              {ticketReviewCopy(ticket)}
+                            </p>
+                          ) : null}
                         </ConsoleTableCell>
                         <ConsoleTableCell className="tenant-ticket-review-control">
                           <form

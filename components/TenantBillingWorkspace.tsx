@@ -58,7 +58,7 @@ function settlementSummary(cycle: BillingCycle | null) {
     return "Cycle is suspended pending operator follow-up.";
   }
 
-  return "Operator-managed settlement details will appear here once a cycle is invoiced.";
+  return "Settlement details will appear here once a cycle is invoiced.";
 }
 
 function outstandingSummary(

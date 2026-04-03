@@ -42,10 +42,6 @@ export function TenantEmbedWorkspace({
           <div className="console-section-header">
             <div>
               <h2>Per-calendar embed settings</h2>
-              <p className="subtle-text">
-                Embedding is configured at the calendar level. The generated
-                snippets use upcoming public events from that calendar.
-              </p>
             </div>
           </div>
 
