@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { updateCalendarEmbedSettingsAction } from "@/app/dashboard/actions";
 import { ConsoleDisclosure } from "@/components/ConsoleDisclosure";
 import { ConsoleFieldLabel } from "@/components/ConsoleFieldLabel";
@@ -72,25 +71,6 @@ export function TenantEmbedWorkspace({
                           ? "Ready to publish"
                           : "Needs a few more things"}
                       </h3>
-                      <p className="subtle-text">
-                        {calendar.embed_enabled
-                          ? `${calendar.embed_allowed_origins.length} allowed origin${calendar.embed_allowed_origins.length === 1 ? "" : "s"}`
-                          : "Embedding is currently turned off"}
-                      </p>
-                    </div>
-                    <div className="button-row">
-                      <Link
-                        className="button button-secondary button-small"
-                        href={`${tenantBasePath}/connections`}
-                      >
-                        Connections
-                      </Link>
-                      <Link
-                        className="button button-secondary button-small"
-                        href={`${tenantBasePath}/events`}
-                      >
-                        Events
-                      </Link>
                     </div>
                   </div>
 
@@ -101,7 +81,11 @@ export function TenantEmbedWorkspace({
                         {calendar.embed_enabled ? "Enabled" : "Disabled"}
                       </strong>
                       <p className="subtle-text">
-                        Turn this on to allow compact iframe rendering.
+                        {embedReady
+                          ? "Ready to publish. Embed snippets are available for this calendar now."
+                          : calendar.embed_enabled
+                            ? "Finish the remaining setup so this calendar can publish usable embed snippets."
+                            : "Turn this on first, then allow at least one origin and publish a public event to generate snippets."}
                       </p>
                     </div>
                     <div className="console-signal-card">

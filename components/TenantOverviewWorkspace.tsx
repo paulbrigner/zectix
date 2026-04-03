@@ -37,10 +37,8 @@ function invalidWebhookSummary(invalidWebhooks: number) {
 
 export function TenantOverviewWorkspace({
   detail,
-  tenantBasePath,
 }: {
   detail: TenantOpsDetail;
-  tenantBasePath: string;
 }) {
   const summary = buildWorkspaceOverview(detail);
   const recentSessions = recentSessionsForDashboard(detail.sessions);
@@ -89,20 +87,6 @@ export function TenantOverviewWorkspace({
               A compact read on whether each calendar is mirrored, payable, and
               ready to embed.
             </p>
-          </div>
-          <div className="button-row">
-            <Link
-              className="button button-secondary button-small"
-              href={`${tenantBasePath}/connections`}
-            >
-              Manage connections
-            </Link>
-            <Link
-              className="button button-secondary button-small"
-              href={`${tenantBasePath}/embed`}
-            >
-              Manage embed
-            </Link>
           </div>
         </div>
 
@@ -178,21 +162,6 @@ export function TenantOverviewWorkspace({
                       </dd>
                     </div>
                   </dl>
-
-                  <div className="button-row">
-                    <Link
-                      className="button button-secondary button-small"
-                      href={`${tenantBasePath}/events`}
-                    >
-                      Review events
-                    </Link>
-                    <Link
-                      className="button button-secondary button-small"
-                      href={`${tenantBasePath}/connections`}
-                    >
-                      Edit connection
-                    </Link>
-                  </div>
                 </article>
               );
             })}

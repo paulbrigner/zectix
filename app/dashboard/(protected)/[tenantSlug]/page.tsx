@@ -24,9 +24,6 @@ export default async function TenantOverviewPage({
   }
 
   return (
-    <TenantOverviewWorkspace
-      detail={detail}
-      tenantBasePath={`/dashboard/${encodeURIComponent(detail.tenant.slug)}`}
-    />
+    <TenantOverviewWorkspace detail={detail} />
   );
 }

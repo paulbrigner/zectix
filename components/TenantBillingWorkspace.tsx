@@ -206,7 +206,7 @@ export function TenantBillingWorkspace({
           <>
             <div className="console-signal-grid billing-cycle-signal-grid">
               <div className="console-signal-card">
-                <span className="console-kpi-label">Recognized registrations</span>
+                <span className="console-kpi-label">Registrations</span>
                 <strong>{currentCycle.recognized_session_count}</strong>
                 <p className="subtle-text">
                   Paid attendee registration{currentCycle.recognized_session_count === 1 ? "" : "s"} mirrored successfully this cycle
