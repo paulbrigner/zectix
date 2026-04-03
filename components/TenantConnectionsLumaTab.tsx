@@ -10,7 +10,6 @@ import { ConsoleDisclosure } from "@/components/ConsoleDisclosure";
 import { ConsoleFieldLabel } from "@/components/ConsoleFieldLabel";
 import { ConsoleForm } from "@/components/ConsoleForm";
 import { ConsoleFormPendingNote } from "@/components/ConsoleFormPendingNote";
-import { ConsoleInfoTip } from "@/components/ConsoleInfoTip";
 import { ConsoleSection } from "@/components/ConsoleSection";
 import { ConsoleSubmitButton } from "@/components/ConsoleSubmitButton";
 import { LocalDateTime } from "@/components/LocalDateTime";
@@ -125,10 +124,7 @@ export function TenantConnectionsLumaTab({
       ) || null;
     const {
       futureMirroredEvents,
-      mirroredByEventId,
       enabledEvents,
-      enabledTickets,
-      tickets,
     } = summarizeCalendarInventory(detail, calendar);
     const previewEvents = livePreview
       ? selectUpcomingEvents(livePreview.events)
@@ -148,9 +144,6 @@ export function TenantConnectionsLumaTab({
       detail.active_cipherpay_connections_by_calendar.get(
         calendar.calendar_connection_id,
       ) || null;
-    const liveOnlyCount = nextLiveEvents.filter(
-      (event) => !mirroredByEventId.has(event.api_id),
-    ).length;
 
     return (
       <article
@@ -162,56 +155,17 @@ export function TenantConnectionsLumaTab({
             <p className="console-kpi-label">{calendar.status}</p>
             <h4>{calendar.display_name}</h4>
           </div>
-          <div className="button-row">
-            <form action={validateAndSyncCalendarAction}>
-              <input
-                name="calendar_connection_id"
-                type="hidden"
-                value={calendar.calendar_connection_id}
-              />
-              <input
-                name="tenant_slug"
-                type="hidden"
-                value={detail.tenant.slug}
-              />
-              <input
-                name="redirect_to"
-                type="hidden"
-                value={calendarReturnPath}
-              />
-              <ConsoleSubmitButton
-                className={`button button-small${
-                  calendar.last_validated_at
-                    ? " button-secondary"
-                    : " button-attention"
-                }`}
-                label={
-                  calendar.last_validated_at
-                    ? "Re-sync now"
-                    : "Connect and sync"
-                }
-                pendingLabel={
-                  calendar.last_validated_at
-                    ? "Re-syncing..."
-                    : "Connecting and syncing..."
-                }
-              />
-              <ConsoleFormPendingNote pendingLabel="Refreshing this calendar and its mirrored inventory..." />
-            </form>
-            <Link
-              className="button button-secondary button-small"
-              href={eventsBasePath}
-            >
-              Review events
-            </Link>
-            {calendar.status !== "disabled" ? (
-              <ConsoleConfirmDialog
-                action={disableCalendarConnectionAction}
-                confirmLabel="Disable calendar"
-                description="This turns off public checkout for this calendar until you reconnect and validate it again."
-                title={`Disable ${calendar.display_name}?`}
-                triggerLabel="Disable calendar"
-              >
+          <div className="console-luma-card-actions">
+            <p className="subtle-text console-luma-sync-note">
+              Last sync{" "}
+              {calendar.last_synced_at ? (
+                <LocalDateTime iso={calendar.last_synced_at} />
+              ) : (
+                "not run yet"
+              )}
+            </p>
+            <div className="button-row">
+              <form action={validateAndSyncCalendarAction}>
                 <input
                   name="calendar_connection_id"
                   type="hidden"
@@ -227,8 +181,57 @@ export function TenantConnectionsLumaTab({
                   type="hidden"
                   value={calendarReturnPath}
                 />
-              </ConsoleConfirmDialog>
-            ) : null}
+                <ConsoleSubmitButton
+                  className={`button button-small${
+                    calendar.last_validated_at
+                      ? " button-secondary"
+                      : " button-attention"
+                  }`}
+                  label={
+                    calendar.last_validated_at
+                      ? "Re-sync now"
+                      : "Connect and sync"
+                  }
+                  pendingLabel={
+                    calendar.last_validated_at
+                      ? "Re-syncing..."
+                      : "Connecting and syncing..."
+                  }
+                />
+                <ConsoleFormPendingNote pendingLabel="Refreshing this calendar and its mirrored inventory..." />
+              </form>
+              <Link
+                className="button button-secondary button-small"
+                href={eventsBasePath}
+              >
+                Review events
+              </Link>
+              {calendar.status !== "disabled" ? (
+                <ConsoleConfirmDialog
+                  action={disableCalendarConnectionAction}
+                  confirmLabel="Disable calendar"
+                  description="This turns off public checkout for this calendar until you reconnect and validate it again."
+                  title={`Disable ${calendar.display_name}?`}
+                  triggerLabel="Disable calendar"
+                >
+                  <input
+                    name="calendar_connection_id"
+                    type="hidden"
+                    value={calendar.calendar_connection_id}
+                  />
+                  <input
+                    name="tenant_slug"
+                    type="hidden"
+                    value={detail.tenant.slug}
+                  />
+                  <input
+                    name="redirect_to"
+                    type="hidden"
+                    value={calendarReturnPath}
+                  />
+                </ConsoleConfirmDialog>
+              ) : null}
+            </div>
           </div>
         </div>
 
@@ -255,10 +258,7 @@ export function TenantConnectionsLumaTab({
               {futureMirroredEvents.length} future event
               {futureMirroredEvents.length === 1 ? "" : "s"}
             </strong>
-            <p className="subtle-text">
-              {enabledEvents.length} live · {enabledTickets.length} ticket
-              {enabledTickets.length === 1 ? "" : "s"} enabled
-            </p>
+            <p className="subtle-text">{enabledEvents.length} live</p>
           </div>
           <div className="console-signal-card">
             <span className="console-kpi-label">Checkout</span>
@@ -278,27 +278,6 @@ export function TenantConnectionsLumaTab({
         {calendar.last_sync_error ? (
           <p className="console-error-text">{calendar.last_sync_error}</p>
         ) : null}
-
-        <div className="console-inline-action">
-          <p className="subtle-text">
-            Last sync{" "}
-            {calendar.last_synced_at ? (
-              <LocalDateTime iso={calendar.last_synced_at} />
-            ) : (
-              "not run yet"
-            )}{" "}
-            · {tickets.length} mirrored ticket
-            {tickets.length === 1 ? "" : "s"} · {liveOnlyCount} live Luma
-            event{liveOnlyCount === 1 ? "" : "s"} not yet mirrored
-          </p>
-          <ConsoleInfoTip label="What Connect and sync does">
-            <p>
-              Checks that the saved Luma key can read the calendar, creates or
-              refreshes the managed webhook, and refreshes the mirrored events
-              and tickets used by public checkout.
-            </p>
-          </ConsoleInfoTip>
-        </div>
 
         <ConsoleDisclosure
           defaultOpen={false}

@@ -1592,6 +1592,17 @@ select {
   gap: var(--space-4);
 }
 
+.console-luma-card-actions {
+  display: grid;
+  justify-items: end;
+  gap: 0.65rem;
+}
+
+.console-luma-sync-note {
+  margin: 0;
+  text-align: right;
+}
+
 .console-luma-card-head,
 .console-event-review-head,
 .console-preview-body-head {
