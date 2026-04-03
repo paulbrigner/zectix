@@ -924,6 +924,17 @@ select {
   line-height: 1.5;
 }
 
+.tenant-summary-checkouts {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.tenant-summary-checkouts h4 {
+  margin: 0;
+  color: var(--color-gray-900);
+  font-size: 1.1rem;
+}
+
 .tenant-checklist-card {
   gap: 1rem;
 }
