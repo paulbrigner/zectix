@@ -559,9 +559,6 @@ export function TenantEventsWorkspace({
                   <ConsoleTableHeader className="tenant-events-cell-event">
                     Event
                   </ConsoleTableHeader>
-                  <ConsoleTableHeader className="tenant-events-cell-calendar">
-                    Calendar
-                  </ConsoleTableHeader>
                   <ConsoleTableHeader className="tenant-events-cell-when">
                     When
                   </ConsoleTableHeader>
@@ -599,9 +596,6 @@ export function TenantEventsWorkspace({
                             {row.location_label || "Location not specified"}
                           </p>
                         </div>
-                      </ConsoleTableCell>
-                      <ConsoleTableCell className="tenant-events-cell-calendar">
-                        {row.calendar.display_name}
                       </ConsoleTableCell>
                       <ConsoleTableCell className="tenant-events-cell-when">
                         <span className="tenant-events-time">

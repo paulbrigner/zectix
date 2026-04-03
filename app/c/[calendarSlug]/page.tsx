@@ -184,9 +184,11 @@ export default async function PublicCalendarPage({
           )}
         </section>
 
-        {embedMode && data.calendar.embed_show_branding ? (
+        {embedMode ? (
+          data.calendar.embed_show_branding ? <EmbedBrandingFooter /> : null
+        ) : (
           <EmbedBrandingFooter />
-        ) : null}
+        )}
       </div>
     </main>
   );
