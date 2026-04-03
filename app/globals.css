@@ -662,6 +662,7 @@ select {
 .tenant-dashboard-menu {
   position: relative;
   flex: 0 0 auto;
+  align-self: flex-start;
 }
 
 .tenant-dashboard-menu summary {
