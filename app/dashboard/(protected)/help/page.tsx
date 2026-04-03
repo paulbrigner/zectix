@@ -77,9 +77,6 @@ export default async function TenantHelpPage({
         <div className="console-section-header">
           <div>
             <h2>Help</h2>
-            <p className="subtle-text">
-              Send a support request without leaving your organizer dashboard.
-            </p>
           </div>
         </div>
 
@@ -132,13 +129,6 @@ export default async function TenantHelpPage({
           ) : selectedTenant ? (
             <>
               <input name="tenant_slug" type="hidden" value={selectedTenant.slug} />
-              <div className="console-detail-card">
-                <p className="console-kpi-label">Organization</p>
-                <h3>{selectedTenant.name}</h3>
-                <p className="subtle-text">
-                  This request will include your current organizer context.
-                </p>
-              </div>
             </>
           ) : null}
 
