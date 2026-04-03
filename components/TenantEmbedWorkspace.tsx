@@ -4,11 +4,16 @@ import { ConsoleFieldLabel } from "@/components/ConsoleFieldLabel";
 import { ConsoleFormPendingNote } from "@/components/ConsoleFormPendingNote";
 import { ConsoleSubmitButton } from "@/components/ConsoleSubmitButton";
 import { ConsoleSwitch } from "@/components/ConsoleSwitch";
+import { EmbedAppearanceResetButton } from "@/components/EmbedAppearanceResetButton";
 import { TenantEmbedPreviewPicker } from "@/components/TenantEmbedPreviewPicker";
 import { appUrl } from "@/lib/app-paths";
 import type { TicketMirror } from "@/lib/app-state/types";
 import { formatFiatAmount } from "@/lib/app-state/utils";
-import { buildEmbedThemeStyle, selectUpcomingEvents } from "@/lib/embed";
+import {
+  DEFAULT_EMBED_HEIGHT_PX,
+  buildEmbedThemeStyle,
+  selectUpcomingEvents,
+} from "@/lib/embed";
 import type { TenantOpsDetail } from "@/lib/tenancy/service";
 import {
   buildEmbedCalendarUrl,
@@ -239,43 +244,6 @@ export function TenantEmbedWorkspace({
                         value={embedBasePath}
                       />
 
-                      <div className={styles.settingsSummaryGrid}>
-                        <div className={styles.settingsSummaryCard}>
-                          <span className={styles.eyebrow}>Embedding</span>
-                          <strong>
-                            {calendar.embed_enabled ? "On" : "Off"}
-                          </strong>
-                          <p className="subtle-text">
-                            Turn this on when you want to place this calendar on
-                            your own website.
-                          </p>
-                        </div>
-                        <div className={styles.settingsSummaryCard}>
-                          <span className={styles.eyebrow}>Allowed sites</span>
-                          <strong>
-                            {calendar.embed_allowed_origins.length === 0
-                              ? "Not set yet"
-                              : `${calendar.embed_allowed_origins.length} saved`}
-                          </strong>
-                          <p className="subtle-text">
-                            Add the website addresses where this embed is
-                            allowed to appear.
-                          </p>
-                        </div>
-                        <div className={styles.settingsSummaryCard}>
-                          <span className={styles.eyebrow}>Available copies</span>
-                          <strong>
-                            {embedExampleEvents.length > 0
-                              ? "Calendar and event"
-                              : "Calendar only"}
-                          </strong>
-                          <p className="subtle-text">
-                            Copy a full calendar embed, plus event embeds for
-                            any upcoming public events.
-                          </p>
-                        </div>
-                      </div>
-
                       <div className="embed-settings-top-grid">
                         <ConsoleSwitch
                           className="embed-toggle-card"
@@ -292,20 +260,6 @@ export function TenantEmbedWorkspace({
                           label="Show branding"
                           name="embed_show_branding"
                         />
-
-                        <label className="console-field embed-settings-height-card">
-                          <ConsoleFieldLabel
-                            info="Choose the starting height for copied embed code. You can still adjust it later on your site if needed."
-                            label="Default iframe height"
-                          />
-                          <input
-                            className="console-input"
-                            defaultValue={calendar.embed_default_height_px}
-                            min={480}
-                            name="embed_default_height_px"
-                            type="number"
-                          />
-                        </label>
                       </div>
 
                       <section className="embed-settings-section">
@@ -327,11 +281,7 @@ export function TenantEmbedWorkspace({
                         />
                       </section>
 
-                      <ConsoleDisclosure
-                        className={styles.nestedDisclosure}
-                        description="Optional style changes for colors and rounded corners."
-                        title="Appearance overrides"
-                      >
+                      <section className="embed-settings-section">
                         <div className="public-field-grid embed-theme-grid">
                           <label className="console-field">
                             <ConsoleFieldLabel
@@ -393,6 +343,19 @@ export function TenantEmbedWorkspace({
                           </label>
                           <label className="console-field">
                             <ConsoleFieldLabel
+                              info="Choose the starting height for copied embed code. You can still adjust it later on your site if needed."
+                              label="Default iframe height"
+                            />
+                            <input
+                              className="console-input"
+                              defaultValue={calendar.embed_default_height_px}
+                              min={480}
+                              name="embed_default_height_px"
+                              type="number"
+                            />
+                          </label>
+                          <label className="console-field">
+                            <ConsoleFieldLabel
                               info="Optional corner roundness for cards inside the embed."
                               label="Corner radius"
                               optional
@@ -406,9 +369,12 @@ export function TenantEmbedWorkspace({
                             />
                           </label>
                         </div>
-                      </ConsoleDisclosure>
+                      </section>
 
                       <div className={styles.settingsActions}>
+                        <EmbedAppearanceResetButton
+                          defaultHeight={DEFAULT_EMBED_HEIGHT_PX}
+                        />
                         <ConsoleSubmitButton
                           className="button button-attention button-small"
                           label="Save embed settings"
