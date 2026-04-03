@@ -29,6 +29,8 @@ export function TenantConnectionsCipherPayTab({
   const cipherPayReturnPath = onboardingIncomplete
     ? setupReturnPath
     : withHash(cipherPayTabPath, "current-cipherpay-connection");
+  const singleCalendar = detail.calendars.length === 1;
+  const primaryCalendar = singleCalendar ? detail.calendars[0] : null;
 
   const calendarNamesById = new Map(
     detail.calendars.map((calendar) => [
@@ -78,7 +80,11 @@ export function TenantConnectionsCipherPayTab({
             detail.calendars.length > 0 && !detail.cipherpay_connections.length
           }
           description="Leave the base URLs blank unless your organization uses custom CipherPay endpoints."
-          title="Add or replace a checkout connection"
+          title={
+            currentCipherPayConnections.length
+              ? "Replace checkout connection"
+              : "Set up checkout connection"
+          }
         >
           <ConsoleForm action={createCipherPayConnectionAction}>
             <input
@@ -96,27 +102,46 @@ export function TenantConnectionsCipherPayTab({
               }
             />
             <div className="public-field-grid">
-              <label className="console-field">
-                <ConsoleFieldLabel
-                  info="Choose which mirrored calendar this payment account should serve."
-                  label="Calendar connection"
-                />
-                <select
-                  className="console-input"
-                  name="calendar_connection_id"
-                  required
-                >
-                  <option value="">Select calendar</option>
-                  {detail.calendars.map((calendar) => (
-                    <option
-                      key={calendar.calendar_connection_id}
-                      value={calendar.calendar_connection_id}
-                    >
-                      {calendar.display_name}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              {primaryCalendar ? (
+                <>
+                  <input
+                    name="calendar_connection_id"
+                    type="hidden"
+                    value={primaryCalendar.calendar_connection_id}
+                  />
+                  <div className="console-field">
+                    <ConsoleFieldLabel
+                      info="Your checkout connection will be attached to the organizer's single calendar."
+                      label="Calendar connection"
+                    />
+                    <div className="console-input">
+                      {primaryCalendar.display_name}
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <label className="console-field">
+                  <ConsoleFieldLabel
+                    info="Choose which mirrored calendar this payment account should serve."
+                    label="Calendar connection"
+                  />
+                  <select
+                    className="console-input"
+                    name="calendar_connection_id"
+                    required
+                  >
+                    <option value="">Select calendar</option>
+                    {detail.calendars.map((calendar) => (
+                      <option
+                        key={calendar.calendar_connection_id}
+                        value={calendar.calendar_connection_id}
+                      >
+                        {calendar.display_name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
               <label className="console-field">
                 <ConsoleFieldLabel
                   info="Use testnet for staging and mainnet for real payments."
@@ -194,8 +219,7 @@ export function TenantConnectionsCipherPayTab({
           >
             <strong>No live checkout connection yet</strong>
             <p className="subtle-text">
-              Add a CipherPay connection to make public checkout payable for one
-              of your mirrored calendars.
+              Add a CipherPay connection to make public checkout payable.
             </p>
           </div>
         ) : (

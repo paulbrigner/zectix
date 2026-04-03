@@ -13,13 +13,9 @@ function updateFieldValue(
   name: string,
   value: string,
 ) {
-  const field = form.elements.namedItem(name);
-  if (!field) {
-    return;
-  }
-
-  const input =
-    field instanceof RadioNodeList ? field[0] : field;
+  const input = form.querySelector(
+    `[name="${CSS.escape(name)}"]`,
+  );
 
   if (
     !(input instanceof HTMLInputElement) &&
@@ -29,6 +25,8 @@ function updateFieldValue(
   }
 
   input.value = value;
+  input.defaultValue = value;
+  input.setAttribute("value", value);
   input.dispatchEvent(new Event("input", { bubbles: true }));
   input.dispatchEvent(new Event("change", { bubbles: true }));
 }

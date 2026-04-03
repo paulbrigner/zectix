@@ -48,17 +48,35 @@ export function TenantOverviewWorkspace({
 }) {
   const summary = buildWorkspaceOverview(detail);
   const recentSessions = recentSessionsForDashboard(detail.sessions);
+  const primaryCalendar = detail.calendars[0] || null;
+  const primaryCalendarPreview = primaryCalendar
+    ? detail.calendar_secret_previews.get(primaryCalendar.calendar_connection_id)
+    : null;
+  const primaryCalendarHealth = primaryCalendar
+    ? calendarConnectionHealthLabel(
+        primaryCalendar,
+        Boolean(primaryCalendarPreview?.luma.has_value),
+      )
+    : "Not connected";
 
   return (
     <div className="console-page-body">
       <section className="console-section tenant-overview-hero">
         <div className="console-kpi-grid tenant-overview-metrics">
           <article className="console-kpi-card">
-            <p className="console-kpi-label">Active calendars</p>
-            <p className="console-kpi-value">{summary.activeCalendars}</p>
+            <p className="console-kpi-label">Luma sync</p>
+            <p className="console-kpi-value">{primaryCalendarHealth}</p>
             <p className="subtle-text console-kpi-detail">
-              {detail.calendars.length} total calendar connection
-              {detail.calendars.length === 1 ? "" : "s"}
+              {primaryCalendar?.last_synced_at ? (
+                <>
+                  Last synced{" "}
+                  <LocalDateTime iso={primaryCalendar.last_synced_at} />
+                </>
+              ) : primaryCalendar ? (
+                "Run Connect and sync to refresh mirrored events."
+              ) : (
+                "Connect your Luma calendar to begin mirroring events."
+              )}
             </p>
           </article>
           <article className="console-kpi-card">
@@ -90,8 +108,9 @@ export function TenantOverviewWorkspace({
           <div>
             <h2>Connections at a glance</h2>
             <p className="subtle-text">
-              A compact read on whether each calendar is mirrored, payable, and
-              ready to embed.
+              {detail.calendars.length <= 1
+                ? "A compact read on your mirrored events, checkout connection, and embed readiness."
+                : "A compact read on whether each calendar is mirrored, payable, and ready to embed."}
             </p>
           </div>
         </div>
@@ -104,6 +123,66 @@ export function TenantOverviewWorkspace({
               mirroring events.
             </p>
           </div>
+        ) : detail.calendars.length === 1 ? (
+          (() => {
+            const calendar = detail.calendars[0];
+            const previews = detail.calendar_secret_previews.get(
+              calendar.calendar_connection_id,
+            );
+            const activeConnection =
+              detail.active_cipherpay_connections_by_calendar.get(
+                calendar.calendar_connection_id,
+              ) || null;
+            const inventory = summarizeCalendarInventory(detail, calendar);
+            const connectionHealth = calendarConnectionHealthLabel(
+              calendar,
+              Boolean(previews?.luma.has_value),
+            );
+
+            return (
+              <div className="tenant-summary-card">
+                <div className="tenant-summary-card-head">
+                  <div>
+                    <p className="console-kpi-label">{calendar.display_name}</p>
+                    <h3>{connectionHealth}</h3>
+                  </div>
+                  <div className="console-mini-pill-row">
+                    <span className={calendarStatusPillClassName(calendar.status)}>
+                      {calendar.status}
+                    </span>
+                    <span
+                      className={`console-mini-pill${calendar.embed_enabled ? " console-mini-pill-info" : ""}`}
+                    >
+                      {calendar.embed_enabled ? "Embed on" : "Embed off"}
+                    </span>
+                  </div>
+                </div>
+
+                <dl className="tenant-summary-list">
+                  <div>
+                    <dt>Luma</dt>
+                    <dd>{previews?.luma.preview || "No key saved yet"}</dd>
+                  </div>
+                  <div>
+                    <dt>CipherPay</dt>
+                    <dd>
+                      {activeConnection
+                        ? `${activeConnection.network} · ${activeConnection.status}`
+                        : "Not connected"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Inventory</dt>
+                    <dd>
+                      {inventory.futureMirroredEvents.length} future event
+                      {inventory.futureMirroredEvents.length === 1 ? "" : "s"} ·{" "}
+                      {inventory.enabledEvents.length} live
+                    </dd>
+                  </div>
+                </dl>
+              </div>
+            );
+          })()
         ) : (
           <div className="console-card-grid">
             {detail.calendars.map((calendar) => {

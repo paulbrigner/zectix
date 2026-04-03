@@ -10,6 +10,7 @@ export function ConsoleDisclosure({
   defaultOpen = false,
   description,
   lockedOpen = false,
+  summaryExtras,
   title,
 }: {
   children: ReactNode;
@@ -17,6 +18,7 @@ export function ConsoleDisclosure({
   defaultOpen?: boolean;
   description?: string;
   lockedOpen?: boolean;
+  summaryExtras?: ReactNode;
   title: string;
 }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -44,12 +46,19 @@ export function ConsoleDisclosure({
                 <p className="subtle-text">{description}</p>
               ) : null}
             </div>
-            {lockedOpen ? null : (
-              <ChevronDownIcon
-                aria-hidden="true"
-                className="console-disclosure-toggle"
-              />
-            )}
+            <div className="console-disclosure-heading-end">
+              {summaryExtras ? (
+                <div className="console-disclosure-summary-extras">
+                  {summaryExtras}
+                </div>
+              ) : null}
+              {lockedOpen ? null : (
+                <ChevronDownIcon
+                  aria-hidden="true"
+                  className="console-disclosure-toggle"
+                />
+              )}
+            </div>
           </div>
         </button>
       </Collapsible.Trigger>

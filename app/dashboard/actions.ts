@@ -358,6 +358,17 @@ export async function createCalendarConnectionAction(formData: FormData) {
   const { detail: beforeDetail, sessionEmail, tenant } =
     await requireTenantMutationContext(tenantSlug);
   const wasComplete = onboardingChecklistComplete(beforeDetail);
+
+  if (beforeDetail?.calendars.length) {
+    const params = new URLSearchParams();
+    params.set("tab", "luma");
+    params.set("luma_error", "already_connected");
+    redirectToWithQuery(
+      `/dashboard/${encodeURIComponent(tenant.slug)}/connections`,
+      params,
+    );
+  }
+
   const displayName = String(formData.get("display_name") || "");
   const slug = asString(formData.get("slug"));
   const connection = await runAuditedTenantDashboardMutation({
