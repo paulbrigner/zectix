@@ -47,19 +47,19 @@ export function TenantDashboardHeaderMenu({
   logoutAction,
 }: TenantDashboardHeaderMenuProps) {
   const pathname = usePathname();
-  const items: NavItem[] = [
+  const primaryItems: NavItem[] = [
     { disabled: onboardingIncomplete, href: basePath, label: "Overview" },
     { disabled: onboardingIncomplete, href: `${basePath}/events`, label: "Events" },
     { disabled: onboardingIncomplete, href: `${basePath}/billing`, label: "Billing" },
     { href: `${basePath}/connections`, label: "Connections" },
     { disabled: onboardingIncomplete, href: `${basePath}/embed`, label: "Embed" },
-    { href: `${basePath}/settings`, label: "Settings" },
   ];
+  const settingsHref = `${basePath}/settings`;
 
   return (
     <div className="tenant-dashboard-header-actions">
       <nav className="tenant-dashboard-nav" aria-label="Organizer workspace">
-        {items.map((item) => {
+        {primaryItems.map((item) => {
           const active = isItemActive(pathname, item.href, basePath);
           const disabled = Boolean(item.disabled);
 
@@ -101,7 +101,7 @@ export function TenantDashboardHeaderMenu({
             aria-label="Organizer workspace"
             className="tenant-dashboard-menu-group tenant-dashboard-menu-group-mobile"
           >
-            {items.map((item) => {
+            {primaryItems.map((item) => {
               const active = isItemActive(pathname, item.href, basePath);
               const disabled = Boolean(item.disabled);
 
@@ -133,6 +133,14 @@ export function TenantDashboardHeaderMenu({
           <div className="tenant-dashboard-menu-divider" />
 
           <div className="tenant-dashboard-menu-group">
+            <Link
+              aria-current={pathname === settingsHref ? "page" : undefined}
+              className={menuEntryClassName(pathname === settingsHref, false)}
+              href={settingsHref}
+            >
+              Settings
+            </Link>
+
             <Link
               className={menuEntryClassName(pathname === "/dashboard/help", false)}
               href="/dashboard/help"
