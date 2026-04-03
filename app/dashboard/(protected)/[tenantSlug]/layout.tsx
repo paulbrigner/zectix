@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { TenantWorkspaceNav } from "@/components/TenantWorkspaceNav";
+import { TenantDashboardHeaderMenu } from "@/components/TenantDashboardHeaderMenu";
 import { getTenantBySlug } from "@/lib/app-state/state";
 import { appPath } from "@/lib/app-paths";
 import { normalizeEmailAddress } from "@/lib/app-state/utils";
@@ -39,28 +38,11 @@ export default async function TenantScopedLayout({
             <h2>{tenant.name}</h2>
           </div>
 
-          <div className="tenant-dashboard-header-actions">
-            <TenantWorkspaceNav
-              basePath={basePath}
-              onboardingIncomplete={onboardingIncomplete}
-            />
-            <div className="tenant-dashboard-utilities">
-              <Link
-                className="tenant-dashboard-utility-link"
-                href="/dashboard/help"
-              >
-                Help
-              </Link>
-              <form action={appPath("/api/dashboard/logout")} method="post">
-                <button
-                  className="tenant-dashboard-utility-link tenant-dashboard-utility-link-strong"
-                  type="submit"
-                >
-                  Sign out
-                </button>
-              </form>
-            </div>
-          </div>
+          <TenantDashboardHeaderMenu
+            basePath={basePath}
+            logoutAction={appPath("/api/dashboard/logout")}
+            onboardingIncomplete={onboardingIncomplete}
+          />
         </div>
       </header>
 
