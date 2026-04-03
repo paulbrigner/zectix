@@ -1,0 +1,386 @@
+.cardHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.cardTitle {
+  margin: 0 0 0.35rem;
+  color: var(--color-gray-950);
+  font-size: 1.35rem;
+}
+
+.headStatus {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.statusPill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.85rem;
+  padding: 0 0.8rem;
+  border-radius: 999px;
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  background: rgba(241, 245, 249, 0.94);
+  color: #475569;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.statusReady {
+  border-color: rgba(22, 101, 52, 0.14);
+  background: rgba(220, 252, 231, 0.9);
+  color: #166534;
+}
+
+.statusInfo {
+  border-color: rgba(30, 64, 175, 0.14);
+  background: rgba(219, 234, 254, 0.94);
+  color: #1d4ed8;
+}
+
+.modeRow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.modeCard {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 3rem;
+  padding: 0.8rem 1rem;
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  border-radius: 18px;
+  background: rgba(249, 250, 251, 0.92);
+  color: var(--color-gray-700);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.modeCardActive {
+  border-color: rgba(37, 99, 235, 0.42);
+  background: rgba(239, 246, 255, 0.96);
+  color: var(--color-gray-950);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+}
+
+.previewFrame {
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  border-radius: 24px;
+  overflow: hidden;
+  background: rgba(248, 250, 252, 0.92);
+}
+
+.previewChrome {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid rgba(17, 24, 39, 0.08);
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.previewOrigin {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.8rem;
+  padding: 0 0.7rem;
+  border-radius: 999px;
+  background: rgba(241, 245, 249, 0.96);
+  color: var(--color-gray-700);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.previewPath {
+  color: var(--color-gray-500);
+  font-size: 0.84rem;
+  word-break: break-all;
+}
+
+.previewViewport {
+  padding: 1rem;
+}
+
+.previewShell {
+  display: grid;
+  gap: 1rem;
+  min-height: 26rem;
+  padding: 1rem;
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at top left, rgba(255, 247, 237, 0.96), transparent 32%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.98));
+  border: 1px solid rgba(17, 24, 39, 0.06);
+}
+
+.previewHero {
+  display: grid;
+  grid-template-columns: minmax(180px, 240px) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.previewMedia {
+  overflow: hidden;
+  aspect-ratio: 1 / 1;
+  border-radius: 22px;
+  background: linear-gradient(
+    135deg,
+    rgba(247, 147, 26, 0.18),
+    rgba(255, 243, 205, 0.92)
+  );
+}
+
+.previewMedia img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.previewMediaFallback {
+  display: grid;
+  place-items: center;
+}
+
+.previewMediaFallback span {
+  color: #9a3412;
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.previewCopy {
+  display: grid;
+  gap: 0.6rem;
+  min-width: 0;
+  align-content: start;
+}
+
+.previewMetaRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.previewBadge,
+.previewBadgeMuted {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.6rem;
+  padding: 0 0.7rem;
+  border-radius: 999px;
+  font-size: 0.77rem;
+  font-weight: 700;
+}
+
+.previewBadge {
+  background: rgba(219, 234, 254, 0.94);
+  color: #1d4ed8;
+}
+
+.previewBadgeMuted {
+  background: rgba(241, 245, 249, 0.94);
+  color: #475569;
+}
+
+.previewCopy h4 {
+  margin: 0;
+  color: var(--color-gray-950);
+  font-size: clamp(1.4rem, 2vw, 2rem);
+  line-height: 1.08;
+}
+
+.previewTime {
+  margin: 0;
+  color: var(--color-gray-700);
+  font-weight: 600;
+}
+
+.previewSummary {
+  margin: 0;
+  color: var(--color-gray-600);
+  font-size: 0.98rem;
+  line-height: 1.6;
+}
+
+.previewActionCard {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  border-radius: 20px;
+  background: white;
+}
+
+.eyebrow {
+  display: block;
+  margin-bottom: 0.25rem;
+  color: var(--color-gray-500);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.price {
+  display: block;
+  color: var(--color-gray-950);
+  font-size: 1.35rem;
+  line-height: 1.1;
+}
+
+.previewActionButton {
+  min-height: 2.9rem;
+  padding: 0.8rem 1.2rem;
+  border: 0;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #d97706, #f59e0b);
+  color: white;
+  font-size: 0.95rem;
+  font-weight: 800;
+  box-shadow: 0 14px 24px rgba(217, 119, 6, 0.24);
+}
+
+.previewInfoGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.previewInfoCard,
+.settingsSummaryCard {
+  display: grid;
+  gap: 0.35rem;
+  padding: 1rem;
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.emptyPreview {
+  display: grid;
+  gap: 0.55rem;
+  min-height: 14rem;
+  place-content: center;
+  padding: 1.5rem;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.92);
+  text-align: center;
+}
+
+.disclosureCard {
+  display: grid;
+  gap: 1rem;
+}
+
+.settingsSummaryGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.nestedDisclosure {
+  margin-top: 0.25rem;
+}
+
+.settingsActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+}
+
+.snippetList {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.snippetRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  border-radius: 18px;
+  background: rgba(248, 250, 252, 0.88);
+}
+
+.snippetCopy {
+  display: grid;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.snippetTitle {
+  color: var(--color-gray-950);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.snippetPath {
+  color: var(--color-gray-500);
+  font-size: 0.84rem;
+  word-break: break-all;
+}
+
+@media (max-width: 960px) {
+  .modeRow,
+  .settingsSummaryGrid,
+  .previewInfoGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .previewHero {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .previewViewport {
+    padding: 0.85rem;
+  }
+
+  .previewShell {
+    min-height: 0;
+    padding: 0.85rem;
+  }
+
+  .previewHero {
+    grid-template-columns: 5rem minmax(0, 1fr);
+    gap: 0.85rem;
+  }
+
+  .previewCopy h4 {
+    font-size: 1.3rem;
+  }
+
+  .previewSummary {
+    font-size: 0.92rem;
+  }
+
+  .previewMedia {
+    border-radius: 18px;
+  }
+
+  .settingsActions,
+  .previewActionCard,
+  .snippetRow {
+    align-items: flex-start;
+  }
+}
