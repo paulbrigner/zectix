@@ -165,9 +165,11 @@ export default async function PublicEventPage({
           />
         </section>
 
-        {embedMode && data.calendar.embed_show_branding ? (
+        {embedMode ? (
+          data.calendar.embed_show_branding ? <EmbedBrandingFooter /> : null
+        ) : (
           <EmbedBrandingFooter />
-        ) : null}
+        )}
       </section>
     </main>
   );

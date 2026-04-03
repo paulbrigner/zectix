@@ -161,10 +161,6 @@ export function TenantConnectionsLumaTab({
           <div>
             <p className="console-kpi-label">{calendar.status}</p>
             <h4>{calendar.display_name}</h4>
-            <p className="subtle-text">
-              Public URL:{" "}
-              <Link href={`/c/${calendar.slug}`}>/c/{calendar.slug}</Link>
-            </p>
           </div>
           <div className="button-row">
             <form action={validateAndSyncCalendarAction}>

@@ -41,6 +41,10 @@ function calendarStatusPillClassName(status: string) {
     : "console-mini-pill";
 }
 
+function hostedCalendarHref(slug: string) {
+  return `/c/${encodeURIComponent(slug)}`;
+}
+
 export function TenantOverviewWorkspace({
   detail,
 }: {
@@ -104,17 +108,6 @@ export function TenantOverviewWorkspace({
       </section>
 
       <section className="console-section">
-        <div className="console-section-header">
-          <div>
-            <h2>Connections at a glance</h2>
-            <p className="subtle-text">
-              {detail.calendars.length <= 1
-                ? "A compact read on your mirrored events, checkout connection, and embed readiness."
-                : "A compact read on whether each calendar is mirrored, payable, and ready to embed."}
-            </p>
-          </div>
-        </div>
-
         {!detail.calendars.length ? (
           <div className="console-preview-empty">
             <strong>No calendar connections yet</strong>
@@ -144,7 +137,15 @@ export function TenantOverviewWorkspace({
                 <div className="tenant-summary-card-head">
                   <div>
                     <p className="console-kpi-label">{calendar.display_name}</p>
-                    <h3>{connectionHealth}</h3>
+                    <div className="tenant-summary-status-line">
+                      <h3>{connectionHealth}</h3>
+                      <Link
+                        className="tenant-summary-public-link"
+                        href={hostedCalendarHref(calendar.slug)}
+                      >
+                        /c/{calendar.slug}
+                      </Link>
+                    </div>
                   </div>
                   <div className="console-mini-pill-row">
                     <span className={calendarStatusPillClassName(calendar.status)}>
@@ -209,7 +210,15 @@ export function TenantOverviewWorkspace({
                       <p className="console-kpi-label">
                         {calendar.display_name}
                       </p>
-                      <h3>{connectionHealth}</h3>
+                      <div className="tenant-summary-status-line">
+                        <h3>{connectionHealth}</h3>
+                        <Link
+                          className="tenant-summary-public-link"
+                          href={hostedCalendarHref(calendar.slug)}
+                        >
+                          /c/{calendar.slug}
+                        </Link>
+                      </div>
                     </div>
                     <div className="console-mini-pill-row">
                       <span className={calendarStatusPillClassName(calendar.status)}>

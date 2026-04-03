@@ -872,6 +872,32 @@ select {
   gap: 1rem;
 }
 
+.tenant-summary-status-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.tenant-summary-public-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.2rem;
+  padding: 0 0.85rem;
+  border: 1px solid rgba(214, 146, 10, 0.26);
+  border-radius: 999px;
+  background: rgba(255, 247, 237, 0.94);
+  color: #b45309;
+  font-size: 0.95rem;
+  font-weight: 800;
+  text-decoration: none;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+}
+
+.tenant-summary-public-link:hover {
+  text-decoration: underline;
+}
+
 .tenant-summary-list {
   display: grid;
   gap: 0.75rem;
@@ -1324,7 +1350,7 @@ select {
 }
 
 .tenant-events-table {
-  min-width: 940px;
+  min-width: 780px;
 }
 
 .tenant-events-ticket-table {
@@ -1335,7 +1361,6 @@ select {
   min-width: 12.5rem;
 }
 
-.tenant-events-cell-calendar,
 .tenant-events-cell-blocker {
   min-width: 10.5rem;
 }
