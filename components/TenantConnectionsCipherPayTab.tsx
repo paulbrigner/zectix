@@ -79,7 +79,6 @@ export function TenantConnectionsCipherPayTab({
           defaultOpen={
             detail.calendars.length > 0 && !detail.cipherpay_connections.length
           }
-          description="Leave the base URLs blank unless your organization uses custom CipherPay endpoints."
           title={
             currentCipherPayConnections.length
               ? "Replace checkout connection"
