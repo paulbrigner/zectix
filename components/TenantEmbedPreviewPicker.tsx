@@ -63,14 +63,28 @@ export function TenantEmbedPreviewPicker({
   entries: TenantEmbedPreviewEntry[];
 }) {
   const [selectedPreviewId, setSelectedPreviewId] = useState<string | null>(null);
+  const [selectedTicketIds, setSelectedTicketIds] = useState<
+    Record<string, string>
+  >({});
 
   const selectedEntry = useMemo(
     () => entries.find((entry) => entry.id === selectedPreviewId) || null,
     [entries, selectedPreviewId],
   );
 
-  function togglePreview(id: string) {
-    setSelectedPreviewId((current) => (current === id ? null : id));
+  function togglePreview(entry: TenantEmbedPreviewEntry) {
+    setSelectedPreviewId((current) => (current === entry.id ? null : entry.id));
+
+    if (
+      entry.kind === "event" &&
+      entry.tickets.length > 0 &&
+      !selectedTicketIds[entry.id]
+    ) {
+      setSelectedTicketIds((current) => ({
+        ...current,
+        [entry.id]: entry.tickets[0].id,
+      }));
+    }
   }
 
   return (
@@ -89,7 +103,7 @@ export function TenantEmbedPreviewPicker({
                 <button
                   aria-pressed={isActive}
                   className={previewButtonClassName(isActive)}
-                  onClick={() => togglePreview(entry.id)}
+                  onClick={() => togglePreview(entry)}
                   type="button"
                 >
                   {isActive ? "Hide preview" : "Preview"}
@@ -181,83 +195,125 @@ export function TenantEmbedPreviewPicker({
                   {selectedEntry.showBranding ? <EmbedBrandingFooter /> : null}
                 </div>
               ) : (
-                <div
-                  className={styles.previewShell}
-                  style={selectedEntry.themeStyle as CSSProperties}
-                >
-                  <div className={styles.previewHero}>
-                    {selectedEntry.coverUrl ? (
-                      <div className={styles.previewMedia}>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          alt={selectedEntry.eventName}
-                          src={selectedEntry.coverUrl}
-                        />
-                      </div>
-                    ) : (
-                      <div
-                        className={`${styles.previewMedia} ${styles.previewMediaFallback}`}
-                      >
-                        <span>
-                          {selectedEntry.eventName.slice(0, 2).toUpperCase()}
-                        </span>
-                      </div>
-                    )}
+                (() => {
+                  const selectedTicketId =
+                    selectedTicketIds[selectedEntry.id] ||
+                    selectedEntry.tickets[0]?.id ||
+                    null;
+                  const selectedTicket =
+                    selectedEntry.tickets.find(
+                      (ticket) => ticket.id === selectedTicketId,
+                    ) || null;
 
-                    <div className={styles.previewCopy}>
-                      <h4>{selectedEntry.eventName}</h4>
-                      <p className={styles.previewTime}>
-                        <LocalDateTime iso={selectedEntry.startAt} />
-                      </p>
-                      <p className={styles.previewSummary}>
-                        {selectedEntry.summary}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className={styles.previewActionCard}>
-                    <div className={styles.previewActionHead}>
-                      <button
-                        className={styles.previewActionButton}
-                        type="button"
-                      >
-                        Open checkout
-                      </button>
-                    </div>
-
-                    {selectedEntry.tickets.length ? (
-                      <div className={styles.previewTicketList}>
-                        {selectedEntry.tickets.map((ticket) => (
+                  return (
+                    <div
+                      className={styles.previewShell}
+                      style={selectedEntry.themeStyle as CSSProperties}
+                    >
+                      <div className={styles.previewHero}>
+                        {selectedEntry.coverUrl ? (
+                          <div className={styles.previewMedia}>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              alt={selectedEntry.eventName}
+                              src={selectedEntry.coverUrl}
+                            />
+                          </div>
+                        ) : (
                           <div
-                            className={styles.previewTicketRow}
-                            key={ticket.id}
+                            className={`${styles.previewMedia} ${styles.previewMediaFallback}`}
                           >
-                            <span className={styles.previewTicketName}>
-                              {ticket.name}
-                            </span>
-                            <span className={styles.previewTicketPrice}>
-                              {ticket.priceLabel}
+                            <span>
+                              {selectedEntry.eventName.slice(0, 2).toUpperCase()}
                             </span>
                           </div>
-                        ))}
+                        )}
+
+                        <div className={styles.previewCopy}>
+                          <h4>{selectedEntry.eventName}</h4>
+                          <p className={styles.previewTime}>
+                            <LocalDateTime iso={selectedEntry.startAt} />
+                          </p>
+                          <p className={styles.previewSummary}>
+                            {selectedEntry.summary}
+                          </p>
+                        </div>
                       </div>
-                    ) : (
-                      <p className="subtle-text">
-                        Ticket tiers will appear here once this event has
-                        mirrored pricing.
-                      </p>
-                    )}
 
-                    {selectedEntry.hiddenTicketCount > 0 ? (
-                      <p className="subtle-text">
-                        + {selectedEntry.hiddenTicketCount} more mirrored ticket
-                        {selectedEntry.hiddenTicketCount === 1 ? "" : "s"}
-                      </p>
-                    ) : null}
-                  </div>
+                      <div className={styles.previewActionCard}>
+                        {selectedEntry.tickets.length ? (
+                          <div className={styles.previewTicketList}>
+                            {selectedEntry.tickets.map((ticket) => {
+                              const selected = selectedTicketId === ticket.id;
 
-                  {selectedEntry.showBranding ? <EmbedBrandingFooter /> : null}
-                </div>
+                              return (
+                                <button
+                                  aria-pressed={selected}
+                                  className={`${styles.previewTicketCard} ${selected ? styles.previewTicketCardSelected : ""}`.trim()}
+                                  key={ticket.id}
+                                  onClick={() =>
+                                    setSelectedTicketIds((current) => ({
+                                      ...current,
+                                      [selectedEntry.id]: ticket.id,
+                                    }))
+                                  }
+                                  type="button"
+                                >
+                                  <span
+                                    className={`${styles.previewTicketIndicator} ${selected ? styles.previewTicketIndicatorSelected : ""}`.trim()}
+                                  />
+                                  <span className={styles.previewTicketDetails}>
+                                    <span className={styles.previewTicketName}>
+                                      {ticket.name}
+                                    </span>
+                                    <span
+                                      className={styles.previewTicketPrice}
+                                    >
+                                      {ticket.priceLabel}
+                                    </span>
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <p className="subtle-text">
+                            Ticket tiers will appear here once this event has
+                            mirrored pricing.
+                          </p>
+                        )}
+
+                        {selectedEntry.hiddenTicketCount > 0 ? (
+                          <p className="subtle-text">
+                            + {selectedEntry.hiddenTicketCount} more mirrored ticket
+                            {selectedEntry.hiddenTicketCount === 1 ? "" : "s"}
+                          </p>
+                        ) : null}
+
+                        {selectedTicket ? (
+                          <div className={styles.previewCheckoutBar}>
+                            <div className={styles.previewCheckoutSummary}>
+                              <span className={styles.previewCheckoutLabel}>
+                                Selected ticket
+                              </span>
+                              <strong>
+                                {selectedTicket.name} · {selectedTicket.priceLabel}
+                              </strong>
+                            </div>
+                            <button
+                              className={styles.previewActionButton}
+                              type="button"
+                            >
+                              Continue to payment
+                            </button>
+                          </div>
+                        ) : null}
+                      </div>
+
+                      {selectedEntry.showBranding ? <EmbedBrandingFooter /> : null}
+                    </div>
+                  );
+                })()
               )}
             </div>
           </div>
