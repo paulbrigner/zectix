@@ -8,7 +8,7 @@ import { TenantEmbedPreviewPicker } from "@/components/TenantEmbedPreviewPicker"
 import { appUrl } from "@/lib/app-paths";
 import type { TicketMirror } from "@/lib/app-state/types";
 import { formatFiatAmount } from "@/lib/app-state/utils";
-import { selectUpcomingEvents } from "@/lib/embed";
+import { buildEmbedThemeStyle, selectUpcomingEvents } from "@/lib/embed";
 import type { TenantOpsDetail } from "@/lib/tenancy/service";
 import {
   buildEmbedCalendarUrl,
@@ -137,6 +137,7 @@ export function TenantEmbedWorkspace({
                         `${detail.tenant.name} calendar for ${calendar.display_name}`,
                         calendar.embed_default_height_px,
                       ),
+                      themeStyle: buildEmbedThemeStyle(calendar.embed_theme),
                       title: calendar.display_name,
                     },
                     ...embedExampleEvents.map((event) => {
@@ -177,6 +178,7 @@ export function TenantEmbedWorkspace({
                             ticket.currency,
                           ),
                         })),
+                        themeStyle: buildEmbedThemeStyle(calendar.embed_theme),
                         title: event.name,
                       };
                     }),

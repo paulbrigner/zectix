@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 import { ConsoleInfoTip } from "@/components/ConsoleInfoTip";
 import { EmbedSnippetCopyButton } from "@/components/EmbedSnippetCopyButton";
 import { EmbedBrandingFooter } from "@/components/EmbedBrandingFooter";
@@ -30,6 +30,7 @@ type CalendarEmbedEntry = {
   label: string;
   showBranding: boolean;
   snippet: string;
+  themeStyle: Record<string, string>;
   title: string;
 };
 
@@ -46,6 +47,7 @@ type EventEmbedEntry = {
   startAt: string;
   summary: string;
   tickets: PreviewTicket[];
+  themeStyle: Record<string, string>;
   title: string;
 };
 
@@ -121,7 +123,10 @@ export function TenantEmbedPreviewPicker({
           <div className={styles.previewFrame}>
             <div className={styles.previewViewport}>
               {selectedEntry.kind === "calendar" ? (
-                <div className={styles.previewShell}>
+                <div
+                  className={styles.previewShell}
+                  style={selectedEntry.themeStyle as CSSProperties}
+                >
                   <div className={styles.previewActionCard}>
                     <div>
                       <h4>{selectedEntry.calendarName}</h4>
@@ -176,7 +181,10 @@ export function TenantEmbedPreviewPicker({
                   {selectedEntry.showBranding ? <EmbedBrandingFooter /> : null}
                 </div>
               ) : (
-                <div className={styles.previewShell}>
+                <div
+                  className={styles.previewShell}
+                  style={selectedEntry.themeStyle as CSSProperties}
+                >
                   <div className={styles.previewHero}>
                     {selectedEntry.coverUrl ? (
                       <div className={styles.previewMedia}>
@@ -209,14 +217,6 @@ export function TenantEmbedPreviewPicker({
 
                   <div className={styles.previewActionCard}>
                     <div className={styles.previewActionHead}>
-                      <div>
-                        <span className={styles.eyebrow}>Ticket options</span>
-                        <strong className={styles.ticketSummary}>
-                          {selectedEntry.tickets.length > 0
-                            ? `${selectedEntry.tickets.length} ticket option${selectedEntry.tickets.length === 1 ? "" : "s"} shown`
-                            : "Ticket options appear here"}
-                        </strong>
-                      </div>
                       <button
                         className={styles.previewActionButton}
                         type="button"
