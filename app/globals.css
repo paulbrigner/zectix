@@ -535,6 +535,19 @@ select {
   justify-content: flex-end;
 }
 
+.tenant-dashboard-header-brand {
+  min-width: 0;
+}
+
+.tenant-dashboard-header-name {
+  margin: 0;
+  color: var(--color-gray-950);
+  font-size: clamp(1.85rem, 2.2vw, 2.3rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+}
+
 .tenant-workspace-nav {
   margin: 0;
   flex-wrap: wrap;
@@ -568,32 +581,34 @@ select {
   align-items: flex-start;
   justify-content: flex-end;
   gap: 1rem;
-  flex: 1 1 48rem;
+  flex: 0 1 auto;
+  margin-left: auto;
   min-width: 0;
 }
 
 .tenant-dashboard-nav-stack {
   position: relative;
-  flex: 1 1 auto;
-  width: min(100%, 48rem);
+  flex: 0 1 auto;
+  width: auto;
+  max-width: 100%;
   padding-bottom: 1.8rem;
   min-width: 0;
 }
 
 .tenant-dashboard-nav {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: nowrap;
   align-items: start;
-  justify-items: stretch;
-  gap: 0.6rem;
+  justify-content: flex-end;
+  gap: clamp(1.2rem, 1.8vw, 1.85rem);
   margin: 0;
 }
 
 .tenant-dashboard-nav-item {
   display: flex;
   justify-content: center;
-  width: 100%;
-  min-width: 0;
+  width: auto;
+  min-width: max-content;
 }
 
 .tenant-dashboard-nav-item-connections {
@@ -604,9 +619,9 @@ select {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
+  width: auto;
   min-height: auto;
-  padding: 0 0 0.35rem;
+  padding: 0 0.08rem 0.35rem;
   border: 0;
   border-bottom: 2px solid transparent;
   background: transparent;
