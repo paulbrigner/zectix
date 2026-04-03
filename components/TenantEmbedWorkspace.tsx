@@ -76,12 +76,6 @@ export function TenantEmbedWorkspace({
         </section>
       ) : (
         <section className="console-section">
-          <div className="console-section-header">
-            <div>
-              <h2>Per-calendar embed settings</h2>
-            </div>
-          </div>
-
           <div className="console-luma-card-stack">
             {detail.calendars.map((calendar) => {
               const inventory = summarizeCalendarInventory(detail, calendar);
@@ -104,11 +98,6 @@ export function TenantEmbedWorkspace({
                 calendar.embed_allowed_origins.length > 0;
               const embedReady =
                 calendarSnippetReady && embedExampleEvents.length > 0;
-              const previewUrl = previewEvent
-                ? appUrl(buildEmbedEventUrl(calendar.slug, previewEvent.event_api_id)) ||
-                  buildEmbedEventUrl(calendar.slug, previewEvent.event_api_id)
-                : appUrl(buildEmbedCalendarUrl(calendar.slug)) ||
-                  buildEmbedCalendarUrl(calendar.slug);
 
               return (
                 <article
@@ -125,10 +114,6 @@ export function TenantEmbedWorkspace({
                           ? "Ready to publish"
                           : "Needs a few more things"}
                       </h3>
-                      <p className="subtle-text">
-                        Copy a generated snippet first, then compare it against
-                        the embedded event-page preview below.
-                      </p>
                     </div>
                     <div className={styles.headStatus}>
                       <span className={previewStatusClassName(embedReady)}>
@@ -143,112 +128,78 @@ export function TenantEmbedWorkspace({
                     </div>
                   </div>
 
-                  <div className={styles.modeRow}>
-                    <div className={`${styles.modeCard} ${styles.modeCardActive}`}>
-                      Embed event page
-                    </div>
-                  </div>
-
-                  <ConsoleDisclosure
-                    defaultOpen={calendarSnippetReady}
-                    description="Copy ready-to-paste iframe HTML before checking the live preview below."
-                    title="Generated embeds"
-                  >
-                    {calendarSnippetReady ? (
-                      <div className={styles.snippetList}>
-                        <div className={styles.snippetRow}>
-                          <div className={styles.snippetCopy}>
-                            <span className={styles.eyebrow}>
-                              Calendar embed
-                            </span>
-                            <span className={styles.snippetTitle}>
-                              {calendar.display_name}
-                            </span>
-                            <span className={styles.snippetPath}>
-                              {appUrl(buildEmbedCalendarUrl(calendar.slug)) ||
-                                buildEmbedCalendarUrl(calendar.slug)}
-                            </span>
-                          </div>
-                          <EmbedSnippetCopyButton
-                            value={buildEmbedSnippet(
-                              appUrl(buildEmbedCalendarUrl(calendar.slug)) ||
-                                buildEmbedCalendarUrl(calendar.slug),
-                              `${detail.tenant.name} calendar for ${calendar.display_name}`,
-                              calendar.embed_default_height_px,
-                            )}
-                          />
+                  {calendarSnippetReady ? (
+                    <div className={styles.snippetList}>
+                      <div className={styles.snippetRow}>
+                        <div className={styles.snippetCopy}>
+                          <span className={styles.eyebrow}>
+                            Calendar embed
+                          </span>
+                          <span className={styles.snippetTitle}>
+                            {calendar.display_name}
+                          </span>
                         </div>
-
-                        {embedExampleEvents.map((event) => {
-                          const relativeUrl = buildEmbedEventUrl(
-                            calendar.slug,
-                            event.event_api_id,
-                          );
-                          const url = appUrl(relativeUrl) || relativeUrl;
-
-                          return (
-                            <div
-                              className={styles.snippetRow}
-                              key={event.event_api_id}
-                            >
-                              <div className={styles.snippetCopy}>
-                                <span className={styles.eyebrow}>
-                                  Event embed
-                                </span>
-                                <span className={styles.snippetTitle}>
-                                  {event.name}
-                                </span>
-                                <span className={styles.snippetPath}>
-                                  {url}
-                                </span>
-                              </div>
-                              <EmbedSnippetCopyButton
-                                value={buildEmbedSnippet(
-                                  url,
-                                  `${detail.tenant.name} checkout for ${event.name}`,
-                                  calendar.embed_default_height_px,
-                                )}
-                              />
-                            </div>
-                          );
-                        })}
-
-                        {!embedExampleEvents.length ? (
-                          <p className="subtle-text">
-                            Calendar embed is ready. Event-specific embeds will
-                            appear once this calendar has at least one upcoming
-                            public event.
-                          </p>
-                        ) : null}
+                        <EmbedSnippetCopyButton
+                          value={buildEmbedSnippet(
+                            appUrl(buildEmbedCalendarUrl(calendar.slug)) ||
+                              buildEmbedCalendarUrl(calendar.slug),
+                            `${detail.tenant.name} calendar for ${calendar.display_name}`,
+                            calendar.embed_default_height_px,
+                          )}
+                        />
                       </div>
-                    ) : (
-                      <p className="subtle-text">
-                        Turn on embedding and add at least one allowed origin
-                        to generate copy-ready HTML here.
-                      </p>
-                    )}
-                  </ConsoleDisclosure>
+
+                      {embedExampleEvents.map((event) => {
+                        const relativeUrl = buildEmbedEventUrl(
+                          calendar.slug,
+                          event.event_api_id,
+                        );
+                        const url = appUrl(relativeUrl) || relativeUrl;
+
+                        return (
+                          <div
+                            className={styles.snippetRow}
+                            key={event.event_api_id}
+                          >
+                            <div className={styles.snippetCopy}>
+                              <span className={styles.eyebrow}>
+                                Event embed
+                              </span>
+                              <span className={styles.snippetTitle}>
+                                {event.name}
+                              </span>
+                            </div>
+                            <EmbedSnippetCopyButton
+                              value={buildEmbedSnippet(
+                                url,
+                                `${detail.tenant.name} checkout for ${event.name}`,
+                                calendar.embed_default_height_px,
+                              )}
+                            />
+                          </div>
+                        );
+                      })}
+
+                      {!embedExampleEvents.length ? (
+                        <p className="subtle-text">
+                          Event embeds appear once this calendar has an upcoming
+                          public event.
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <p className="subtle-text">
+                      Turn on embedding and add at least one allowed origin to
+                      generate copy-ready HTML.
+                    </p>
+                  )}
 
                   <section className={styles.previewSection}>
                     <div className={styles.previewSectionHead}>
-                      <div>
-                        <span className={styles.sectionLabel}>Live preview</span>
-                        <h4 className={styles.previewSectionTitle}>
-                          Embedded event page
-                        </h4>
-                        <p className="subtle-text">
-                          This framed area is the compact iframe experience a
-                          host sees after pasting the generated HTML.
-                        </p>
-                      </div>
-
+                      <h4 className={styles.previewSectionTitle}>
+                        Live preview
+                      </h4>
                       <div className={styles.previewSectionMeta}>
-                        <p className="subtle-text">
-                          Embed status:{" "}
-                          {embedReady
-                            ? "ready to publish"
-                            : "needs allowed origins and at least one public upcoming event"}
-                        </p>
                         <ConsoleInfoTip label="How embed mode works">
                           <p>
                             The iframe uses the same mirrored event pages as
@@ -261,13 +212,6 @@ export function TenantEmbedWorkspace({
                     </div>
 
                     <div className={styles.previewFrame}>
-                      <div className={styles.previewChrome}>
-                        <span className={styles.previewOrigin}>
-                          {primaryOrigin(calendar.embed_allowed_origins)}
-                        </span>
-                        <span className={styles.previewPath}>{previewUrl}</span>
-                      </div>
-
                       <div className={styles.previewViewport}>
                         {previewEvent ? (
                           <div className={styles.previewShell}>
