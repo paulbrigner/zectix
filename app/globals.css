@@ -565,7 +565,7 @@ select {
 .tenant-dashboard-header-actions {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-end;
   justify-content: flex-end;
   gap: 1rem 1.25rem;
 }
@@ -573,20 +573,22 @@ select {
 .tenant-dashboard-utilities {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-end;
   gap: 0.9rem;
 }
 
 .tenant-dashboard-utility-link {
   display: inline-flex;
-  align-items: center;
-  min-height: 2rem;
-  padding: 0;
+  align-items: flex-end;
+  min-height: auto;
+  padding: 0 0 0.35rem;
   border: 0;
+  border-bottom: 2px solid transparent;
   background: transparent;
   color: var(--text-muted);
   font-size: 0.95rem;
   font-weight: 600;
+  line-height: 1.2;
   text-decoration: none;
 }
 
