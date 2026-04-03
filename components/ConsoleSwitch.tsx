@@ -138,8 +138,17 @@ export function ConsoleSwitch({
           }
 
           setLocalPending(true);
-          queueMicrotask(() => {
+          const submitForm = () => {
             switchRef.current?.form?.requestSubmit();
+          };
+
+          if (typeof window === "undefined") {
+            submitForm();
+            return;
+          }
+
+          window.requestAnimationFrame(() => {
+            submitForm();
           });
         }}
         ref={switchRef}
