@@ -208,6 +208,13 @@
   background: white;
 }
 
+.previewActionCard h4 {
+  margin: 0;
+  color: var(--color-gray-950);
+  font-size: clamp(1.35rem, 2vw, 1.8rem);
+  line-height: 1.08;
+}
+
 .previewActionHead {
   display: flex;
   flex-wrap: wrap;
@@ -274,6 +281,55 @@
   color: var(--color-gray-700);
   font-weight: 700;
   white-space: nowrap;
+}
+
+.calendarPreviewList {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  border-radius: 20px;
+  background: white;
+}
+
+.calendarPreviewRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(17, 24, 39, 0.08);
+}
+
+.calendarPreviewRow:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.calendarPreviewCopy {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.calendarPreviewTitle {
+  color: var(--color-gray-950);
+  font-size: 1rem;
+}
+
+.calendarPreviewMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.65rem;
+}
+
+.calendarPreviewSummary {
+  color: var(--color-gray-600);
+  font-size: 0.9rem;
+  font-weight: 600;
 }
 
 .previewInfoGrid {
@@ -349,6 +405,14 @@
   min-width: 0;
 }
 
+.snippetActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.65rem;
+}
+
 .snippetTitle {
   color: var(--color-gray-950);
   font-size: 1rem;
@@ -375,6 +439,11 @@
   .previewHero {
     grid-template-columns: 7.25rem minmax(0, 1fr);
     gap: 0.9rem;
+  }
+
+  .calendarPreviewMeta,
+  .snippetActions {
+    justify-content: flex-start;
   }
 
   .previewMedia {
@@ -410,6 +479,7 @@
   }
 
   .settingsActions,
+  .calendarPreviewRow,
   .previewActionHead,
   .snippetRow {
     align-items: flex-start;
