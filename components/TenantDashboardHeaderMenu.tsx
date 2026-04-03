@@ -1,8 +1,9 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { Menu } from "lucide-react";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 
 type TenantDashboardHeaderMenuProps = {
   basePath: string;
@@ -30,6 +31,15 @@ function navLinkClassName(active: boolean, disabled: boolean) {
     .join(" ");
 }
 
+function subnavLinkClassName(active: boolean) {
+  return [
+    "tenant-dashboard-subnav-link",
+    active ? "tenant-dashboard-subnav-link-active" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
 function menuEntryClassName(active: boolean, disabled: boolean, strong = false) {
   return [
     "tenant-dashboard-menu-entry",
@@ -46,49 +56,102 @@ export function TenantDashboardHeaderMenu({
   onboardingIncomplete,
   logoutAction,
 }: TenantDashboardHeaderMenuProps) {
+  const menuRef = useRef<HTMLDetailsElement>(null);
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const searchKey = searchParams.toString();
+  const connectionsHref = `${basePath}/connections`;
+  const settingsHref = `${basePath}/settings`;
+  const activeConnectionsTab =
+    searchParams.get("tab") === "cipherpay" ? "cipherpay" : "luma";
+  const connectionsSubItems: NavItem[] = [
+    { href: `${connectionsHref}?tab=luma`, label: "Luma" },
+    { href: `${connectionsHref}?tab=cipherpay`, label: "CipherPay" },
+  ];
   const primaryItems: NavItem[] = [
     { disabled: onboardingIncomplete, href: basePath, label: "Overview" },
     { disabled: onboardingIncomplete, href: `${basePath}/events`, label: "Events" },
     { disabled: onboardingIncomplete, href: `${basePath}/billing`, label: "Billing" },
-    { href: `${basePath}/connections`, label: "Connections" },
+    { href: connectionsHref, label: "Connections" },
     { disabled: onboardingIncomplete, href: `${basePath}/embed`, label: "Embed" },
   ];
-  const settingsHref = `${basePath}/settings`;
+  const showingConnectionsSubmenu = pathname === connectionsHref;
+
+  function isConnectionsSubitemActive(label: string) {
+    if (!showingConnectionsSubmenu) {
+      return false;
+    }
+
+    return activeConnectionsTab === "cipherpay"
+      ? label === "CipherPay"
+      : label === "Luma";
+  }
+
+  useEffect(() => {
+    menuRef.current?.removeAttribute("open");
+  }, [pathname, searchKey]);
+
+  function closeMenu() {
+    menuRef.current?.removeAttribute("open");
+  }
 
   return (
     <div className="tenant-dashboard-header-actions">
-      <nav className="tenant-dashboard-nav" aria-label="Organizer workspace">
-        {primaryItems.map((item) => {
-          const active = isItemActive(pathname, item.href, basePath);
-          const disabled = Boolean(item.disabled);
+      <div className="tenant-dashboard-nav-stack">
+        <nav className="tenant-dashboard-nav" aria-label="Organizer workspace">
+          {primaryItems.map((item) => {
+            const active = isItemActive(pathname, item.href, basePath);
+            const disabled = Boolean(item.disabled);
 
-          if (disabled) {
+            if (disabled) {
+              return (
+                <span
+                  aria-disabled="true"
+                  className={navLinkClassName(active, disabled)}
+                  key={item.href}
+                >
+                  {item.label}
+                </span>
+              );
+            }
+
             return (
-              <span
-                aria-disabled="true"
+              <Link
+                aria-current={active ? "page" : undefined}
                 className={navLinkClassName(active, disabled)}
+                href={item.href}
                 key={item.href}
               >
                 {item.label}
-              </span>
+              </Link>
             );
-          }
+          })}
+        </nav>
 
-          return (
-            <Link
-              aria-current={active ? "page" : undefined}
-              className={navLinkClassName(active, disabled)}
-              href={item.href}
-              key={item.href}
-            >
-              {item.label}
-            </Link>
-          );
-        })}
-      </nav>
+        {showingConnectionsSubmenu ? (
+          <nav
+            aria-label="Connections sections"
+            className="tenant-dashboard-subnav"
+          >
+            {connectionsSubItems.map((item) => {
+              const active = isConnectionsSubitemActive(item.label);
 
-      <details className="tenant-dashboard-menu">
+              return (
+                <Link
+                  aria-current={active ? "page" : undefined}
+                  className={subnavLinkClassName(active)}
+                  href={item.href}
+                  key={item.href}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+        ) : null}
+      </div>
+
+      <details className="tenant-dashboard-menu" ref={menuRef}>
         <summary
           aria-label="Open organizer menu"
           className="tenant-dashboard-menu-trigger"
@@ -104,6 +167,7 @@ export function TenantDashboardHeaderMenu({
             {primaryItems.map((item) => {
               const active = isItemActive(pathname, item.href, basePath);
               const disabled = Boolean(item.disabled);
+              const isConnectionsItem = item.href === connectionsHref;
 
               if (disabled) {
                 return (
@@ -117,12 +181,49 @@ export function TenantDashboardHeaderMenu({
                 );
               }
 
-              return (
+              return isConnectionsItem ? (
+                <div
+                  className="tenant-dashboard-menu-submenu-shell"
+                  key={`${item.href}-menu`}
+                >
+                  <Link
+                    aria-current={active ? "page" : undefined}
+                    className={menuEntryClassName(active, disabled)}
+                    href={item.href}
+                    onClick={closeMenu}
+                  >
+                    {item.label}
+                  </Link>
+                  <div className="tenant-dashboard-menu-subgroup">
+                    {connectionsSubItems.map((subitem) => {
+                      const subitemActive = isConnectionsSubitemActive(
+                        subitem.label,
+                      );
+
+                      return (
+                        <Link
+                          aria-current={subitemActive ? "page" : undefined}
+                          className={`${menuEntryClassName(
+                            subitemActive,
+                            false,
+                          )} tenant-dashboard-menu-entry-submenu`}
+                          href={subitem.href}
+                          key={subitem.href}
+                          onClick={closeMenu}
+                        >
+                          {subitem.label}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
                 <Link
                   aria-current={active ? "page" : undefined}
                   className={menuEntryClassName(active, disabled)}
                   href={item.href}
                   key={`${item.href}-menu`}
+                  onClick={closeMenu}
                 >
                   {item.label}
                 </Link>
@@ -137,6 +238,7 @@ export function TenantDashboardHeaderMenu({
               aria-current={pathname === settingsHref ? "page" : undefined}
               className={menuEntryClassName(pathname === settingsHref, false)}
               href={settingsHref}
+              onClick={closeMenu}
             >
               Settings
             </Link>
@@ -144,6 +246,7 @@ export function TenantDashboardHeaderMenu({
             <Link
               className={menuEntryClassName(pathname === "/dashboard/help", false)}
               href="/dashboard/help"
+              onClick={closeMenu}
             >
               Help
             </Link>
@@ -151,6 +254,7 @@ export function TenantDashboardHeaderMenu({
             <form action={logoutAction} className="tenant-dashboard-menu-form" method="post">
               <button
                 className={menuEntryClassName(false, false, true)}
+                onClick={closeMenu}
                 type="submit"
               >
                 Sign out

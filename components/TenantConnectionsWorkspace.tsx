@@ -1,5 +1,3 @@
-import Link from "next/link";
-import { ConsoleSection } from "@/components/ConsoleSection";
 import type { TenantOpsDetail } from "@/lib/tenancy/service";
 import {
   hasCompletedTenantOnboarding,
@@ -70,103 +68,39 @@ export function TenantConnectionsWorkspace({
     connectionsBasePath,
     "cipherpay",
   );
-  const tabs: Array<{
-    copy: string;
-    disabled: boolean;
-    href: string;
-    id: TenantConnectionsTab;
-    label: string;
-  }> = [
-    {
-      copy: onboardingComplete ? "Completed." : "Finish onboarding in a focused sequence.",
-      href: setupTabPath,
-      id: "setup",
-      label: "Setup",
-      disabled: onboardingComplete && !allowSetupTab,
-    },
-    {
-      copy: "Connect calendars and refresh mirrored inventory.",
-      href: lumaTabPath,
-      id: "luma",
-      label: "Luma",
-      disabled: onboardingIncomplete && activeTab !== "luma",
-    },
-    {
-      copy: "Attach and validate your live checkout account.",
-      href: cipherPayTabPath,
-      id: "cipherpay",
-      label: "CipherPay",
-      disabled: onboardingIncomplete && activeTab !== "cipherpay",
-    },
-  ];
 
   return (
     <div className="console-page-body">
-      <ConsoleSection
-        description="Complete setup and manage your Luma and CipherPay connections without mixing onboarding steps with everyday event review."
-        title="Connections"
-      >
-
-        <nav
-          aria-label="Connections sections"
-          className="console-tab-bar"
-        >
-          {tabs.map((tab) => (
-            tab.disabled ? (
-              <span
-                aria-disabled="true"
-                className="console-tab-link console-tab-link-disabled"
-                key={tab.id}
-              >
-                <span className="console-tab-link-label">{tab.label}</span>
-                <span className="console-tab-link-copy">{tab.copy}</span>
-              </span>
-            ) : (
-              <Link
-                className={`console-tab-link${
-                  activeTab === tab.id ? " console-tab-link-active" : ""
-                }`}
-                href={tab.href}
-                key={tab.id}
-              >
-                <span className="console-tab-link-label">{tab.label}</span>
-                <span className="console-tab-link-copy">{tab.copy}</span>
-              </Link>
-            )
-          ))}
-        </nav>
-
-        <div className="console-tab-panel">
-          {activeTab === "setup" ? (
-            <TenantConnectionsSetupTab
-              connectionsBasePath={connectionsBasePath}
-              cipherPayTabPath={cipherPayTabPath}
-              detail={detail}
-              eventsBasePath={eventsBasePath}
-              lumaTabPath={lumaTabPath}
-              searchParams={searchParams}
-              setupTabPath={setupTabPath}
-            />
-          ) : null}
-          {activeTab === "luma" ? (
-            <TenantConnectionsLumaTab
-              detail={detail}
-              eventsBasePath={eventsBasePath}
-              lumaTabPath={lumaTabPath}
-              onboardingIncomplete={onboardingIncomplete}
-              setupTabPath={setupTabPath}
-            />
-          ) : null}
-          {activeTab === "cipherpay" ? (
-            <TenantConnectionsCipherPayTab
-              cipherPayTabPath={cipherPayTabPath}
-              detail={detail}
-              onboardingIncomplete={onboardingIncomplete}
-              setupTabPath={setupTabPath}
-            />
-          ) : null}
-        </div>
-      </ConsoleSection>
+      <div className="console-tab-panel">
+        {activeTab === "setup" ? (
+          <TenantConnectionsSetupTab
+            connectionsBasePath={connectionsBasePath}
+            cipherPayTabPath={cipherPayTabPath}
+            detail={detail}
+            eventsBasePath={eventsBasePath}
+            lumaTabPath={lumaTabPath}
+            searchParams={searchParams}
+            setupTabPath={setupTabPath}
+          />
+        ) : null}
+        {activeTab === "luma" ? (
+          <TenantConnectionsLumaTab
+            detail={detail}
+            eventsBasePath={eventsBasePath}
+            lumaTabPath={lumaTabPath}
+            onboardingIncomplete={onboardingIncomplete}
+            setupTabPath={setupTabPath}
+          />
+        ) : null}
+        {activeTab === "cipherpay" ? (
+          <TenantConnectionsCipherPayTab
+            cipherPayTabPath={cipherPayTabPath}
+            detail={detail}
+            onboardingIncomplete={onboardingIncomplete}
+            setupTabPath={setupTabPath}
+          />
+        ) : null}
+      </div>
     </div>
   );
 }

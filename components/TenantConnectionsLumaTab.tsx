@@ -49,7 +49,6 @@ export function TenantConnectionsLumaTab({
     <div className="console-content">
       <ConsoleSection
         className="console-anchor-target"
-        description="Add a calendar, validate it, and keep the managed webhook healthy. Mirroring and public inventory depend on this layer working cleanly."
         id="luma-calendars"
         title="Luma calendars"
         titleAs="h3"

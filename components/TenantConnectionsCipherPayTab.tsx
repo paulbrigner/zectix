@@ -68,7 +68,6 @@ export function TenantConnectionsCipherPayTab({
     <div className="console-content">
       <ConsoleSection
         className="console-anchor-target"
-        description="Each calendar uses one live CipherPay account for checkout. Saving a new connection for a calendar replaces that calendar's current live checkout connection."
         id="connect-cipherpay"
         title="CipherPay checkout"
         titleAs="h3"
