@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { TenantOpsDetail } from "@/lib/tenancy/service";
-import { buildOnboardingChecklist } from "@/lib/tenant-self-serve";
+import {
+  buildEmbedSnippet,
+  buildOnboardingChecklist,
+} from "@/lib/tenant-self-serve";
 import {
   makeCalendarConnection,
   makeCipherPayConnection,
@@ -246,5 +249,27 @@ describe("buildOnboardingChecklist", () => {
       checklist.find((item) => item.stepId === "publish_event_and_ticket")
         ?.complete,
     ).toBe(false);
+  });
+
+  it("builds embed snippets with an automatic resize bridge", () => {
+    const snippet = buildEmbedSnippet(
+      "https://staging.zectix.com/c/demo-calendar?embed=1&po=https%3A%2F%2Fexample.com",
+      'Demo "Calendar"',
+      860,
+    );
+
+    expect(snippet).toContain(
+      'src="https://staging.zectix.com/c/demo-calendar?embed=1&amp;po=https%3A%2F%2Fexample.com"',
+    );
+    expect(snippet).toContain('title="Demo &quot;Calendar&quot;"');
+    expect(snippet).toContain(
+      "const expectedOrigin = new URL(iframe.src).origin;",
+    );
+    expect(snippet).toContain(
+      'if (!data || data.source !== "zectix-embed") return;',
+    );
+    expect(snippet).toContain(
+      'iframe.style.height = Math.max(240, Math.ceil(data.height)) + "px";',
+    );
   });
 });

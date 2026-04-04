@@ -298,7 +298,7 @@ export function TenantEmbedWorkspace({
               </div>
               <div className="console-field">
                 <ConsoleFieldLabel
-                  info="Choose the starting height for copied embed code. You can still adjust it later on your site if needed."
+                  info="Choose the starting height for copied embed code. The embed will resize itself as visitors move through the calendar, event, and checkout flow."
                   label="Default iframe height"
                 />
                 <div className="console-input-with-unit">

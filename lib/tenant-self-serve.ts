@@ -273,8 +273,31 @@ export function buildEmbedCalendarUrl(calendarSlug: string) {
 }
 
 export function buildEmbedSnippet(url: string, title: string, height: number) {
-  const safeTitle = title.replaceAll('"', "&quot;");
-  return `<iframe src="${url}" title="${safeTitle}" style="width:100%;height:${height}px;border:0;" loading="lazy"></iframe>`;
+  const safeUrl = url.replaceAll("&", "&amp;").replaceAll('"', "&quot;");
+  const safeTitle = title.replaceAll("&", "&amp;").replaceAll('"', "&quot;");
+  return `<iframe src="${safeUrl}" title="${safeTitle}" style="width:100%;height:${height}px;border:0;display:block;overflow:hidden;" loading="lazy"></iframe>
+<script>
+(function () {
+  const script = document.currentScript;
+  const iframe = script && script.previousElementSibling;
+  if (!(iframe instanceof HTMLIFrameElement)) return;
+
+  const expectedOrigin = new URL(iframe.src).origin;
+
+  function handleMessage(event) {
+    if (event.origin !== expectedOrigin) return;
+    if (event.source !== iframe.contentWindow) return;
+
+    const data = event.data;
+    if (!data || data.source !== "zectix-embed") return;
+    if (data.type !== "resize" || typeof data.height !== "number") return;
+
+    iframe.style.height = Math.max(240, Math.ceil(data.height)) + "px";
+  }
+
+  window.addEventListener("message", handleMessage, false);
+})();
+</script>`;
 }
 
 function usesCallbackTokenFallback(delivery: TenantOpsDetail["webhooks"][number]) {
