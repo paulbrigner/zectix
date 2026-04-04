@@ -43,54 +43,50 @@ export default async function TenantStartPage({
 
   return (
     <main className="page console-shell">
-      <section className="card console-card-shell">
-        <div className="console-content">
-          <section className="console-section console-login-card">
-            <a href={appPath("/")} className="console-login-wordmark">ZecTix</a>
-            <h1>Start your organizer setup</h1>
-            <p className="subtle-text">
-              Create your organizer account and we&apos;ll send a sign-in link
-              to get you started.
+      <section className="console-section console-login-card">
+        <a href={appPath("/")} className="console-login-wordmark">ZecTix</a>
+        <h1>Start your organizer setup</h1>
+        <p className="subtle-text">
+          Create your organizer account and we&apos;ll send a sign-in link
+          to get you started.
+        </p>
+
+        {resolvedSearchParams.email_sent === "1" ? (
+          <div className="tenant-start-notice tenant-start-notice-success" role="status">
+            <strong>Check your inbox for the sign-in link.</strong>
+            <p>
+              If an account already exists for this email, we sent the link there.
             </p>
+          </div>
+        ) : null}
+        {errorMessage ? <p className="console-error-text">{errorMessage}</p> : null}
 
-            {resolvedSearchParams.email_sent === "1" ? (
-              <div className="tenant-start-notice tenant-start-notice-success" role="status">
-                <strong>Check your inbox for the sign-in link.</strong>
-                <p>
-                  If an account already exists for this email, we sent the link there.
-                </p>
-              </div>
-            ) : null}
-            {errorMessage ? <p className="console-error-text">{errorMessage}</p> : null}
+        <form action={appPath("/api/dashboard/start")} method="post" className="console-login-form">
+          <Input
+            autoComplete="organization"
+            info="Shown in your dashboard and checkout pages."
+            label="Organization name"
+            maxLength={160}
+            name="name"
+            required
+            type="text"
+          />
+          <Input
+            autoComplete="email"
+            info="We&apos;ll send the sign-in link here."
+            label="Work email"
+            maxLength={320}
+            name="email"
+            required
+            type="email"
+          />
+          <Button type="submit">Create account</Button>
+        </form>
 
-            <form action={appPath("/api/dashboard/start")} method="post" className="console-login-form">
-              <Input
-                autoComplete="organization"
-                info="Shown in your dashboard and checkout pages."
-                label="Organization name"
-                maxLength={160}
-                name="name"
-                required
-                type="text"
-              />
-              <Input
-                autoComplete="email"
-                info="We&apos;ll send the sign-in link here."
-                label="Work email"
-                maxLength={320}
-                name="email"
-                required
-                type="email"
-              />
-              <Button type="submit">Create account</Button>
-            </form>
-
-            <p className="console-login-footer">
-              {"Already have an account? "}
-              <a href={appPath("/dashboard/login")}>Sign in</a>
-            </p>
-          </section>
-        </div>
+        <p className="console-login-footer">
+          {"Already have an account? "}
+          <a href={appPath("/dashboard/login")}>Sign in</a>
+        </p>
       </section>
     </main>
   );

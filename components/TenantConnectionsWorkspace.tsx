@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { TenantOpsDetail } from "@/lib/tenancy/service";
 import {
   hasCompletedTenantOnboarding,
@@ -26,7 +27,7 @@ function readConnectionsTab(
     case "luma":
       return "luma";
     default:
-      return onboardingComplete ? "luma" : "setup";
+      return "luma";
   }
 }
 
@@ -41,6 +42,15 @@ function buildConnectionsTabHref(
   tab: TenantConnectionsTab,
 ) {
   return `${connectionsBasePath}?tab=${tab}`;
+}
+
+function inlineTabClassName(active: boolean) {
+  return [
+    "console-nav-link",
+    active ? "console-nav-link-active" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 }
 
 export function TenantConnectionsWorkspace({
@@ -69,16 +79,30 @@ export function TenantConnectionsWorkspace({
     "cipherpay",
   );
 
+  const tabs: { key: TenantConnectionsTab; href: string; label: string }[] = [
+    { key: "luma", href: lumaTabPath, label: "Luma" },
+    { key: "cipherpay", href: cipherPayTabPath, label: "CipherPay" },
+  ];
+
   return (
     <div className="console-page-body">
+      <nav className="tenant-workspace-nav connections-inline-tabs" aria-label="Connections">
+        {tabs.map((tab) => (
+          <Link
+            aria-current={activeTab === tab.key ? "page" : undefined}
+            className={inlineTabClassName(activeTab === tab.key)}
+            href={tab.href}
+            key={tab.key}
+          >
+            {tab.label}
+          </Link>
+        ))}
+      </nav>
+
       <div className="console-tab-panel">
         {activeTab === "setup" ? (
           <TenantConnectionsSetupTab
-            connectionsBasePath={connectionsBasePath}
-            cipherPayTabPath={cipherPayTabPath}
             detail={detail}
-            eventsBasePath={eventsBasePath}
-            lumaTabPath={lumaTabPath}
             searchParams={searchParams}
             setupTabPath={setupTabPath}
           />

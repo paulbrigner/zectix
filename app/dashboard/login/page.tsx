@@ -43,39 +43,35 @@ export default async function TenantLoginPage({
 
   return (
     <main className="page console-shell">
-      <section className="card console-card-shell">
-        <div className="console-content">
-          <section className="console-section console-login-card">
-            <a href={appPath("/")} className="console-login-wordmark">ZecTix</a>
-            <h1>Sign in to your dashboard</h1>
-            <p className="subtle-text">
-              Enter your account email to receive a one-time sign-in link.
-              The link expires after 15 minutes.
-            </p>
-            {resolvedSearchParams.email_sent === "1" ? (
-              <p className="console-success-text">
-                Check your inbox. If that email is linked to an account, we sent a sign-in link.
-              </p>
-            ) : null}
-            {errorMessage ? <p className="console-error-text">{errorMessage}</p> : null}
+      <section className="console-section console-login-card">
+        <a href={appPath("/")} className="console-login-wordmark">ZecTix</a>
+        <h1>Sign in to your dashboard</h1>
+        <p className="subtle-text">
+          Enter your account email to receive a one-time sign-in link.
+          The link expires after 15 minutes.
+        </p>
+        {resolvedSearchParams.email_sent === "1" ? (
+          <p className="console-success-text">
+            Check your inbox. If that email is linked to an account, we sent a sign-in link.
+          </p>
+        ) : null}
+        {errorMessage ? <p className="console-error-text">{errorMessage}</p> : null}
 
-            <form action={appPath("/api/dashboard/login")} method="post" className="console-login-form">
-              <Input
-                autoComplete="email"
-                label="Email address"
-                name="email"
-                required
-                type="email"
-              />
-              <Button type="submit">Continue with email</Button>
-            </form>
+        <form action={appPath("/api/dashboard/login")} method="post" className="console-login-form">
+          <Input
+            autoComplete="email"
+            label="Email address"
+            name="email"
+            required
+            type="email"
+          />
+          <Button type="submit">Continue with email</Button>
+        </form>
 
-            <p className="console-login-footer">
-              {"Don't have an account? "}
-              <a href={appPath("/dashboard/start")}>Start onboarding</a>
-            </p>
-          </section>
-        </div>
+        <p className="console-login-footer">
+          {"Don't have an account? "}
+          <a href={appPath("/dashboard/start")}>Start onboarding</a>
+        </p>
       </section>
     </main>
   );

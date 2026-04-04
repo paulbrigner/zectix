@@ -7,7 +7,7 @@ import {
 } from "@/app/dashboard/actions";
 import { ConsoleConfirmDialog } from "@/components/ConsoleConfirmDialog";
 import { ConsoleDisclosure } from "@/components/ConsoleDisclosure";
-import { ConsoleFieldLabel } from "@/components/ConsoleFieldLabel";
+import { ConsoleFieldLabel, ConsoleFieldHint } from "@/components/ConsoleFieldLabel";
 import { ConsoleForm } from "@/components/ConsoleForm";
 import { ConsoleFormPendingNote } from "@/components/ConsoleFormPendingNote";
 import { ConsoleSection } from "@/components/ConsoleSection";
@@ -43,36 +43,35 @@ function CreateCalendarConnectionForm({
       <input name="redirect_to" type="hidden" value={redirectTo} />
       <div className="public-field-grid">
         <label className="console-field">
-          <ConsoleFieldLabel
-            info="Shown in your dashboard and used as the default public label for this calendar."
-            label="Display name"
-          />
+          <ConsoleFieldLabel label="Display name" />
           <input
             className="console-input"
             name="display_name"
             required
             type="text"
           />
+          <ConsoleFieldHint>
+            Shown in your dashboard and used as the default public label for this calendar.
+          </ConsoleFieldHint>
         </label>
         <label className="console-field">
-          <ConsoleFieldLabel
-            info="Public URL path under /c/{slug}. Leave blank to generate it from the display name and add a numeric suffix if needed."
-            label="Public slug"
-            optional
-          />
-          <input className="console-input" name="slug" type="text" />
-        </label>
-        <label className="console-field">
-          <ConsoleFieldLabel
-            info="Organizer-owned Luma API key used to mirror events, attach attendees after payment, and register the managed event webhook."
-            label="Luma API key"
-          />
+          <ConsoleFieldLabel label="Luma API key" />
           <input
             className="console-input"
             name="luma_api_key"
             required
             type="password"
           />
+          <ConsoleFieldHint>
+            Organizer-owned Luma API key used to mirror events, attach attendees after payment, and register the managed event webhook.
+          </ConsoleFieldHint>
+        </label>
+        <label className="console-field">
+          <ConsoleFieldLabel label="Public slug" optional />
+          <input className="console-input" name="slug" type="text" />
+          <ConsoleFieldHint>
+            Public URL path under /c/&#123;slug&#125;. Leave blank to generate it from the display name.
+          </ConsoleFieldHint>
         </label>
       </div>
       <div className="button-row">
@@ -339,16 +338,16 @@ export function TenantConnectionsLumaTab({
               value={calendarReturnPath}
             />
             <label className="console-field">
-              <ConsoleFieldLabel
-                info="Saving a new key clears the current webhook details until you run Connect and sync again."
-                label="New Luma API key"
-              />
+              <ConsoleFieldLabel label="New Luma API key" />
               <input
                 className="console-input"
                 name="luma_api_key"
                 required
                 type="password"
               />
+              <ConsoleFieldHint>
+                Saving a new key clears the current webhook details until you run Connect and sync again.
+              </ConsoleFieldHint>
             </label>
             <div className="button-row">
               <ConsoleSubmitButton

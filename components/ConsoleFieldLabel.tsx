@@ -1,5 +1,4 @@
 export function ConsoleFieldLabel({
-  info,
   label,
   optional = false,
 }: {
@@ -15,14 +14,10 @@ export function ConsoleFieldLabel({
           {optional ? <span className="console-field-badge">Optional</span> : null}
         </span>
       </span>
-      {info ? (
-        <span className="console-field-help">
-          <span aria-hidden="true" className="console-info-indicator">
-            i
-          </span>
-          <span>{info}</span>
-        </span>
-      ) : null}
     </span>
   );
+}
+
+export function ConsoleFieldHint({ children }: { children: React.ReactNode }) {
+  return <span className="console-field-help">{children}</span>;
 }

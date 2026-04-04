@@ -1,8 +1,7 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { TenantOverviewWorkspace } from "@/components/TenantOverviewWorkspace";
 import { requireTenantPageAccess } from "@/lib/tenant-auth-server";
 import { getTenantSelfServeDetailBySlug } from "@/lib/tenancy/service";
-import { hasCompletedTenantOnboarding } from "@/lib/tenant-self-serve";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,11 +18,9 @@ export default async function TenantOverviewPage({
     notFound();
   }
 
-  if (!hasCompletedTenantOnboarding(detail.tenant)) {
-    redirect(`/dashboard/${encodeURIComponent(detail.tenant.slug)}/connections`);
-  }
+  const basePath = `/dashboard/${encodeURIComponent(detail.tenant.slug)}`;
 
   return (
-    <TenantOverviewWorkspace detail={detail} />
+    <TenantOverviewWorkspace detail={detail} basePath={basePath} />
   );
 }
