@@ -163,10 +163,7 @@ export function EventCheckoutForm({
 
       <section className="public-section-card">
         <div className="public-section-head">
-          <h2>Eligible tickets</h2>
-          <p className="subtle-text">
-            These tickets passed the managed-service checks and were explicitly enabled by ops.
-          </p>
+          <h2>Tickets</h2>
         </div>
 
         <div className="public-ticket-grid">
