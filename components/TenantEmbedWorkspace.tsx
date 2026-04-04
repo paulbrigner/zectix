@@ -2,6 +2,7 @@ import { updateCalendarEmbedSettingsAction } from "@/app/dashboard/actions";
 import { ColorHexInput } from "@/components/ColorHexInput";
 import { ConsoleDisclosure } from "@/components/ConsoleDisclosure";
 import { EmbedLiveThemeProvider } from "@/components/EmbedLiveThemeProvider";
+import { EmbedHeightModeField } from "@/components/EmbedHeightModeField";
 import { ConsoleFieldLabel } from "@/components/ConsoleFieldLabel";
 import { ConsoleFormPendingNote } from "@/components/ConsoleFormPendingNote";
 import { ConsoleSubmitButton } from "@/components/ConsoleSubmitButton";
@@ -296,20 +297,9 @@ export function TenantEmbedWorkspace({
                   themeKey="text_color"
                 />
               </div>
-              <div className="console-field">
-                <ConsoleFieldLabel
-                  info="Choose the starting height for copied embed code. The embed will resize itself as visitors move through the calendar, event, and checkout flow."
-                  label="Default iframe height"
-                />
-                <div className="console-input-with-unit">
-                  <LiveDimensionInput
-                    defaultValue={calendar.embed_default_height_px}
-                    min={480}
-                    name="embed_default_height_px"
-                  />
-                  <span className="console-input-unit">px</span>
-                </div>
-              </div>
+              <EmbedHeightModeField
+                defaultHeight={calendar.embed_default_height_px}
+              />
               <div className="console-field">
                 <ConsoleFieldLabel
                   info="Optional corner roundness for cards inside the embed."

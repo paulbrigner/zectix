@@ -10,12 +10,10 @@ const RESET_FIELD_NAMES = [
 
 function updateFieldValue(
   form: HTMLFormElement,
-  name: string,
+  selector: string,
   value: string,
 ) {
-  const input = form.querySelector(
-    `[name="${CSS.escape(name)}"]`,
-  );
+  const input = form.querySelector(selector);
 
   if (
     !(input instanceof HTMLInputElement) &&
@@ -27,6 +25,27 @@ function updateFieldValue(
   input.value = value;
   input.defaultValue = value;
   input.setAttribute("value", value);
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+  input.dispatchEvent(new Event("change", { bubbles: true }));
+}
+
+function updateCheckboxValue(
+  form: HTMLFormElement,
+  selector: string,
+  checked: boolean,
+) {
+  const input = form.querySelector(selector);
+
+  if (!(input instanceof HTMLInputElement) || input.type !== "checkbox") {
+    return;
+  }
+
+  input.checked = checked;
+  if (checked) {
+    input.setAttribute("checked", "");
+  } else {
+    input.removeAttribute("checked");
+  }
   input.dispatchEvent(new Event("input", { bubbles: true }));
   input.dispatchEvent(new Event("change", { bubbles: true }));
 }
@@ -46,12 +65,18 @@ export function EmbedAppearanceResetButton({
         }
 
         for (const name of RESET_FIELD_NAMES) {
-          updateFieldValue(form, name, "");
+          updateFieldValue(form, `[name="${CSS.escape(name)}"]`, "");
         }
+
+        updateCheckboxValue(
+          form,
+          '[name="embed_dynamic_height"]',
+          true,
+        );
 
         updateFieldValue(
           form,
-          "embed_default_height_px",
+          '[data-embed-height-visible="true"]',
           String(defaultHeight),
         );
       }}

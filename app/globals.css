@@ -2819,6 +2819,39 @@ select {
   white-space: nowrap;
 }
 
+.embed-height-mode {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.embed-height-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: fit-content;
+  color: var(--color-gray-900);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.embed-height-toggle input {
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.embed-height-mode .console-input:disabled {
+  background: rgba(248, 250, 252, 0.94);
+  color: var(--color-gray-400);
+  cursor: not-allowed;
+}
+
+.embed-height-mode .console-field-help {
+  margin: 0;
+}
+
 .console-status {
   display: inline-flex;
   align-items: center;
