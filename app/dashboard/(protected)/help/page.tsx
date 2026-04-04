@@ -92,7 +92,12 @@ export default async function TenantHelpPage({
             role="alert"
             title={resolvedSearchParams.error}
             titleAs="h3"
-          />
+          >
+            <p className="subtle-text">
+              Please try again, or use the support form below if the problem
+              continues.
+            </p>
+          </ConsoleSection>
         ) : null}
 
         <ConsoleSection
