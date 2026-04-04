@@ -41,7 +41,6 @@ import {
   listSelfServeTenantsForEmail,
   OutstandingBillingBalanceError,
   setTenantStatus,
-  setEventPublicCheckoutRequested,
   setTicketOperatorAssertions,
   syncCalendarEventForOps,
   updateCalendarConnectionLumaKey,
@@ -947,42 +946,6 @@ export async function setTicketAssertionsAction(formData: FormData) {
       setTicketOperatorAssertions({
         event_api_id: eventApiId,
         ticket_type_api_id: ticketTypeApiId,
-        public_checkout_requested: publicCheckoutRequested,
-      }),
-    sessionEmail,
-    tenantId: tenant.tenant_id,
-    tenantSlug: tenant.slug,
-  });
-  await redirectAfterTenantMutation(formData, {
-    eventApiId,
-    fallback: `/dashboard/${encodeURIComponent(tenant.slug)}/events`,
-    sessionEmail,
-    tenantSlug: tenant.slug,
-    wasComplete,
-  });
-}
-
-export async function setEventPublicCheckoutAction(formData: FormData) {
-  const tenantSlug = String(formData.get("tenant_slug") || "");
-  const { detail: beforeDetail, sessionEmail, tenant } =
-    await requireTenantMutationContext(tenantSlug);
-  const calendarConnectionId = String(formData.get("calendar_connection_id") || "");
-  await requireCalendarTenantAccess(tenant.tenant_id, calendarConnectionId);
-  const wasComplete = onboardingChecklistComplete(beforeDetail);
-  const eventApiId = String(formData.get("event_api_id") || "");
-  const publicCheckoutRequested = asBoolean(formData.get("public_checkout_requested"));
-  await runAuditedTenantDashboardMutation({
-    action: "set_event_public_checkout",
-    beforeDetail,
-    context: {
-      calendar_connection_id: calendarConnectionId,
-      event_api_id: eventApiId,
-      public_checkout_requested: publicCheckoutRequested,
-    },
-    mutation: () =>
-      setEventPublicCheckoutRequested({
-        calendar_connection_id: calendarConnectionId,
-        event_api_id: eventApiId,
         public_checkout_requested: publicCheckoutRequested,
       }),
     sessionEmail,

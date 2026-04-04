@@ -163,7 +163,7 @@ export function EventCheckoutForm({
 
       <section className="public-section-card">
         <div className="public-section-head">
-          <h2>Select a ticket</h2>
+          <h2>Tickets</h2>
         </div>
 
         <div className="public-ticket-grid">

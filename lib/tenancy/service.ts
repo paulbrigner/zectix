@@ -1112,33 +1112,6 @@ export async function setTicketOperatorAssertions(input: {
   return nextTicket;
 }
 
-export async function setEventPublicCheckoutRequested(input: {
-  calendar_connection_id: string;
-  event_api_id: string;
-  public_checkout_requested: boolean;
-}) {
-  const event = await getEventMirror(input.calendar_connection_id, input.event_api_id);
-  if (!event) {
-    throw new Error("Event mirror was not found.");
-  }
-
-  const tickets = await listTicketMirrorsByEvent(event.event_api_id);
-  const nextEvent: EventMirror = {
-    ...event,
-    ...buildEventCheckoutState(
-      {
-        ...event,
-      },
-      tickets,
-    ),
-    updated_at: nowIso(),
-  };
-
-  await putEventMirror(nextEvent);
-  await refreshTenantOnboardingProgress(event.tenant_id);
-  return nextEvent;
-}
-
 export async function getTenantOpsDetail(tenantId: string) {
   const tenant = await getTenant(tenantId);
   if (!tenant) {
