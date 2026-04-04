@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
+import { ConsoleInfoTip } from "@/components/ConsoleInfoTip";
 
 export function EmbedHeightModeField({
   defaultHeight,
@@ -22,37 +23,30 @@ export function EmbedHeightModeField({
       </span>
 
       <div className="embed-height-mode">
-        <label className="embed-height-toggle" htmlFor={dynamicHintId}>
-          <input
-            checked={dynamic}
-            id={dynamicHintId}
-            name="embed_dynamic_height"
-            onChange={(event) => {
-              const nextChecked = event.target.checked;
-              setDynamic(nextChecked);
-              if (!height.trim()) {
-                setHeight(String(defaultHeight));
-              }
-            }}
-            type="checkbox"
-          />
-          <span>Dynamic</span>
-          <span
-            aria-label={dynamicHelpText}
-            className="console-info-indicator"
-            role="img"
-            title={dynamicHelpText}
-          >
-            i
-          </span>
-        </label>
-        <span className="console-field-help" id={`${dynamicHintId}-help`}>
-          {dynamicHelpText}
-        </span>
+        <div className="embed-height-toggle">
+          <label className="embed-height-toggle-label" htmlFor={dynamicHintId}>
+            <input
+              checked={dynamic}
+              id={dynamicHintId}
+              name="embed_dynamic_height"
+              onChange={(event) => {
+                const nextChecked = event.target.checked;
+                setDynamic(nextChecked);
+                if (!height.trim()) {
+                  setHeight(String(defaultHeight));
+                }
+              }}
+              type="checkbox"
+            />
+            <span>Dynamic</span>
+          </label>
+          <ConsoleInfoTip label="What dynamic height means">
+            <p>{dynamicHelpText}</p>
+          </ConsoleInfoTip>
+        </div>
 
         <div className="console-input-with-unit">
           <input
-            aria-describedby={`${dynamicHintId}-help`}
             className="console-input"
             data-embed-height-visible="true"
             disabled={dynamic}
