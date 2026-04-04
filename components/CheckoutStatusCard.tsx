@@ -119,7 +119,7 @@ function statusMessage(session: CheckoutSession) {
     return "This invoice was refunded in CipherPay.";
   }
 
-  return "Send the exact amount below using the QR code, copied address, or wallet button.";
+  return "Scan the QR code, tap Open wallet, or copy the address manually.";
 }
 
 function paymentStateLabel(session: CheckoutSession) {
@@ -140,9 +140,8 @@ export function CheckoutStatusCard({
   viewerToken,
   embedMode = false,
 }: CheckoutStatusCardProps) {
-  const showCheckoutSessionPanel = false;
   const [session, setSession] = useState(initialSession);
-  const [copyNotice, setCopyNotice] = useState<string | null>(null);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string | null>(null);
   const [entryQrDataUrl, setEntryQrDataUrl] = useState<string | null>(null);
   const [countdownNowMs, setCountdownNowMs] = useState(() => Date.now());
@@ -347,18 +346,18 @@ export function CheckoutStatusCard({
   }, [checkInQrUrl]);
 
   useEffect(() => {
-    if (!copyNotice) {
+    if (!copiedField) {
       return undefined;
     }
 
     const timeoutId = window.setTimeout(() => {
-      setCopyNotice(null);
-    }, 2400);
+      setCopiedField(null);
+    }, 1800);
 
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [copyNotice]);
+  }, [copiedField]);
 
   useEffect(() => {
     if (!embedMode) {
@@ -381,14 +380,14 @@ export function CheckoutStatusCard({
     session.status,
   ]);
 
-  async function copyValue(value: string | null, label: string) {
+  async function copyValue(value: string | null, field: string) {
     if (!value) return;
 
     try {
       await navigator.clipboard.writeText(value);
-      setCopyNotice(`${label} copied.`);
+      setCopiedField(field);
     } catch {
-      setCopyNotice(`Could not copy ${label.toLowerCase()}.`);
+      // Silently fail — no disruptive error toast for clipboard
     }
   }
 
@@ -670,7 +669,7 @@ export function CheckoutStatusCard({
     const printWindow = window.open("", "_blank", "width=960,height=1100");
 
     if (!printWindow) {
-      setCopyNotice("Could not open print view.");
+      setCopiedField("print-error");
       return;
     }
 
@@ -700,154 +699,91 @@ export function CheckoutStatusCard({
     window.setTimeout(() => {
       URL.revokeObjectURL(url);
     }, 0);
-    setCopyNotice("Pass saved.");
+    setCopiedField("pass-saved");
+  }
+
+  const clipboardSvg = (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+      <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+    </svg>
+  );
+
+  const checkSvg = (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  );
+
+  function copyIconFor(field: string) {
+    return copiedField === field ? checkSvg : clipboardSvg;
   }
 
   return (
-    <div className={`status-layout${showCheckoutSessionPanel ? "" : " status-layout-single"}`}>
-      {showCheckoutSessionPanel ? (
-        <div className="status-main">
-          <section className="status-card">
-            <div className="status-card-head">
-              <div>
-                <p className="eyebrow">Checkout status</p>
-                <h2>{session.event_name}</h2>
-              </div>
-              <div className="status-badge-wrap">
-                <span className="public-status-chip">{paymentStateLabel(session)}</span>
-              </div>
-            </div>
-
-            <p className="checkout-status-message">{statusMessage(session)}</p>
-
-            <div className="status-detail-grid">
-              <div className="checkout-key-value">
-                <span>Attendee</span>
-                <strong>{attendeeName}</strong>
-                <p className="subtle-text">{attendeeEmail}</p>
-              </div>
-              <div className="checkout-key-value">
-                <span>Ticket tier</span>
-                <strong>{passReady ? lumaTicketName : session.ticket_type_name || "Luma ticket"}</strong>
-                <p className="subtle-text">
-                  {formatFiatAmount(session.amount, session.currency)}
-                </p>
-              </div>
-              <div className="checkout-key-value">
-                <span>Invoice ID</span>
-                <strong className="checkout-mono">{session.cipherpay_invoice_id}</strong>
-                <p className="subtle-text">
-                  Memo {session.cipherpay_memo_code || "not assigned yet"}
-                </p>
-              </div>
-              <div className="checkout-key-value">
-                <span>Registration</span>
-                <strong>
-                  {session.registration_status === "registered"
-                    ? "Ready"
-                    : session.registration_status}
-                </strong>
-                <p className="subtle-text">
-                  {session.registered_at ? (
-                    <>
-                      Updated <LocalDateTime iso={session.registered_at} />
-                    </>
-                  ) : session.registration_error ? (
-                    session.registration_error
-                  ) : (
-                    "Waiting for payment acceptance"
-                  )}
-                </p>
-              </div>
-            </div>
-
-            <div className="status-timeline">
-              <div className="checkout-key-value">
-                <span>Created</span>
-                <strong>
-                  {session.created_at ? <LocalDateTime iso={session.created_at} /> : "n/a"}
-                </strong>
-              </div>
-              <div className="checkout-key-value">
-                <span>Detected</span>
-                <strong>
-                  {session.detected_at ? <LocalDateTime iso={session.detected_at} /> : "n/a"}
-                </strong>
-              </div>
-              <div className="checkout-key-value">
-                <span>Confirmed</span>
-                <strong>
-                  {session.confirmed_at ? <LocalDateTime iso={session.confirmed_at} /> : "n/a"}
-                </strong>
-              </div>
-              {!paymentAccepted ? (
-                <div className="checkout-key-value">
-                  <span>Invoice expires</span>
-                  <strong>
-                    {session.cipherpay_expires_at ? (
-                      <LocalDateTime iso={session.cipherpay_expires_at} />
-                    ) : (
-                      "n/a"
-                    )}
-                  </strong>
-                </div>
-              ) : null}
-            </div>
-          </section>
-        </div>
-      ) : null}
-
-      <aside className="status-sidebar">
+    <div className="status-layout">
+      <div className="status-main">
         {!paymentAccepted ? (
           <section className="payment-panel">
-            <div className="payment-panel-head">
-              <div>
-                <p className="eyebrow">Pay with Zcash</p>
-                <h3>Complete your ticket purchase</h3>
+            <p className="checkout-status-message">{statusMessage(session)}</p>
+
+            <div className="payment-hero">
+              <div className={`payment-qr-wrap${invoiceExpired ? " payment-qr-wrap-expired" : ""}`}>
+                {qrCodeDataUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    alt="Zcash payment QR code"
+                    className={`checkout-qr-image${invoiceExpired ? " checkout-qr-image-expired" : ""}`}
+                    src={qrCodeDataUrl}
+                  />
+                ) : (
+                  <div className="checkout-qr-fallback">
+                    QR code will appear once CipherPay returns the payment URI.
+                  </div>
+                )}
+                {invoiceExpired ? <div className="payment-qr-expired-overlay">Expired</div> : null}
               </div>
-              <div className="payment-panel-meta">
-                <span className="public-status-chip">{paymentStateLabel(session)}</span>
+              <strong className="payment-amount">{zecAmountLabel(session.cipherpay_price_zec)}</strong>
+              {session.amount ? (
+                <span className="payment-fiat-equiv">
+                  ≈ {formatFiatAmount(session.amount, session.currency)}
+                </span>
+              ) : null}
+              <div className="payment-status-row">
+                <span className="public-status-chip">
+                  {(session.status === "pending" || session.status === "draft") && !invoiceExpired ? (
+                    <span className="payment-pulse-dot" />
+                  ) : null}
+                  {paymentStateLabel(session)}
+                </span>
                 {paymentExpiryLabel && !invoiceExpired ? (
                   <span className="status-pill-lite">{paymentExpiryLabel}</span>
                 ) : null}
               </div>
             </div>
 
-            <div className="payment-summary-row">
-              <div className="checkout-key-value">
-                <span>Event</span>
-                <strong>{session.event_name}</strong>
-              </div>
-              <div className="checkout-key-value">
-                <span>Ticket tier</span>
-                <strong>{session.ticket_type_name || "Luma ticket"}</strong>
-              </div>
-            </div>
-
-            <div className={`payment-qr-wrap${invoiceExpired ? " payment-qr-wrap-expired" : ""}`}>
-              {qrCodeDataUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  alt="Zcash payment QR code"
-                  className={`checkout-qr-image${invoiceExpired ? " checkout-qr-image-expired" : ""}`}
-                  src={qrCodeDataUrl}
-                />
-              ) : (
-                <div className="checkout-qr-fallback">
-                  QR code will appear once CipherPay returns the payment URI.
-                </div>
-              )}
-              {invoiceExpired ? <div className="payment-qr-expired-overlay">Expired</div> : null}
+            <div className="payment-cta-row">
+              {session.cipherpay_zcash_uri ? (
+                invoiceExpired ? (
+                  <button className="button payment-cta-primary" disabled type="button">
+                    Expired
+                  </button>
+                ) : (
+                  <a className="button payment-cta-primary" href={session.cipherpay_zcash_uri}>
+                    Open wallet
+                  </a>
+                )
+              ) : null}
+              <button
+                className={`payment-copy-link${copiedField === "link" ? " payment-copy-link-ok" : ""}`}
+                disabled={!session.cipherpay_zcash_uri || invoiceExpired}
+                onClick={() => void copyValue(session.cipherpay_zcash_uri, "link")}
+                type="button"
+              >
+                {copiedField === "link" ? "Copied" : "Copy payment link"}
+              </button>
             </div>
 
             <div className="payment-key-list">
-              <div className="payment-key-row">
-                <div className="checkout-key-value">
-                  <span>Amount</span>
-                  <strong>{zecAmountLabel(session.cipherpay_price_zec)}</strong>
-                </div>
-              </div>
-
               <div className="payment-key-row">
                 <div className="checkout-key-value">
                   <span>Address</span>
@@ -858,56 +794,34 @@ export function CheckoutStatusCard({
                   </strong>
                 </div>
                 <button
-                  className="button button-secondary button-small"
+                  className={`payment-copy-icon${copiedField === "address" ? " payment-copy-icon-ok" : ""}`}
                   disabled={!session.cipherpay_payment_address || invoiceExpired}
                   onClick={() =>
-                    void copyValue(session.cipherpay_payment_address, "Payment address")
+                    void copyValue(session.cipherpay_payment_address, "address")
                   }
+                  title="Copy address"
                   type="button"
                 >
-                  {invoiceExpired ? "Address expired" : "Copy address"}
+                  {copyIconFor("address")}
                 </button>
               </div>
 
               <div className="payment-key-row">
                 <div className="checkout-key-value">
-                  <span>Reference code</span>
+                  <span>Memo</span>
                   <strong>{session.cipherpay_memo_code || "Not assigned yet"}</strong>
                 </div>
                 <button
-                  className="button button-secondary button-small"
+                  className={`payment-copy-icon${copiedField === "memo" ? " payment-copy-icon-ok" : ""}`}
                   disabled={!session.cipherpay_memo_code}
-                  onClick={() => void copyValue(session.cipherpay_memo_code, "Reference code")}
+                  onClick={() => void copyValue(session.cipherpay_memo_code, "memo")}
+                  title="Copy memo"
                   type="button"
                 >
-                  Copy code
+                  {copyIconFor("memo")}
                 </button>
               </div>
             </div>
-
-            <div className="payment-action-stack">
-              {session.cipherpay_zcash_uri ? (
-                invoiceExpired ? (
-                  <button className="button" disabled type="button">
-                    Open wallet · Expired
-                  </button>
-                ) : (
-                  <a className="button" href={session.cipherpay_zcash_uri}>
-                    Open wallet
-                  </a>
-                )
-              ) : null}
-              <button
-                className="button button-secondary"
-                disabled={!session.cipherpay_zcash_uri || invoiceExpired}
-                onClick={() => void copyValue(session.cipherpay_zcash_uri, "Zcash URI")}
-                type="button"
-              >
-                {invoiceExpired ? "Copy payment URI · Expired" : "Copy payment URI"}
-              </button>
-            </div>
-
-            {copyNotice ? <p className="console-valid-text">{copyNotice}</p> : null}
           </section>
         ) : (
           <section className="pass-shell">
@@ -964,8 +878,6 @@ export function CheckoutStatusCard({
                     "Payment accepted, but Luma did not create the attendee record yet.")
                   : "Payment accepted. We're attaching your Luma attendee pass now. This page refreshes automatically."}
             </div>
-
-            {copyNotice ? <p className="console-valid-text">{copyNotice}</p> : null}
 
             {passReady && registrationGuest ? (
               <div className="pass-grid">
@@ -1043,24 +955,25 @@ export function CheckoutStatusCard({
               </div>
             )}
 
-            {copyNotice ? <p className="console-valid-text">{copyNotice}</p> : null}
           </section>
         )}
+      </div>
 
-        <section className="status-card">
-          <p className="eyebrow">Event details</p>
-          <h2>Event details</h2>
-          <div className="status-detail-grid">
+      <aside className="status-sidebar">
+        <section className="checkout-receipt">
+          <h2 className="checkout-receipt-heading">Order summary</h2>
+
+          <div className="checkout-detail-group">
             <div className="checkout-key-value">
-              <span>Starts</span>
+              <span>When</span>
               <strong>
                 {event?.start_at ? <LocalDateTime iso={event.start_at} /> : "n/a"}
               </strong>
-              <p className="subtle-text">{event?.timezone || "America/New_York"}</p>
-            </div>
-            <div className="checkout-key-value">
-              <span>Ends</span>
-              <strong>{event?.end_at ? <LocalDateTime iso={event.end_at} /> : "n/a"}</strong>
+              {event?.end_at ? (
+                <p className="subtle-text">
+                  Ends <LocalDateTime iso={event.end_at} />
+                </p>
+              ) : null}
             </div>
             <div className="checkout-key-value">
               <span>Location</span>
@@ -1072,9 +985,24 @@ export function CheckoutStatusCard({
               ) : null}
             </div>
           </div>
-          <p className="checkout-status-message">
-            {event?.description || "Event logistics will remain available on the Luma event page."}
-          </p>
+
+          <div className="checkout-detail-group">
+            <div className="checkout-key-value">
+              <span>Attendee</span>
+              <strong>{attendeeName}</strong>
+              <p className="subtle-text">{attendeeEmail}</p>
+            </div>
+            <div className="checkout-key-value">
+              <span>Ticket</span>
+              <strong>{session.ticket_type_name || "Luma ticket"}</strong>
+              <p className="subtle-text">
+                {formatFiatAmount(session.amount, session.currency)}
+              </p>
+              {event?.description ? (
+                <p className="checkout-item-description">{event.description}</p>
+              ) : null}
+            </div>
+          </div>
         </section>
       </aside>
     </div>

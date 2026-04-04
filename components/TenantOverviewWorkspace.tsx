@@ -155,14 +155,14 @@ export function TenantOverviewWorkspace({
               </ConsoleTableCell>
               <ConsoleTableCell>
                 <Link
-                  className="button button-secondary button-small"
+                  className="console-table-link"
                   href={
                     viewerToken
                       ? `/checkout/${encodeURIComponent(session.session_id)}?t=${encodeURIComponent(viewerToken)}`
                       : `/checkout/${encodeURIComponent(session.session_id)}`
                   }
                 >
-                  Open
+                  View →
                 </Link>
               </ConsoleTableCell>
             </ConsoleTableRow>
@@ -207,21 +207,21 @@ export function TenantOverviewWorkspace({
         <section className="console-section">
           <div className="console-kpi-grid">
             <article className="console-kpi-card">
-              <p className="console-kpi-label">Upcoming</p>
+              <p className="console-kpi-label">Upcoming events</p>
               <p className="console-kpi-value">{summary.upcomingEvents.length}</p>
               <p className="subtle-text console-kpi-detail">
                 {summary.liveEvents.length} live on checkout
               </p>
             </article>
             <article className="console-kpi-card">
-              <p className="console-kpi-label">Pending</p>
+              <p className="console-kpi-label">Pending checkouts</p>
               <p className="console-kpi-value">{summary.pendingSessions}</p>
               <p className="subtle-text console-kpi-detail">
                 {summary.trackedSessions} total sessions
               </p>
             </article>
             <article className="console-kpi-card">
-              <p className="console-kpi-label">Registered</p>
+              <p className="console-kpi-label">Registered attendees</p>
               <p className="console-kpi-value">{summary.registeredSessions}</p>
               <p className="subtle-text console-kpi-detail">
                 {invalidWebhookSummary(summary.invalidWebhooks)}
@@ -243,51 +243,32 @@ export function TenantOverviewWorkspace({
       ) : detail.calendars.length === 1 ? (
         (() => {
           const calendar = detail.calendars[0];
-          const connectionHealth = calendarConnectionHealthLabel(
-            calendar,
-            Boolean(
-              detail.calendar_secret_previews.get(
-                calendar.calendar_connection_id,
-              )?.luma.has_value,
-            ),
-          );
 
           return (
             <>
-              <section className="console-section tenant-summary-card">
-                <div className="tenant-summary-card-head">
-                  <div>
-                    <p className="console-kpi-label">{calendar.display_name}</p>
-                    <div className="tenant-summary-status-line">
-                      <h3>{connectionHealth}</h3>
-                      <Link
-                        className="tenant-summary-public-link"
-                        href={hostedCalendarHref(calendar.slug)}
-                      >
-                        /c/{calendar.slug}
-                      </Link>
-                    </div>
-                    <p className="subtle-text">
-                      {calendar.last_synced_at ? (
-                        <>
-                          Last synced{" "}
-                          <LocalDateTime iso={calendar.last_synced_at} />
-                        </>
-                      ) : (
-                        "Not synced yet"
-                      )}
-                    </p>
-                  </div>
-                  <div className="console-mini-pill-row">
-                    <span className={calendarStatusPillClassName(calendar.status)}>
-                      {calendar.status}
-                    </span>
-                    <span
-                      className={`console-mini-pill${calendar.embed_enabled ? " console-mini-pill-info" : ""}`}
-                    >
-                      {calendar.embed_enabled ? "Embed on" : "Embed off"}
-                    </span>
-                  </div>
+              <section className="console-section overview-connection-strip">
+                <h2>Luma calendar</h2>
+                <div className="overview-connection-row">
+                  <span className={`overview-connection-dot${calendar.status === "active" ? " overview-connection-dot-active" : ""}`} />
+                  <span className="overview-connection-name">{calendar.display_name}</span>
+                  <span className="overview-connection-detail">
+                    {calendar.embed_enabled ? "Embed enabled" : "Embed disabled"}
+                  </span>
+                  <Link
+                    className="tenant-summary-public-link"
+                    href={hostedCalendarHref(calendar.slug)}
+                  >
+                    /c/{calendar.slug}
+                  </Link>
+                  <span className="overview-connection-sync">
+                    {calendar.last_synced_at ? (
+                      <>
+                        Synced <LocalDateTime iso={calendar.last_synced_at} />
+                      </>
+                    ) : (
+                      "Not synced yet"
+                    )}
+                  </span>
                 </div>
               </section>
 
