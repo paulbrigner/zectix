@@ -55,7 +55,6 @@ export function HeroGlow() {
       <div className="glow-orb glow-orb-1" />
       <div className="glow-orb glow-orb-2" />
       <div className="glow-orb glow-orb-3" />
-      <div className="glow-orb glow-orb-4" />
       <div className="glow-spotlight" ref={spotlightRef} />
       <div className="glow-noise" />
     </div>

@@ -4,6 +4,7 @@ import {
   getAdminAuthFromEmail,
   getAdminLoginEmail,
 } from "@/lib/admin-auth";
+import { isProductionRuntime } from "@/lib/runtime-env";
 
 let cachedSesClient: SESv2Client | null = null;
 
@@ -82,6 +83,14 @@ export async function sendAdminMagicLinkEmail(email: string, token: string) {
   const verifyUrl = buildAdminMagicLinkUrl(token);
   if (!verifyUrl) {
     throw new Error("APP_PUBLIC_ORIGIN must be configured for admin email sign-in.");
+  }
+
+  if (!isProductionRuntime()) {
+    console.log("\n╔══════════════════════════════════════════════════════════╗");
+    console.log("║  [DEV] Operator magic-link — click to sign in:         ║");
+    console.log("╚══════════════════════════════════════════════════════════╝");
+    console.log(`→ ${verifyUrl}\n`);
+    return;
   }
 
   const { subject, text, html } = buildAdminMagicLinkEmail(verifyUrl);

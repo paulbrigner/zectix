@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Button } from "@/components/ui";
 import { HeroGlow } from "@/components/HeroGlow";
 
@@ -74,23 +75,12 @@ export default function Home() {
       <HeroGlow />
       <nav className="landing-nav">
         <span className="landing-wordmark">ZecTix</span>
-        <div className="landing-nav-links">
-          <a href="#paths">Paths</a>
-          <a href="#direct">Direct</a>
-          <a href="#managed">Luma</a>
-          <a href="#why">Why ZecTix</a>
-        </div>
         <div className="landing-nav-actions">
-          <Button
-            variant="landing-ghost"
-            href="https://www.cipherpay.app/en/dashboard/login"
-            target="_blank"
-            rel="noreferrer"
-          >
-            CipherPay login
-          </Button>
-          <Button variant="landing-ghost" href="/dashboard/login">
-            ZecTix login
+          <Link className="landing-nav-signin" href="/dashboard/login">
+            Sign in
+          </Link>
+          <Button variant="landing-primary" href="#paths">
+            Get started
           </Button>
         </div>
       </nav>
@@ -138,7 +128,7 @@ export default function Home() {
               in the way.
             </p>
             <span className="landing-path-cta">
-              How it works<span aria-hidden="true"> &rarr;</span>
+              Learn more<span aria-hidden="true"> &rarr;</span>
             </span>
           </a>
 
@@ -151,7 +141,7 @@ export default function Home() {
               alongside your existing workflow.
             </p>
             <span className="landing-path-cta">
-              How it works<span aria-hidden="true"> &rarr;</span>
+              Learn more<span aria-hidden="true"> &rarr;</span>
             </span>
           </a>
         </div>
@@ -249,7 +239,17 @@ export default function Home() {
 
       <footer className="landing-footer">
         <span className="landing-wordmark">ZecTix</span>
-        <p>Built on Zcash</p>
+        <p>
+          Built on Zcash. Powered by{" "}
+          <a
+            href="https://www.cipherpay.app"
+            target="_blank"
+            rel="noreferrer"
+            className="landing-footer-link"
+          >
+            CipherPay
+          </a>
+        </p>
       </footer>
     </main>
   );

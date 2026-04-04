@@ -45,54 +45,50 @@ export default async function TenantStartPage({
     <main className="page console-shell">
       <section className="card console-card-shell">
         <div className="console-content">
-          <section className="console-section">
-            <p className="eyebrow">Self-serve onboarding</p>
+          <section className="console-section console-login-card">
+            <a href={appPath("/")} className="console-login-wordmark">ZecTix</a>
             <h1>Start your organizer setup</h1>
             <p className="subtle-text">
-              We&apos;ll create a draft organizer account, then email a one-time
-              sign-in link so you can connect Luma, validate your calendar, and
-              configure CipherPay from the organizer dashboard.
+              Create your organizer account and we&apos;ll send a sign-in link
+              to get you started.
             </p>
 
             {resolvedSearchParams.email_sent === "1" ? (
               <div className="tenant-start-notice tenant-start-notice-success" role="status">
-                <strong>Check your inbox for the one-time sign-in link.</strong>
+                <strong>Check your inbox for the sign-in link.</strong>
                 <p>
-                  If this looked like an existing draft organizer, we reused it
-                  and sent the link there.
+                  If an account already exists for this email, we sent the link there.
                 </p>
               </div>
             ) : null}
             {errorMessage ? <p className="console-error-text">{errorMessage}</p> : null}
 
-            <form action={appPath("/api/dashboard/start")} className="console-content" method="post">
-              <div className="public-field-grid">
-                <Input
-                  autoComplete="organization"
-                  info="This becomes the organizer name shown in your dashboard and future public checkout surfaces."
-                  label="Organization name"
-                  maxLength={160}
-                  name="name"
-                  required
-                  type="text"
-                />
-                <Input
-                  autoComplete="email"
-                  info="We use this as the first owner email and send the sign-in link here."
-                  label="Work email"
-                  maxLength={320}
-                  name="email"
-                  required
-                  type="email"
-                />
-              </div>
-              <div className="button-row">
-                <Button type="submit">Create draft and email sign-in link</Button>
-                <Button variant="secondary" href="/dashboard/login">
-                  Existing organizer sign-in
-                </Button>
-              </div>
+            <form action={appPath("/api/dashboard/start")} method="post" className="console-login-form">
+              <Input
+                autoComplete="organization"
+                info="Shown in your dashboard and checkout pages."
+                label="Organization name"
+                maxLength={160}
+                name="name"
+                required
+                type="text"
+              />
+              <Input
+                autoComplete="email"
+                info="We&apos;ll send the sign-in link here."
+                label="Work email"
+                maxLength={320}
+                name="email"
+                required
+                type="email"
+              />
+              <Button type="submit">Create account</Button>
             </form>
+
+            <p className="console-login-footer">
+              {"Already have an account? "}
+              <a href={appPath("/dashboard/login")}>Sign in</a>
+            </p>
           </section>
         </div>
       </section>

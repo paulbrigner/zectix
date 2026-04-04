@@ -92,8 +92,8 @@ select {
   padding: 0 1rem;
   border: 1px solid transparent;
   border-radius: 999px;
-  background: linear-gradient(135deg, var(--accent-bright), var(--accent));
-  color: var(--surface-dark);
+  background: var(--accent);
+  color: #fff;
   font-weight: 600;
   text-decoration: none;
   transition:
@@ -101,11 +101,18 @@ select {
     box-shadow 160ms ease,
     opacity 160ms ease,
     background 160ms ease;
-  box-shadow: 0 12px 24px var(--accent-glow);
+  box-shadow: 0 8px 20px rgba(212, 146, 10, 0.18);
 }
 
 .button:hover {
   transform: translateY(-1px);
+  background: var(--accent-hover);
+  box-shadow: 0 12px 28px rgba(212, 146, 10, 0.24);
+}
+
+.button-secondary:hover {
+  background: rgba(248, 250, 252, 0.96);
+  box-shadow: none;
 }
 
 .button:disabled {
@@ -1553,6 +1560,48 @@ select {
   border: 1px solid rgba(17, 24, 39, 0.07);
   border-radius: var(--radius-xl);
   background: rgba(255, 255, 255, 0.92);
+}
+
+.console-login-card {
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+.console-login-wordmark {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.25rem;
+  letter-spacing: -0.03em;
+  color: var(--text-dark);
+  text-decoration: none;
+}
+
+.console-login-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.console-login-form .button {
+  width: 100%;
+}
+
+.console-login-footer {
+  margin: 0;
+  text-align: center;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+}
+
+.console-login-footer a {
+  color: var(--accent-text);
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 150ms;
+}
+
+.console-login-footer a:hover {
+  color: var(--accent-hover);
 }
 
 .console-kpi-grid,

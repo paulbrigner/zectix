@@ -45,39 +45,35 @@ export default async function TenantLoginPage({
     <main className="page console-shell">
       <section className="card console-card-shell">
         <div className="console-content">
-          <section className="console-section">
-            <p className="eyebrow">Organizer access</p>
+          <section className="console-section console-login-card">
+            <a href={appPath("/")} className="console-login-wordmark">ZecTix</a>
             <h1>Sign in to your dashboard</h1>
             <p className="subtle-text">
-              Enter the email address configured as your account contact to receive a one-time
-              sign-in link for calendar setup, event review, and checkout monitoring.
+              Enter your account email to receive a one-time sign-in link.
+              The link expires after 15 minutes.
             </p>
             {resolvedSearchParams.email_sent === "1" ? (
               <p className="console-success-text">
-                If that email address is configured for an account, we sent a one-time sign-in link.
+                Check your inbox. If that email is linked to an account, we sent a sign-in link.
               </p>
             ) : null}
             {errorMessage ? <p className="console-error-text">{errorMessage}</p> : null}
 
-            <form action={appPath("/api/dashboard/login")} className="console-content" method="post">
+            <form action={appPath("/api/dashboard/login")} method="post" className="console-login-form">
               <Input
                 autoComplete="email"
-                info="Use the account contact email. The link expires after 15 minutes and can only be used once."
                 label="Email address"
                 name="email"
                 required
                 type="email"
               />
-              <div className="button-row">
-                <Button type="submit">Email sign-in link</Button>
-                <Button variant="secondary" href="/dashboard/start">
-                  Start onboarding
-                </Button>
-                <Button variant="secondary" href="/">
-                  Back home
-                </Button>
-              </div>
+              <Button type="submit">Continue with email</Button>
             </form>
+
+            <p className="console-login-footer">
+              {"Don't have an account? "}
+              <a href={appPath("/dashboard/start")}>Start onboarding</a>
+            </p>
           </section>
         </div>
       </section>
