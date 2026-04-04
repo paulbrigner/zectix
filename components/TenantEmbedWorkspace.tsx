@@ -94,6 +94,7 @@ export function TenantEmbedWorkspace({
     const settingsFormKey = JSON.stringify({
       allowedOrigins: calendar.embed_allowed_origins,
       defaultHeight: calendar.embed_default_height_px,
+      dynamicHeight: calendar.embed_dynamic_height,
       embedEnabled: calendar.embed_enabled,
       radius: calendar.embed_theme.radius_px,
       showBranding: calendar.embed_show_branding,
@@ -133,6 +134,7 @@ export function TenantEmbedWorkspace({
                 buildEmbedCalendarUrl(calendar.slug),
               `${detail.tenant.name} calendar for ${calendar.display_name}`,
               calendar.embed_default_height_px,
+              { dynamicHeight: calendar.embed_dynamic_height },
             ),
             themeStyle: buildEmbedThemeStyle(calendar.embed_theme),
             title: calendar.display_name,
@@ -163,6 +165,7 @@ export function TenantEmbedWorkspace({
                 url,
                 `${detail.tenant.name} checkout for ${event.name}`,
                 calendar.embed_default_height_px,
+                { dynamicHeight: calendar.embed_dynamic_height },
               ),
               startAt: event.start_at,
               summary: summarizeDescription(event.description),
@@ -298,6 +301,7 @@ export function TenantEmbedWorkspace({
                 />
               </div>
               <EmbedHeightModeField
+                defaultDynamic={calendar.embed_dynamic_height}
                 defaultHeight={calendar.embed_default_height_px}
               />
               <div className="console-field">

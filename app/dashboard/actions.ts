@@ -692,6 +692,10 @@ export async function updateCalendarEmbedSettingsAction(formData: FormData) {
   const calendarConnectionId = String(formData.get("calendar_connection_id") || "");
   await requireCalendarTenantAccess(tenant.tenant_id, calendarConnectionId);
   const embedEnabled = asBoolean(formData.get("embed_enabled"));
+  const embedDynamicHeight = asBoolean(
+    formData.get("embed_dynamic_height"),
+    true,
+  );
   const embedShowBranding = asBoolean(formData.get("embed_show_branding"));
   await runAuditedTenantDashboardMutation({
     action: "update_calendar_embed_settings",
@@ -699,6 +703,7 @@ export async function updateCalendarEmbedSettingsAction(formData: FormData) {
     context: {
       calendar_connection_id: calendarConnectionId,
       embed_enabled: embedEnabled,
+      embed_dynamic_height: embedDynamicHeight,
       embed_show_branding: embedShowBranding,
     },
     mutation: () =>
@@ -706,6 +711,7 @@ export async function updateCalendarEmbedSettingsAction(formData: FormData) {
         calendar_connection_id: calendarConnectionId,
         embed_enabled: embedEnabled,
         embed_allowed_origins: String(formData.get("embed_allowed_origins") || ""),
+        embed_dynamic_height: embedDynamicHeight,
         embed_default_height_px: asString(formData.get("embed_default_height_px")),
         embed_show_branding: embedShowBranding,
         embed_theme: {

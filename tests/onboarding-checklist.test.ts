@@ -271,5 +271,22 @@ describe("buildOnboardingChecklist", () => {
     expect(snippet).toContain(
       'iframe.style.height = Math.max(240, Math.ceil(data.height)) + "px";',
     );
+    expect(snippet).toContain(
+      'style="width:100%;min-height:240px;border:0;display:block;overflow:hidden;"',
+    );
+    expect(snippet).not.toContain('height:860px');
+  });
+
+  it("builds fixed-height embed snippets when dynamic height is turned off", () => {
+    const snippet = buildEmbedSnippet(
+      "https://staging.zectix.com/c/demo-calendar?embed=1",
+      "Demo Calendar",
+      920,
+      { dynamicHeight: false },
+    );
+
+    expect(snippet).toContain(
+      'style="width:100%;height:920px;border:0;display:block;overflow:hidden;"',
+    );
   });
 });

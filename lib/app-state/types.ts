@@ -94,6 +94,7 @@ export type CalendarConnection = {
   last_sync_error: string | null;
   embed_enabled: boolean;
   embed_allowed_origins: string[];
+  embed_dynamic_height: boolean;
   embed_default_height_px: number;
   embed_show_branding: boolean;
   embed_theme: CalendarEmbedTheme;

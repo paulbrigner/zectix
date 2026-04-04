@@ -759,6 +759,7 @@ export async function createCalendarConnection(input: {
     last_sync_error: null,
     embed_enabled: false,
     embed_allowed_origins: [],
+    embed_dynamic_height: true,
     embed_default_height_px: DEFAULT_EMBED_HEIGHT_PX,
     embed_show_branding: true,
     embed_theme: normalizeCalendarEmbedTheme(null),
@@ -1042,6 +1043,7 @@ export async function updateCalendarEmbedSettings(input: {
   calendar_connection_id: string;
   embed_enabled: boolean;
   embed_allowed_origins: string[] | string;
+  embed_dynamic_height: boolean;
   embed_default_height_px?: number | string | null;
   embed_show_branding: boolean;
   embed_theme?: unknown;
@@ -1055,6 +1057,7 @@ export async function updateCalendarEmbedSettings(input: {
     ...connection,
     embed_enabled: input.embed_enabled,
     embed_allowed_origins: normalizeOriginList(input.embed_allowed_origins),
+    embed_dynamic_height: input.embed_dynamic_height,
     embed_default_height_px: normalizeEmbedHeight(
       input.embed_default_height_px,
       connection.embed_default_height_px || DEFAULT_EMBED_HEIGHT_PX,

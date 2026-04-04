@@ -80,6 +80,7 @@ const calendar: CalendarConnection = {
   last_sync_error: null,
   embed_enabled: true,
   embed_allowed_origins: ["https://test-org.example.com"],
+  embed_dynamic_height: true,
   embed_default_height_px: 860,
   embed_show_branding: true,
   embed_theme: {

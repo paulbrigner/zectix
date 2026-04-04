@@ -4,11 +4,13 @@ import { useId, useState } from "react";
 import { ConsoleInfoTip } from "@/components/ConsoleInfoTip";
 
 export function EmbedHeightModeField({
+  defaultDynamic,
   defaultHeight,
 }: {
+  defaultDynamic: boolean;
   defaultHeight: number;
 }) {
-  const [dynamic, setDynamic] = useState(true);
+  const [dynamic, setDynamic] = useState(defaultDynamic);
   const [height, setHeight] = useState(String(defaultHeight));
   const dynamicHintId = useId();
   const dynamicHelpText =

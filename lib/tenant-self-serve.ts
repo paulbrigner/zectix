@@ -272,10 +272,22 @@ export function buildEmbedCalendarUrl(calendarSlug: string) {
   return `/c/${encodeURIComponent(calendarSlug)}?embed=1`;
 }
 
-export function buildEmbedSnippet(url: string, title: string, height: number) {
+export function buildEmbedSnippet(
+  url: string,
+  title: string,
+  height: number,
+  options?: {
+    dynamicHeight?: boolean;
+  },
+) {
   const safeUrl = url.replaceAll("&", "&amp;").replaceAll('"', "&quot;");
   const safeTitle = title.replaceAll("&", "&amp;").replaceAll('"', "&quot;");
-  return `<iframe src="${safeUrl}" title="${safeTitle}" style="width:100%;height:${height}px;border:0;display:block;overflow:hidden;" loading="lazy"></iframe>
+  const dynamicHeight = options?.dynamicHeight ?? true;
+  const iframeStyle = dynamicHeight
+    ? "width:100%;min-height:240px;border:0;display:block;overflow:hidden;"
+    : `width:100%;height:${height}px;border:0;display:block;overflow:hidden;`;
+
+  return `<iframe src="${safeUrl}" title="${safeTitle}" style="${iframeStyle}" loading="lazy"></iframe>
 <script>
 (function () {
   const script = document.currentScript;

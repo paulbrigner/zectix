@@ -955,6 +955,7 @@ describe("updateCalendarEmbedSettings", () => {
       embed_enabled: true,
       embed_allowed_origins:
         "https://events.example.com\nhttps://app.example.com/page",
+      embed_dynamic_height: false,
       embed_default_height_px: "920",
       embed_show_branding: false,
       embed_theme: {
@@ -971,6 +972,7 @@ describe("updateCalendarEmbedSettings", () => {
       "https://events.example.com",
       "https://app.example.com",
     ]);
+    expect(result.embed_dynamic_height).toBe(false);
     expect(result.embed_default_height_px).toBe(920);
     expect(result.embed_show_branding).toBe(false);
     expect(result.embed_theme).toEqual({

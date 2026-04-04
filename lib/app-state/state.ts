@@ -435,6 +435,7 @@ function normalizeCalendarConnection(value: unknown): CalendarConnection | null 
     last_sync_error: asString(item?.last_sync_error),
     embed_enabled: asBoolean(item?.embed_enabled, false),
     embed_allowed_origins: normalizeOriginList(item?.embed_allowed_origins),
+    embed_dynamic_height: asBoolean(item?.embed_dynamic_height, true),
     embed_default_height_px: normalizeEmbedHeight(
       item?.embed_default_height_px,
       DEFAULT_EMBED_HEIGHT_PX,
