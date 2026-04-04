@@ -3,6 +3,7 @@ import { SESv2Client, SendEmailCommand } from "@aws-sdk/client-sesv2";
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export type SupportRequestSubmission = {
+  category: string | null;
   email: string;
   organization: string | null;
   subject: string;
@@ -11,6 +12,7 @@ export type SupportRequestSubmission = {
 };
 
 type RawSupportRequestSubmission = {
+  category?: unknown;
   email?: unknown;
   organization?: unknown;
   subject?: unknown;
@@ -74,12 +76,14 @@ export function parseSupportRequestSubmission(payload: unknown):
     };
   }
 
+  const category = asOptionalTrimmedString(body.category);
   const organization = asOptionalTrimmedString(body.organization);
   const contextPath = asOptionalTrimmedString(body.contextPath);
 
   return {
     ok: true,
     data: {
+      category,
       email,
       organization,
       subject,
@@ -90,14 +94,19 @@ export function parseSupportRequestSubmission(payload: unknown):
 }
 
 export function buildSupportRequestEmail(submission: SupportRequestSubmission) {
-  const subject = `Organizer support request: ${submission.subject}`;
+  const categoryPrefix = submission.category
+    ? `[${submission.category}] `
+    : "";
+  const subject = `Organizer support request: ${categoryPrefix}${submission.subject}`;
   const organization = submission.organization || "Not provided";
+  const category = submission.category || "Not specified";
   const currentPage = submission.contextPath || "Not provided";
   const text = [
     "New organizer support request",
     "",
     `From: ${submission.email}`,
     `Organization: ${organization}`,
+    `Topic: ${category}`,
     `Current page: ${currentPage}`,
     `Subject: ${submission.subject}`,
     "",
@@ -109,6 +118,7 @@ export function buildSupportRequestEmail(submission: SupportRequestSubmission) {
     "<table cellpadding=\"0\" cellspacing=\"0\" border=\"0\">",
     `<tr><td style="padding:6px 12px 6px 0"><strong>From</strong></td><td>${escapeHtml(submission.email)}</td></tr>`,
     `<tr><td style="padding:6px 12px 6px 0"><strong>Organization</strong></td><td>${escapeHtml(organization)}</td></tr>`,
+    `<tr><td style="padding:6px 12px 6px 0"><strong>Topic</strong></td><td>${escapeHtml(category)}</td></tr>`,
     `<tr><td style="padding:6px 12px 6px 0"><strong>Current page</strong></td><td>${escapeHtml(currentPage)}</td></tr>`,
     `<tr><td style="padding:6px 12px 6px 0"><strong>Subject</strong></td><td>${escapeHtml(submission.subject)}</td></tr>`,
     "</table>",

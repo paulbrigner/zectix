@@ -217,7 +217,10 @@ export function TenantConnectionsCipherPayTab({
               >
                 <div className="console-luma-card-head">
                   <div>
-                    <p className="console-kpi-label">{connection.status}</p>
+                    <span className="console-connection-status">
+                      <span className={`console-connection-status-dot console-connection-status-dot-${connection.status === "active" ? "active" : "pending"}`} />
+                      {connection.status === "active" ? "Active" : "Pending"}
+                    </span>
                     <h4>{connection.network}</h4>
                   </div>
                   <div className="console-luma-card-actions">
@@ -238,13 +241,11 @@ export function TenantConnectionsCipherPayTab({
                           type="hidden"
                           value={cipherPayReturnPath}
                         />
-                        <div className="button-row">
-                          <ConsoleSubmitButton
-                            className="button button-secondary button-small"
-                            label="Validate connection"
-                            pendingLabel="Validating..."
-                          />
-                        </div>
+                        <ConsoleSubmitButton
+                          className="button button-secondary button-small"
+                          label="Validate connection"
+                          pendingLabel="Validating..."
+                        />
                         <ConsoleFormPendingNote pendingLabel="Validating..." />
                       </ConsoleForm>
                     ) : null}
@@ -266,7 +267,7 @@ export function TenantConnectionsCipherPayTab({
                   </div>
                   <div className="console-signal-card">
                     <span className="console-kpi-label">Endpoint</span>
-                    <strong className="subtle-text">{connection.api_base_url}</strong>
+                    <strong>{connection.api_base_url}</strong>
                   </div>
                 </div>
 

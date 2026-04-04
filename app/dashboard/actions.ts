@@ -744,6 +744,7 @@ export async function submitSupportRequestAction(formData: FormData) {
       : null;
 
   const parsed = parseSupportRequestSubmission({
+    category: asString(formData.get("category")),
     email: sessionEmail,
     organization: requestedTenant?.name || null,
     subject: String(formData.get("subject") || ""),

@@ -799,6 +799,7 @@ export function CheckoutStatusCard({
                   onClick={() =>
                     void copyValue(session.cipherpay_payment_address, "address")
                   }
+                  aria-label="Copy address"
                   title="Copy address"
                   type="button"
                 >
@@ -815,6 +816,7 @@ export function CheckoutStatusCard({
                   className={`payment-copy-icon${copiedField === "memo" ? " payment-copy-icon-ok" : ""}`}
                   disabled={!session.cipherpay_memo_code}
                   onClick={() => void copyValue(session.cipherpay_memo_code, "memo")}
+                  aria-label="Copy memo"
                   title="Copy memo"
                   type="button"
                 >

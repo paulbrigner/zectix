@@ -1,6 +1,7 @@
-import Link from "next/link";
 import { submitSupportRequestAction } from "@/app/dashboard/actions";
+import { ConsoleFieldLabel, ConsoleFieldHint } from "@/components/ConsoleFieldLabel";
 import { ConsoleFormPendingNote } from "@/components/ConsoleFormPendingNote";
+import { ConsoleSection } from "@/components/ConsoleSection";
 import { ConsoleSubmitButton } from "@/components/ConsoleSubmitButton";
 import { TenantDashboardShellHeader } from "@/components/TenantDashboardShellHeader";
 import { hasCompletedTenantOnboarding } from "@/lib/tenant-self-serve";
@@ -55,9 +56,6 @@ export default async function TenantHelpPage({
   const helpRedirectTo = headerTenant
     ? `/dashboard/help?tenant=${encodeURIComponent(headerTenant.slug)}`
     : "/dashboard/help";
-  const dashboardHref = selectedTenant
-    ? `/dashboard/${encodeURIComponent(selectedTenant.slug)}`
-    : headerBasePath;
 
   return (
     <>
@@ -73,118 +71,110 @@ export default async function TenantHelpPage({
         />
       ) : null}
 
-      <section className="console-section">
-        <div className="console-section-header">
-          <div>
-            <h2>Help</h2>
-          </div>
-        </div>
-
+      <div className="console-page-body settings-page-body">
         {resolvedSearchParams.sent === "1" ? (
-          <p className="console-success-text">
-            Your support request was sent. We&apos;ll follow up by email.
-          </p>
+          <ConsoleSection
+            className="tenant-onboarding-complete-banner"
+            eyebrow={<p className="console-kpi-label">Request sent</p>}
+            role="status"
+            title="Your support request was sent."
+            titleAs="h3"
+          >
+            <p className="subtle-text">
+              We&apos;ll follow up at <strong>{email}</strong> as soon as possible.
+            </p>
+          </ConsoleSection>
         ) : null}
+
         {resolvedSearchParams.error ? (
-          <p className="console-error-text">{resolvedSearchParams.error}</p>
+          <ConsoleSection
+            eyebrow={<p className="console-kpi-label">Something went wrong</p>}
+            role="alert"
+            title={resolvedSearchParams.error}
+            titleAs="h3"
+          />
         ) : null}
 
-        <form action={submitSupportRequestAction} className="console-content">
-          <input name="redirect_to" type="hidden" value={helpRedirectTo} />
-          <input
-            name="context_path"
-            type="hidden"
-            value={resolvedSearchParams.from || ""}
-          />
+        <ConsoleSection
+          description={`Describe the issue and we'll follow up at ${email}.`}
+          title="Help"
+        >
+          <form action={submitSupportRequestAction} className="console-content">
+            <input name="redirect_to" type="hidden" value={helpRedirectTo} />
+            <input
+              name="context_path"
+              type="hidden"
+              value={resolvedSearchParams.from || ""}
+            />
 
-          {tenants.length > 1 ? (
+            {tenants.length > 1 ? (
+              <label className="console-field">
+                <ConsoleFieldLabel label="Organization" optional />
+                <ConsoleFieldHint>
+                  Choose the organization this request is about.
+                </ConsoleFieldHint>
+                <select
+                  className="console-input"
+                  defaultValue={selectedTenantSlug}
+                  name="tenant_slug"
+                >
+                  <option value="">General question</option>
+                  {tenants.map((tenant) => (
+                    <option key={tenant.tenant_id} value={tenant.slug}>
+                      {tenant.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : selectedTenant ? (
+              <input name="tenant_slug" type="hidden" value={selectedTenant.slug} />
+            ) : null}
+
             <label className="console-field">
-              <span className="console-field-label">
-                <span className="console-field-label-row">
-                  <span>Organization</span>
-                </span>
-                <span className="console-field-help">
-                  <span aria-hidden="true" className="console-info-indicator">
-                    i
-                  </span>
-                  <span>
-                    Choose the organization this request is about so we can review
-                    the right calendar and billing context.
-                  </span>
-                </span>
-              </span>
-              <select
-                className="console-input"
-                defaultValue={selectedTenantSlug}
-                name="tenant_slug"
-              >
-                <option value="">General question</option>
-                {tenants.map((tenant) => (
-                  <option key={tenant.tenant_id} value={tenant.slug}>
-                    {tenant.name}
-                  </option>
-                ))}
+              <ConsoleFieldLabel label="Topic" />
+              <select className="console-input" defaultValue="" name="category">
+                <option disabled value="">Select a topic...</option>
+                <option value="billing">Billing &amp; payments</option>
+                <option value="luma_sync">Luma sync issues</option>
+                <option value="embed">Embed configuration</option>
+                <option value="account">Account settings</option>
+                <option value="other">Other</option>
               </select>
             </label>
-          ) : selectedTenant ? (
-            <>
-              <input name="tenant_slug" type="hidden" value={selectedTenant.slug} />
-            </>
-          ) : null}
 
-          <label className="console-field">
-            <span className="console-field-label">
-              <span className="console-field-label-row">
-                <span>Subject</span>
-              </span>
-              <span className="console-field-help">
-                <span aria-hidden="true" className="console-info-indicator">
-                  i
-                </span>
-                <span>
-                  Keep this short and specific, for example &quot;Luma sync
-                  failed&quot; or &quot;Embed origin question&quot;.
-                </span>
-              </span>
-            </span>
-            <input className="console-input" name="subject" required type="text" />
-          </label>
+            <label className="console-field">
+              <ConsoleFieldLabel label="Subject" />
+              <ConsoleFieldHint>
+                Keep it short — e.g. &quot;Luma sync failed&quot; or &quot;Embed
+                origin question&quot;.
+              </ConsoleFieldHint>
+              <input className="console-input" name="subject" required type="text" />
+            </label>
 
-          <label className="console-field">
-            <span className="console-field-label">
-              <span className="console-field-label-row">
-                <span>Message</span>
-              </span>
-              <span className="console-field-help">
-                <span aria-hidden="true" className="console-info-indicator">
-                  i
-                </span>
-                <span>
-                  Include what you expected, what you saw instead, and any event,
-                  ticket, or checkout details that will help us trace it quickly.
-                </span>
-              </span>
-            </span>
-            <textarea
-              className="console-input console-textarea"
-              name="message"
-              required
-            />
-          </label>
+            <label className="console-field">
+              <ConsoleFieldLabel label="Message" />
+              <ConsoleFieldHint>
+                Include what you expected, what happened instead, and any event or
+                checkout details that help us trace it.
+              </ConsoleFieldHint>
+              <textarea
+                className="console-input console-textarea"
+                name="message"
+                required
+              />
+            </label>
 
-          <div className="button-row">
-            <ConsoleSubmitButton
-              className="button"
-              label="Send support request"
-              pendingLabel="Sending support request..."
-            />
-            <Link className="button button-secondary" href={dashboardHref}>
-              Cancel
-            </Link>
-          </div>
-          <ConsoleFormPendingNote pendingLabel="Sending your message..." />
-        </form>
-      </section>
+            <div className="button-row">
+              <ConsoleSubmitButton
+                className="button button-small"
+                label="Send support request"
+                pendingLabel="Sending support request..."
+              />
+            </div>
+            <ConsoleFormPendingNote pendingLabel="Sending your message..." />
+          </form>
+        </ConsoleSection>
+      </div>
     </>
   );
 }

@@ -44,10 +44,11 @@ function onboardingStepHref(
   }
 }
 
-function registrationStatusClassName(status: string) {
-  if (status === "registered") return "console-valid-text";
-  if (status === "failed") return "console-error-text";
-  return "subtle-text";
+function registrationLabel(status: string) {
+  if (status === "registered") return { icon: "✓", text: "Registered" };
+  if (status === "failed") return { icon: "!", text: "Failed" };
+  if (status === "pending") return { icon: "–", text: "Pending" };
+  return { icon: "–", text: status };
 }
 
 function invalidWebhookSummary(invalidWebhooks: number) {
@@ -100,7 +101,7 @@ export function TenantOverviewWorkspace({
           <ConsoleTableHeader>Attendee</ConsoleTableHeader>
           <ConsoleTableHeader>Payment</ConsoleTableHeader>
           <ConsoleTableHeader>Registration</ConsoleTableHeader>
-          <ConsoleTableHeader>Amount</ConsoleTableHeader>
+          <ConsoleTableHeader className="console-table-cell-right">Amount</ConsoleTableHeader>
           <ConsoleTableHeader>Updated</ConsoleTableHeader>
           <ConsoleTableHeader>Action</ConsoleTableHeader>
         </ConsoleTableRow>
@@ -130,12 +131,11 @@ export function TenantOverviewWorkspace({
                 <ConsoleStatusPill status={session.status} />
               </ConsoleTableCell>
               <ConsoleTableCell>
-                <span
-                  className={registrationStatusClassName(
-                    session.registration_status,
-                  )}
-                >
-                  {session.registration_status}
+                <span className="console-registration-inline">
+                  <span className={`console-registration-icon console-registration-icon-${session.registration_status === "registered" ? "ok" : session.registration_status === "failed" ? "err" : "wait"}`}>
+                    {registrationLabel(session.registration_status).icon}
+                  </span>
+                  {registrationLabel(session.registration_status).text}
                 </span>
                 {session.registration_error ? (
                   <p className="subtle-text console-table-note">
@@ -143,7 +143,7 @@ export function TenantOverviewWorkspace({
                   </p>
                 ) : null}
               </ConsoleTableCell>
-              <ConsoleTableCell>
+              <ConsoleTableCell className="console-table-cell-right">
                 {formatFiatAmount(session.amount, session.currency)}
               </ConsoleTableCell>
               <ConsoleTableCell>
@@ -161,6 +161,8 @@ export function TenantOverviewWorkspace({
                       ? `/checkout/${encodeURIComponent(session.session_id)}?t=${encodeURIComponent(viewerToken)}`
                       : `/checkout/${encodeURIComponent(session.session_id)}`
                   }
+                  target="_blank"
+                  rel="noopener noreferrer"
                 >
                   View →
                 </Link>

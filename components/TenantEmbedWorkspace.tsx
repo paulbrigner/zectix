@@ -1,10 +1,13 @@
 import { updateCalendarEmbedSettingsAction } from "@/app/dashboard/actions";
+import { ColorHexInput } from "@/components/ColorHexInput";
 import { ConsoleDisclosure } from "@/components/ConsoleDisclosure";
+import { EmbedLiveThemeProvider } from "@/components/EmbedLiveThemeProvider";
 import { ConsoleFieldLabel } from "@/components/ConsoleFieldLabel";
 import { ConsoleFormPendingNote } from "@/components/ConsoleFormPendingNote";
 import { ConsoleSubmitButton } from "@/components/ConsoleSubmitButton";
 import { ConsoleSwitch } from "@/components/ConsoleSwitch";
 import { EmbedAppearanceResetButton } from "@/components/EmbedAppearanceResetButton";
+import { LiveDimensionInput } from "@/components/LiveDimensionInput";
 import { TenantEmbedPreviewPicker } from "@/components/TenantEmbedPreviewPicker";
 import { appUrl } from "@/lib/app-paths";
 import type { TicketMirror } from "@/lib/app-state/types";
@@ -174,183 +177,192 @@ export function TenantEmbedWorkspace({
         ]
       : [];
 
-    const settingsAndPreview = (
-      <>
-        <ConsoleDisclosure
-          defaultOpen={!calendarSnippetReady}
-          lockedOpen={!calendarSnippetReady}
-          summaryExtras={
-            <>
-              <span className={previewStatusClassName(embedReady)}>
-                {calendar.embed_enabled ? "Embed enabled" : "Embed off"}
-              </span>
-              <span className={`${styles.statusPill} ${styles.statusInfo}`}>
-                {calendar.embed_allowed_origins.length} allowed origin
-                {calendar.embed_allowed_origins.length === 1 ? "" : "s"}
-              </span>
-            </>
-          }
-          title="Edit settings"
+    const settingsForm = (
+      <ConsoleDisclosure
+        defaultOpen={!calendarSnippetReady}
+        lockedOpen={!calendarSnippetReady}
+        summaryExtras={
+          <>
+            <span className={previewStatusClassName(embedReady)}>
+              {calendar.embed_enabled ? "Embed enabled" : "Embed off"}
+            </span>
+            <span className={`${styles.statusPill} ${styles.statusInfo}`}>
+              {calendar.embed_allowed_origins.length} allowed origin
+              {calendar.embed_allowed_origins.length === 1 ? "" : "s"}
+            </span>
+          </>
+        }
+        title="Edit settings"
+      >
+        <form
+          action={updateCalendarEmbedSettingsAction}
+          className="console-content embed-settings-form"
+          key={settingsFormKey}
         >
-          <form
-            action={updateCalendarEmbedSettingsAction}
-            className="console-content embed-settings-form"
-            key={settingsFormKey}
-          >
-            <input
-              name="calendar_connection_id"
-              type="hidden"
-              value={calendar.calendar_connection_id}
+          <input
+            name="calendar_connection_id"
+            type="hidden"
+            value={calendar.calendar_connection_id}
+          />
+          <input name="tenant_slug" type="hidden" value={detail.tenant.slug} />
+          <input name="redirect_to" type="hidden" value={embedBasePath} />
+
+          <div className="embed-settings-top-grid">
+            <ConsoleSwitch
+              className="embed-toggle-card"
+              defaultChecked={calendar.embed_enabled}
+              description="Allow this calendar to appear as an embed on approved websites."
+              label="Enable embedding"
+              name="embed_enabled"
             />
-            <input name="tenant_slug" type="hidden" value={detail.tenant.slug} />
-            <input name="redirect_to" type="hidden" value={embedBasePath} />
 
-            <div className="embed-settings-top-grid">
-              <ConsoleSwitch
-                className="embed-toggle-card"
-                defaultChecked={calendar.embed_enabled}
-                description="Allow this calendar to appear as an embed on approved websites."
-                label="Enable embedding"
-                name="embed_enabled"
-              />
+            <ConsoleSwitch
+              className="embed-toggle-card"
+              defaultChecked={calendar.embed_show_branding}
+              description="Show the ZecTix and CipherPay footer inside the embed."
+              label="Show branding"
+              name="embed_show_branding"
+            />
+          </div>
 
-              <ConsoleSwitch
-                className="embed-toggle-card"
-                defaultChecked={calendar.embed_show_branding}
-                description="Show the ZecTix and CipherPay footer inside the embed."
-                label="Show branding"
-                name="embed_show_branding"
-              />
+          <section className="embed-settings-section">
+            <div className="embed-settings-section-head">
+              <h4>Allowed origins</h4>
+              <p className="subtle-text">
+                Enter one website address per line, for example{" "}
+                <code>https://events.example.com</code>. Only the sites listed
+                here can display the embed.
+              </p>
             </div>
+            <textarea
+              className="console-input embed-settings-textarea"
+              defaultValue={calendar.embed_allowed_origins.join("\n")}
+              name="embed_allowed_origins"
+              rows={4}
+            />
+          </section>
 
-            <section className="embed-settings-section">
-              <div className="embed-settings-section-head">
-                <h4>Allowed origins</h4>
-                <p className="subtle-text">
-                  Enter one website address per line, for example{" "}
-                  <code>https://events.example.com</code>. Only the sites listed
-                  here can display the embed.
-                </p>
+          <section className="embed-settings-section">
+            <div className="public-field-grid embed-theme-grid">
+              <div className="console-field">
+                <ConsoleFieldLabel
+                  info="Optional button and highlight color inside the embed."
+                  label="Accent color"
+                  optional
+                />
+                <ColorHexInput
+                  defaultValue={calendar.embed_theme.accent_color || ""}
+                  name="embed_accent_color"
+                  placeholder="#d4920a"
+                  themeKey="accent_color"
+                />
               </div>
-              <textarea
-                className="console-input embed-settings-textarea"
-                defaultValue={calendar.embed_allowed_origins.join("\n")}
-                name="embed_allowed_origins"
-                rows={4}
-              />
-            </section>
-
-            <section className="embed-settings-section">
-              <div className="public-field-grid embed-theme-grid">
-                <label className="console-field">
-                  <ConsoleFieldLabel
-                    info="Optional button and highlight color inside the embed."
-                    label="Accent color"
-                    optional
-                  />
-                  <input
-                    className="console-input"
-                    defaultValue={calendar.embed_theme.accent_color || ""}
-                    name="embed_accent_color"
-                    placeholder="#d4920a"
-                    type="text"
-                  />
-                </label>
-                <label className="console-field">
-                  <ConsoleFieldLabel
-                    info="Optional page background color inside the embed."
-                    label="Background color"
-                    optional
-                  />
-                  <input
-                    className="console-input"
-                    defaultValue={calendar.embed_theme.background_color || ""}
-                    name="embed_background_color"
-                    placeholder="#fafaf9"
-                    type="text"
-                  />
-                </label>
-                <label className="console-field">
-                  <ConsoleFieldLabel
-                    info="Optional card background color inside the embed."
-                    label="Surface color"
-                    optional
-                  />
-                  <input
-                    className="console-input"
-                    defaultValue={calendar.embed_theme.surface_color || ""}
-                    name="embed_surface_color"
-                    placeholder="#ffffff"
-                    type="text"
-                  />
-                </label>
-                <label className="console-field">
-                  <ConsoleFieldLabel
-                    info="Optional text color for headings and body copy."
-                    label="Text color"
-                    optional
-                  />
-                  <input
-                    className="console-input"
-                    defaultValue={calendar.embed_theme.text_color || ""}
-                    name="embed_text_color"
-                    placeholder="#131b2d"
-                    type="text"
-                  />
-                </label>
-                <label className="console-field">
-                  <ConsoleFieldLabel
-                    info="Choose the starting height for copied embed code. You can still adjust it later on your site if needed."
-                    label="Default iframe height"
-                  />
-                  <input
-                    className="console-input"
+              <div className="console-field">
+                <ConsoleFieldLabel
+                  info="Optional page background color inside the embed."
+                  label="Background color"
+                  optional
+                />
+                <ColorHexInput
+                  defaultValue={calendar.embed_theme.background_color || ""}
+                  name="embed_background_color"
+                  placeholder="#fafaf9"
+                  themeKey="background_color"
+                />
+              </div>
+              <div className="console-field">
+                <ConsoleFieldLabel
+                  info="Optional card background color inside the embed."
+                  label="Surface color"
+                  optional
+                />
+                <ColorHexInput
+                  defaultValue={calendar.embed_theme.surface_color || ""}
+                  name="embed_surface_color"
+                  placeholder="#ffffff"
+                  themeKey="surface_color"
+                />
+              </div>
+              <div className="console-field">
+                <ConsoleFieldLabel
+                  info="Optional text color for headings and body copy."
+                  label="Text color"
+                  optional
+                />
+                <ColorHexInput
+                  defaultValue={calendar.embed_theme.text_color || ""}
+                  name="embed_text_color"
+                  placeholder="#131b2d"
+                  themeKey="text_color"
+                />
+              </div>
+              <div className="console-field">
+                <ConsoleFieldLabel
+                  info="Choose the starting height for copied embed code. You can still adjust it later on your site if needed."
+                  label="Default iframe height"
+                />
+                <div className="console-input-with-unit">
+                  <LiveDimensionInput
                     defaultValue={calendar.embed_default_height_px}
                     min={480}
                     name="embed_default_height_px"
-                    type="number"
                   />
-                </label>
-                <label className="console-field">
-                  <ConsoleFieldLabel
-                    info="Optional corner roundness for cards inside the embed."
-                    label="Corner radius"
-                    optional
-                  />
-                  <input
-                    className="console-input"
+                  <span className="console-input-unit">px</span>
+                </div>
+              </div>
+              <div className="console-field">
+                <ConsoleFieldLabel
+                  info="Optional corner roundness for cards inside the embed."
+                  label="Corner radius"
+                  optional
+                />
+                <div className="console-input-with-unit">
+                  <LiveDimensionInput
                     defaultValue={calendar.embed_theme.radius_px || ""}
                     name="embed_radius_px"
                     placeholder="22"
-                    type="number"
+                    themeKey="radius_px"
                   />
-                </label>
+                  <span className="console-input-unit">px</span>
+                </div>
               </div>
-            </section>
-
-            <div className={styles.settingsActions}>
-              <EmbedAppearanceResetButton
-                defaultHeight={DEFAULT_EMBED_HEIGHT_PX}
-              />
-              <ConsoleSubmitButton
-                className="button button-attention button-small"
-                label="Save embed settings"
-                pendingLabel="Saving embed settings..."
-              />
             </div>
-            <ConsoleFormPendingNote pendingLabel="Saving your embed settings..." />
-          </form>
-        </ConsoleDisclosure>
+          </section>
 
+          <div className={styles.settingsActions}>
+            <EmbedAppearanceResetButton
+              defaultHeight={DEFAULT_EMBED_HEIGHT_PX}
+            />
+            <ConsoleSubmitButton
+              className="button button-attention button-small"
+              label="Save embed settings"
+              pendingLabel="Saving embed settings..."
+            />
+          </div>
+          <ConsoleFormPendingNote pendingLabel="Saving your embed settings..." />
+        </form>
+      </ConsoleDisclosure>
+    );
+
+    const settingsAndPreview = (
+      <EmbedLiveThemeProvider>
+      <div className="embed-settings-layout">
         {calendarSnippetReady ? (
-          <TenantEmbedPreviewPicker entries={embedEntries} />
+          <TenantEmbedPreviewPicker
+            entries={embedEntries}
+            settingsPanel={settingsForm}
+          />
         ) : (
-          <p className="subtle-text">
-            Turn on embedding and add at least one allowed origin to generate
-            copy-ready HTML.
-          </p>
+          <div className="embed-settings-no-entries">
+            {settingsForm}
+            <p className="subtle-text">
+              Turn on embedding and add at least one allowed origin to generate
+              copy-ready HTML.
+            </p>
+          </div>
         )}
-      </>
+      </div>
+      </EmbedLiveThemeProvider>
     );
 
     if (singleCalendarShell) {

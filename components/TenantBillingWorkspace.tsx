@@ -181,9 +181,11 @@ export function TenantBillingWorkspace({
               )}
             </p>
             {currentCycle ? (
-              <StatusBadge tone={billingTone(currentCycle.status)}>
-                {humanizeBillingLabel(currentCycle.status)}
-              </StatusBadge>
+              <div className="console-mini-pill-row">
+                <StatusBadge tone={billingTone(currentCycle.status)}>
+                  {humanizeBillingLabel(currentCycle.status)}
+                </StatusBadge>
+              </div>
             ) : null}
           </article>
 
@@ -236,7 +238,7 @@ export function TenantBillingWorkspace({
             </div>
 
             <div className="billing-cycle-detail-grid">
-              <article className="console-detail-card billing-breakdown-card">
+              <article className="billing-breakdown-card">
                 <p className="console-kpi-label">Balance breakdown</p>
                 <dl className="billing-breakdown-list">
                   <div>
@@ -262,7 +264,7 @@ export function TenantBillingWorkspace({
                 </dl>
               </article>
 
-              <article className="console-detail-card billing-cycle-meta-card">
+              <article className="billing-cycle-meta-card">
                 <p className="console-kpi-label">Cycle details</p>
                 <dl className="tenant-summary-list billing-cycle-meta-list">
                   <div>

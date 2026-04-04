@@ -419,25 +419,22 @@ export function TenantEventsWorkspace({
       ) : null}
 
       {feedIssues.length ? (
-        <section className="console-section">
-          <div className="console-section-header">
-            <div>
-              <h2>Feed issues</h2>
-              <p className="subtle-text">
-                These calendars need attention before the event workspace can
-                reflect the latest upstream state.
-              </p>
-            </div>
-          </div>
-          <div className="console-card-grid">
-            {feedIssues.map(({ calendar, error }) => (
-              <article
-                className="console-detail-card"
-                key={calendar.calendar_connection_id}
-              >
-                <p className="console-kpi-label">{calendar.display_name}</p>
-                <h3>Could not load current Luma events</h3>
-                <p className="subtle-text">{error}</p>
+        <section className="console-feed-issue-banner">
+          {feedIssues.map(({ calendar, error }) => (
+            <div
+              className="tenant-feed-issue-row"
+              key={calendar.calendar_connection_id}
+            >
+              <div className="tenant-feed-issue-content">
+                <svg className="tenant-feed-issue-icon" viewBox="0 0 20 20" fill="currentColor" width="16" height="16" aria-hidden="true">
+                  <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.168 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                </svg>
+                <div>
+                  <strong>{calendar.display_name}</strong>
+                  <p className="subtle-text">{error}</p>
+                </div>
+              </div>
+              <div className="tenant-feed-issue-actions">
                 <form action={validateAndSyncCalendarAction}>
                   <input
                     name="calendar_connection_id"
@@ -456,14 +453,20 @@ export function TenantEventsWorkspace({
                   />
                   <ConsoleSubmitButton
                     className="button button-secondary button-small"
-                    label="Refresh whole calendar"
-                    pendingLabel="Refreshing whole calendar..."
+                    label="Retry sync"
+                    pendingLabel="Syncing..."
                   />
                   <ConsoleFormPendingNote pendingLabel="Refreshing this calendar..." />
                 </form>
-              </article>
-            ))}
-          </div>
+                <Link
+                  className="console-table-link"
+                  href={`${tenantBasePath}/connections?tab=luma`}
+                >
+                  Update API key →
+                </Link>
+              </div>
+            </div>
+          ))}
         </section>
       ) : null}
 
@@ -553,9 +556,6 @@ export function TenantEventsWorkspace({
             <ConsoleTable tableClassName="tenant-events-table">
               <ConsoleTableHead>
                 <ConsoleTableRow>
-                  <ConsoleTableHeader className="tenant-events-cell-action">
-                    Action
-                  </ConsoleTableHeader>
                   <ConsoleTableHeader className="tenant-events-cell-event">
                     Event
                   </ConsoleTableHeader>
@@ -565,8 +565,11 @@ export function TenantEventsWorkspace({
                   <ConsoleTableHeader className="tenant-events-cell-checkout">
                     Checkout
                   </ConsoleTableHeader>
-                  <ConsoleTableHeader className="tenant-events-cell-tickets">
+                  <ConsoleTableHeader className="tenant-events-cell-tickets console-table-cell-right">
                     Tickets
+                  </ConsoleTableHeader>
+                  <ConsoleTableHeader className="tenant-events-cell-action">
+                    {" "}
                   </ConsoleTableHeader>
                 </ConsoleTableRow>
               </ConsoleTableHead>
@@ -581,17 +584,11 @@ export function TenantEventsWorkspace({
                       }
                       key={row.row_id}
                     >
-                      <ConsoleTableCell className="tenant-events-cell-action">
-                        <Link
-                          className="button button-secondary button-small"
-                          href={rowHref}
-                        >
-                          Details
-                        </Link>
-                      </ConsoleTableCell>
                       <ConsoleTableCell className="tenant-events-cell-event">
                         <div className="console-table-cell-stack">
-                          <strong>{row.event_name}</strong>
+                          <Link className="console-table-event-link" href={rowHref}>
+                            {row.event_name}
+                          </Link>
                           <p className="subtle-text console-table-note">
                             {row.location_label || "Location not specified"}
                           </p>
@@ -607,16 +604,31 @@ export function TenantEventsWorkspace({
                           {row.public_status_label}
                         </StatusBadge>
                       </ConsoleTableCell>
-                      <ConsoleTableCell className="tenant-events-cell-tickets">
+                      <ConsoleTableCell className="tenant-events-cell-tickets console-table-cell-right">
                         {row.source === "mirrored" ? (
-                          <div className="console-table-cell-stack">
-                            <strong>
-                              {row.enabled_ticket_count}/{row.ticket_count}{" "}
-                              ready
-                            </strong>
-                          </div>
+                          <strong>
+                            {row.enabled_ticket_count}/{row.ticket_count}{" "}
+                            live
+                          </strong>
                         ) : (
                           <span className="subtle-text">Import first</span>
+                        )}
+                      </ConsoleTableCell>
+                      <ConsoleTableCell className="tenant-events-cell-action console-table-cell-right">
+                        {selected ? (
+                          <Link
+                            className="console-table-link"
+                            href={buildEventsHref(tenantBasePath, filters)}
+                          >
+                            Close ↑
+                          </Link>
+                        ) : (
+                          <Link
+                            className="console-table-link"
+                            href={rowHref}
+                          >
+                            View →
+                          </Link>
                         )}
                       </ConsoleTableCell>
                     </ConsoleTableRow>
@@ -629,88 +641,43 @@ export function TenantEventsWorkspace({
 
         {selectedRow ? (
           <aside
-            className="console-section console-anchor-target tenant-events-detail-panel"
+            className="console-detail-card console-luma-card console-anchor-target tenant-events-detail-panel"
             id="event-review-details"
           >
             <>
-              <div className="tenant-events-detail-hero">
-                {selectedRow.cover_url ? (
-                  <div className="tenant-event-media tenant-events-detail-media">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      alt={selectedRow.event_name}
-                      src={selectedRow.cover_url}
-                    />
-                  </div>
-                ) : (
-                  <div className="tenant-event-media tenant-event-media-fallback tenant-events-detail-media">
-                    <span>
-                      {selectedRow.event_name.slice(0, 2).toUpperCase()}
-                    </span>
-                  </div>
-                )}
-                <div className="tenant-event-copy tenant-events-detail-copy">
-                  <div className="console-mini-pill-row tenant-events-detail-pills">
-                    <StatusBadge tone={sourceTone(selectedRow)}>
-                      {sourceLabel(selectedRow)}
-                    </StatusBadge>
-                    <StatusBadge tone={selectedRow.public_status_tone}>
-                      {selectedRow.public_status_label}
-                    </StatusBadge>
-                    <StatusBadge tone={selectedRow.sync_status_tone}>
-                      {selectedRow.sync_status_label}
-                    </StatusBadge>
-                  </div>
-                  <h3>{selectedRow.event_name}</h3>
+              <div className="tenant-events-detail-head">
+                <div>
+                  <span className="console-connection-status">
+                    <span className={`console-connection-status-dot console-connection-status-dot-${selectedRow.public_status_tone === "success" ? "active" : selectedRow.public_status_tone === "danger" ? "disabled" : "pending"}`} />
+                    {selectedRow.public_status_label}
+                  </span>
+                  <h3 className="tenant-events-detail-title">{selectedRow.event_name}</h3>
                   <p className="subtle-text">
                     <LocalDateTime iso={selectedRow.start_at} />
                     {selectedRow.location_label
                       ? ` · ${selectedRow.location_label}`
                       : ""}
                   </p>
-                  <p className="subtle-text">
-                    Calendar {selectedRow.calendar.display_name} ·{" "}
-                    {selectedRow.primary_blocker}
-                  </p>
+                </div>
+                <div className="console-mini-pill-row tenant-events-detail-pills">
+                  <StatusBadge tone={sourceTone(selectedRow)}>
+                    {sourceLabel(selectedRow)}
+                  </StatusBadge>
+                  <StatusBadge tone={selectedRow.sync_status_tone}>
+                    {selectedRow.sync_status_label}
+                  </StatusBadge>
+                  {selectedRow.source === "mirrored" ? (
+                    <span className="subtle-text console-table-note">
+                      {selectedRow.enabled_ticket_count}/{selectedRow.ticket_count} tickets
+                    </span>
+                  ) : null}
                 </div>
               </div>
 
-              <div className="console-signal-grid tenant-events-detail-signals">
-                <div className="console-signal-card">
-                  <span className="console-kpi-label">Checkout</span>
-                  <strong>{selectedRow.public_status_label}</strong>
-                  <p className="subtle-text">{selectedRow.primary_blocker}</p>
-                </div>
-                <div className="console-signal-card">
-                  <span className="console-kpi-label">Tickets ready</span>
-                  <strong>
-                    {selectedRow.source === "mirrored"
-                      ? `${selectedRow.enabled_ticket_count}/${selectedRow.ticket_count}`
-                      : "Import first"}
-                  </strong>
-                  <p className="subtle-text">
-                    {selectedRow.source === "mirrored"
-                      ? "Ticket availability is controlled individually below."
-                      : "Ticket review starts after import"}
-                  </p>
-                </div>
-                <div className="console-signal-card">
-                  <span className="console-kpi-label">Sync state</span>
-                  <strong>{selectedRow.sync_status_label}</strong>
-                  <p className="subtle-text">
-                    {selectedRow.last_synced_at ? (
-                      <LocalDateTime iso={selectedRow.last_synced_at} />
-                    ) : (
-                      "No mirrored sync has been recorded yet."
-                    )}
-                  </p>
-                </div>
-              </div>
-
-              <div className="button-row tenant-events-detail-actions">
+              <div className="tenant-events-detail-actions">
                 {selectedRow.event_url ? (
                   <a
-                    className="button button-secondary button-small"
+                    className="button button-small"
                     href={selectedRow.event_url}
                     rel="noreferrer noopener"
                     target="_blank"
@@ -833,8 +800,7 @@ export function TenantEventsWorkspace({
                       <ConsoleTableRow>
                         <ConsoleTableHeader>Ticket</ConsoleTableHeader>
                         <ConsoleTableHeader>Price</ConsoleTableHeader>
-                        <ConsoleTableHeader>Status</ConsoleTableHeader>
-                        <ConsoleTableHeader>Public checkout</ConsoleTableHeader>
+                        <ConsoleTableHeader className="console-table-cell-right">Public checkout</ConsoleTableHeader>
                       </ConsoleTableRow>
                     </ConsoleTableHead>
                     <ConsoleTableBody>
@@ -857,24 +823,10 @@ export function TenantEventsWorkspace({
                             {formatFiatAmount(ticket.amount, ticket.currency)}
                           </strong>
                         </ConsoleTableCell>
-                        <ConsoleTableCell>
-                          {ticketReviewLabel(ticket) ? (
-                            <div className="console-mini-pill-row console-ticket-review-pills">
-                              <StatusBadge tone={ticketReviewTone(ticket)}>
-                                {ticketReviewLabel(ticket)}
-                              </StatusBadge>
-                            </div>
-                          ) : null}
-                          {ticketReviewCopy(ticket) ? (
-                            <p className="subtle-text console-table-note">
-                              {ticketReviewCopy(ticket)}
-                            </p>
-                          ) : null}
-                        </ConsoleTableCell>
-                        <ConsoleTableCell className="tenant-ticket-review-control">
+                        <ConsoleTableCell className="console-table-cell-right">
                           <form
                             action={setTicketAssertionsAction}
-                            className="tenant-ticket-review-inline-form"
+                            className="tenant-ticket-review-inline-form tenant-ticket-toggle-only"
                           >
                             <input
                               name="tenant_slug"
@@ -908,11 +860,11 @@ export function TenantEventsWorkspace({
                             />
 
                             <ConsoleSwitch
-                              className="tenant-ticket-review-check tenant-ticket-review-inline-switch"
+                              className="tenant-ticket-review-check tenant-ticket-review-inline-switch tenant-ticket-toggle-minimal"
                               defaultChecked={ticket.public_checkout_requested}
                               label="Allow this ticket"
                               name="public_checkout_requested"
-                              pendingLabel="Saving ticket visibility..."
+                              pendingLabel="Saving..."
                               submitOnChange
                             />
                           </form>

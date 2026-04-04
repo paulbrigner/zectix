@@ -128,7 +128,7 @@ export function EventCheckoutForm({
         <div className="public-section-head">
           <h2>Attendee</h2>
           <p className="subtle-text">
-            Luma will use this information for the attendee record and event entry pass.
+            For your event pass and attendee record.
           </p>
         </div>
 
@@ -163,10 +163,7 @@ export function EventCheckoutForm({
 
       <section className="public-section-card">
         <div className="public-section-head">
-          <h2>Eligible tickets</h2>
-          <p className="subtle-text">
-            These tickets passed the managed-service checks and were explicitly enabled by ops.
-          </p>
+          <h2>Select a ticket</h2>
         </div>
 
         <div className="public-ticket-grid">
@@ -187,7 +184,6 @@ export function EventCheckoutForm({
                 <div className="public-ticket-card-body">
                   <div className="public-ticket-card-top">
                     <div>
-                      <p className="public-ticket-status">Available now</p>
                       <p className="public-ticket-name">{ticket.name}</p>
                       {ticket.description ? (
                         <p className="subtle-text">{ticket.description}</p>
@@ -207,14 +203,12 @@ export function EventCheckoutForm({
 
       <section className="public-section-card public-total-card">
         <div className="public-total-row">
-          <div>
-            <span className="public-total-label">You&apos;ll pay</span>
-            <strong>{ticketPriceLabel(selectedTicket)}</strong>
-          </div>
-          <span className="public-status-chip">CipherPay invoice</span>
+          <span className="public-total-label">Total</span>
+          <strong>{ticketPriceLabel(selectedTicket)}</strong>
         </div>
+
         <p className="subtle-text">
-          The invoice quotes the final ZEC amount on the next screen.
+          You&apos;ll see the exact ZEC amount on the payment screen.
         </p>
 
         {error ? <p className="console-error-text">{error}</p> : null}
