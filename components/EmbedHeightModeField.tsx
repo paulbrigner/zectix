@@ -1,7 +1,6 @@
 "use client";
 
 import { useId, useState } from "react";
-import { ConsoleInfoTip } from "@/components/ConsoleInfoTip";
 
 export function EmbedHeightModeField({
   defaultDynamic,
@@ -13,8 +12,6 @@ export function EmbedHeightModeField({
   const [dynamic, setDynamic] = useState(defaultDynamic);
   const [height, setHeight] = useState(String(defaultHeight));
   const dynamicHintId = useId();
-  const dynamicHelpText =
-    "Dynamic automatically resizes the iframe to fit the calendar, event, or checkout step as visitors move through it.";
 
   return (
     <div className="console-field">
@@ -42,9 +39,6 @@ export function EmbedHeightModeField({
             />
             <span>Dynamic</span>
           </label>
-          <ConsoleInfoTip label="What dynamic height means">
-            <p>{dynamicHelpText}</p>
-          </ConsoleInfoTip>
         </div>
 
         <div className="console-input-with-unit">
