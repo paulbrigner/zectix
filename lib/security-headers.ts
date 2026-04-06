@@ -25,6 +25,9 @@ function isEmbedCapablePath(pathname: string) {
   return normalizedPath.startsWith("/c/") || normalizedPath.startsWith("/checkout/");
 }
 
+const EMBED_INLINE_SCRIPT_HASH =
+  "'sha256-qHYaVeehBMZCJI/c5OB20TgGA6nms3zsnjjk8+8duEg='";
+
 export function buildSecurityHeaders(input: {
   pathname: string;
   searchParams?: URLSearchParams;
@@ -52,7 +55,7 @@ export function buildSecurityHeaders(input: {
   if (embedMode) {
     headers.set(
       "Content-Security-Policy",
-      "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:; frame-ancestors *; upgrade-insecure-requests",
+      `default-src 'self'; script-src 'self' ${EMBED_INLINE_SCRIPT_HASH}; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:; frame-ancestors *; upgrade-insecure-requests`,
     );
   } else {
     headers.set("X-Frame-Options", "DENY");
