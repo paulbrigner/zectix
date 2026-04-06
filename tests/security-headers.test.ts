@@ -30,7 +30,7 @@ describe("security headers", () => {
 
     expect(headers.get("X-Frame-Options")).toBeNull();
     expect(headers.get("Content-Security-Policy")).toBe(
-      "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:; frame-ancestors *; upgrade-insecure-requests",
+      "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:; frame-ancestors *; upgrade-insecure-requests",
     );
   });
 });
