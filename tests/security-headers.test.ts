@@ -16,21 +16,25 @@ describe("security headers", () => {
     expect(headers.get("Referrer-Policy")).toBe(
       "strict-origin-when-cross-origin",
     );
+    expect(headers.get("Permissions-Policy")).toBe(
+      "camera=(), microphone=(), geolocation=()",
+    );
     expect(headers.get("Strict-Transport-Security")).toBe(
       "max-age=31536000; includeSubDomains",
     );
   });
 
-  it("omits frame denial for explicit embed pages", () => {
+  it("omits frame denial for explicit embed pages and supports nonce scripts", () => {
     const headers = buildSecurityHeaders({
       pathname: "/c/demo-calendar",
       searchParams: new URLSearchParams({ embed: "1" }),
       isProduction: true,
+      nonce: "nonce-value",
     });
 
     expect(headers.get("X-Frame-Options")).toBeNull();
     expect(headers.get("Content-Security-Policy")).toBe(
-      "default-src 'self'; script-src 'self' 'sha256-qHYaVeehBMZCJI/c5OB20TgGA6nms3zsnjjk8+8duEg='; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:; frame-ancestors *; upgrade-insecure-requests",
+      "default-src 'self'; script-src 'self' 'nonce-nonce-value' 'strict-dynamic'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:; frame-ancestors *; upgrade-insecure-requests",
     );
   });
 });
