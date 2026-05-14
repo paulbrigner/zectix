@@ -14,7 +14,8 @@
     "typecheck": "tsc --noEmit",
     "db:init": "node scripts/create-local-table.mjs",
     "db:seed": "env $(grep -v '^#' .env.local | xargs) tsx scripts/seed-dev.ts",
-    "auth:hash": "node scripts/generate-admin-password-hash.mjs"
+    "auth:hash": "node scripts/generate-admin-password-hash.mjs",
+    "ops:cleanup-secrets": "node ops/aws/cleanup-orphaned-secrets-handler.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.888.0",

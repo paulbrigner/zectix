@@ -1189,40 +1189,44 @@ export async function listTenantsByContactEmail(email: string) {
 }
 
 export async function putCalendarConnection(connection: CalendarConnection) {
-  await Promise.all([
-    getDynamoDocumentClient().send(
-      new PutCommand({
-        TableName: appStateTableName(),
-        Item: {
-          ...calendarConnectionKey(connection.calendar_connection_id),
-          ...connection,
+  await getDynamoDocumentClient().send(
+    new TransactWriteCommand({
+      TransactItems: [
+        {
+          Put: {
+            TableName: appStateTableName(),
+            Item: {
+              ...calendarConnectionKey(connection.calendar_connection_id),
+              ...connection,
+            },
+          },
         },
-      }),
-    ),
-    getDynamoDocumentClient().send(
-      new PutCommand({
-        TableName: appStateTableName(),
-        Item: {
-          ...tenantCalendarKey(
-            connection.tenant_id,
-            connection.created_at,
-            connection.calendar_connection_id,
-          ),
-          ...connection,
+        {
+          Put: {
+            TableName: appStateTableName(),
+            Item: {
+              ...tenantCalendarKey(
+                connection.tenant_id,
+                connection.created_at,
+                connection.calendar_connection_id,
+              ),
+              ...connection,
+            },
+          },
         },
-      }),
-    ),
-    getDynamoDocumentClient().send(
-      new PutCommand({
-        TableName: appStateTableName(),
-        Item: {
-          ...calendarSlugKey(connection.slug),
-          tenant_id: connection.tenant_id,
-          calendar_connection_id: connection.calendar_connection_id,
+        {
+          Put: {
+            TableName: appStateTableName(),
+            Item: {
+              ...calendarSlugKey(connection.slug),
+              tenant_id: connection.tenant_id,
+              calendar_connection_id: connection.calendar_connection_id,
+            },
+          },
         },
-      }),
-    ),
-  ]);
+      ],
+    }),
+  );
 
   return connection;
 }
@@ -1288,18 +1292,18 @@ export async function putCipherPayConnection(
   connection: CipherPayConnection,
   options?: { attachToCalendar?: boolean },
 ) {
-  const writes = [
-    getDynamoDocumentClient().send(
-      new PutCommand({
+  const writes: NonNullable<TransactWriteCommandInput["TransactItems"]> = [
+    {
+      Put: {
         TableName: appStateTableName(),
         Item: {
           ...cipherPayConnectionKey(connection.cipherpay_connection_id),
           ...connection,
         },
-      }),
-    ),
-    getDynamoDocumentClient().send(
-      new PutCommand({
+      },
+    },
+    {
+      Put: {
         TableName: appStateTableName(),
         Item: {
           ...tenantCipherPayKey(
@@ -1309,25 +1313,27 @@ export async function putCipherPayConnection(
           ),
           ...connection,
         },
-      }),
-    ),
+      },
+    },
   ];
 
   if (options?.attachToCalendar !== false) {
-    writes.push(
-      getDynamoDocumentClient().send(
-        new PutCommand({
-          TableName: appStateTableName(),
-          Item: {
-            ...calendarCipherPayKey(connection.calendar_connection_id),
-            cipherpay_connection_id: connection.cipherpay_connection_id,
-          },
-        }),
-      ),
-    );
+    writes.push({
+      Put: {
+        TableName: appStateTableName(),
+        Item: {
+          ...calendarCipherPayKey(connection.calendar_connection_id),
+          cipherpay_connection_id: connection.cipherpay_connection_id,
+        },
+      },
+    });
   }
 
-  await Promise.all(writes);
+  await getDynamoDocumentClient().send(
+    new TransactWriteCommand({
+      TransactItems: writes,
+    }),
+  );
 
   return connection;
 }

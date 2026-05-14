@@ -234,6 +234,7 @@ Optional organizer support inbox:
 - the tenant dashboard is the internal organizer-style view for connection health, upcoming mirrored inventory, recent sessions, and webhook visibility.
 - the tenant settings page sends email-change confirmations before a new organizer login address becomes active.
 - organizer account deletion logs the organizer out, blocks only when the outstanding balance is above the settlement threshold, disables active Luma webhooks, and schedules AWS Secrets Manager cleanup with a 30-day recovery window when `SECRET_STORE_BACKEND=aws-secrets-manager`.
+- orphaned AWS Secrets Manager entries can be audited with `npm run ops:cleanup-secrets -- --dry-run` and scheduled for deletion with `-- --apply`; the AWS handler in `ops/aws/cleanup-orphaned-secrets-handler.mjs` uses DynamoDB secret refs as the source of truth and never reads secret values.
 - the public event form shows only ticket tiers that are active and enabled for managed Zcash checkout.
 - embedded checkout reuses the mirrored public event and checkout pages, adds a compact shell, and emits `postMessage` events for resize and checkout state updates.
 - the checkout page centers the attendee-facing payment/pass states: pay with Zcash, preparing your pass, pass ready, open on Luma, and save pass.

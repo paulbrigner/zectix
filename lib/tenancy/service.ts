@@ -74,6 +74,7 @@ import {
 import { evaluateEventCheckoutState } from "@/lib/eligibility/event-checkout";
 import { evaluateTicketEligibility } from "@/lib/eligibility/ticket-eligibility";
 import { getSecretStore } from "@/lib/secrets";
+import type { SecretStore } from "@/lib/secrets/types";
 import {
   ensureCalendarConnectionWebhookSubscription,
   syncCalendarConnection,
@@ -247,6 +248,27 @@ function isIgnorableSecretDeletionError(error: unknown) {
     (error.name === "AccessDeniedException" ||
       error.message.includes("secretsmanager:DeleteSecret"))
   );
+}
+
+function uniqueSecretRefs(refs: Array<string | null | undefined>) {
+  return Array.from(
+    new Set(refs.map((ref) => ref?.trim()).filter(Boolean) as string[]),
+  );
+}
+
+async function cleanupSecretRefsBestEffort(
+  secretStore: SecretStore,
+  refs: Array<string | null | undefined>,
+  reason: string,
+) {
+  for (const ref of uniqueSecretRefs(refs)) {
+    try {
+      await secretStore.deleteSecret(ref);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.warn(`Skipping secret cleanup for ${ref} after ${reason}: ${message}`);
+    }
+  }
 }
 
 async function loadEventSyncSnapshot(
@@ -742,7 +764,8 @@ export async function createCalendarConnection(input: {
     input.slug || input.display_name,
     async (candidate) => getCalendarConnectionBySlug(candidate),
   );
-  const lumaApiSecretRef = await getSecretStore().setSecret(null, input.luma_api_key);
+  const secretStore = getSecretStore();
+  const lumaApiSecretRef = await secretStore.setSecret(null, input.luma_api_key);
 
   const connection: CalendarConnection = {
     calendar_connection_id: randomUUID(),
@@ -767,7 +790,17 @@ export async function createCalendarConnection(input: {
     updated_at: timestamp,
   };
 
-  const saved = await putCalendarConnection(connection);
+  let saved: CalendarConnection;
+  try {
+    saved = await putCalendarConnection(connection);
+  } catch (error) {
+    await cleanupSecretRefsBestEffort(
+      secretStore,
+      [lumaApiSecretRef],
+      "failed calendar connection creation",
+    );
+    throw error;
+  }
   await refreshTenantOnboardingProgress(input.tenant_id);
   return saved;
 }
@@ -781,10 +814,15 @@ export async function updateCalendarConnectionLumaKey(
     throw new Error(`Calendar connection ${calendarConnectionId} was not found.`);
   }
 
-  const lumaApiSecretRef = await getSecretStore().setSecret(
+  const secretStore = getSecretStore();
+  const createdSecretRefs: string[] = [];
+  const lumaApiSecretRef = await secretStore.setSecret(
     connection.luma_api_secret_ref || null,
     lumaApiKey,
   );
+  if (!connection.luma_api_secret_ref) {
+    createdSecretRefs.push(lumaApiSecretRef);
+  }
 
   const nextConnection: CalendarConnection = {
     ...connection,
@@ -797,7 +835,22 @@ export async function updateCalendarConnectionLumaKey(
     updated_at: nowIso(),
   };
 
-  const saved = await putCalendarConnection(nextConnection);
+  let saved: CalendarConnection;
+  try {
+    saved = await putCalendarConnection(nextConnection);
+  } catch (error) {
+    await cleanupSecretRefsBestEffort(
+      secretStore,
+      createdSecretRefs,
+      "failed Luma API key update",
+    );
+    throw error;
+  }
+  await cleanupSecretRefsBestEffort(
+    secretStore,
+    [connection.luma_webhook_secret_ref, connection.luma_webhook_token_ref],
+    "Luma API key reset",
+  );
   await refreshTenantOnboardingProgress(connection.tenant_id);
   return saved;
 }
@@ -835,6 +888,11 @@ export async function disableCalendarConnection(calendarConnectionId: string) {
   };
 
   const saved = await putCalendarConnection(nextConnection);
+  await cleanupSecretRefsBestEffort(
+    secretStore,
+    [connection.luma_webhook_secret_ref, connection.luma_webhook_token_ref],
+    "calendar disable",
+  );
   await refreshTenantOnboardingProgress(connection.tenant_id);
   return saved;
 }
@@ -865,45 +923,63 @@ export async function createCipherPayConnection(input: {
     );
   }
 
-  const apiSecretRef = await getSecretStore().setSecret(
-    existingConnection?.cipherpay_api_secret_ref || null,
-    input.cipherpay_api_key,
-  );
-  const webhookSecretRef = await getSecretStore().setSecret(
-    existingConnection?.cipherpay_webhook_secret_ref || null,
-    input.cipherpay_webhook_secret,
-  );
+  const secretStore = getSecretStore();
+  const createdSecretRefs: string[] = [];
+  let saved: CipherPayConnection;
+  try {
+    const apiSecretRef = await secretStore.setSecret(
+      existingConnection?.cipherpay_api_secret_ref || null,
+      input.cipherpay_api_key,
+    );
+    if (!existingConnection?.cipherpay_api_secret_ref) {
+      createdSecretRefs.push(apiSecretRef);
+    }
+    const webhookSecretRef = await secretStore.setSecret(
+      existingConnection?.cipherpay_webhook_secret_ref || null,
+      input.cipherpay_webhook_secret,
+    );
+    if (!existingConnection?.cipherpay_webhook_secret_ref) {
+      createdSecretRefs.push(webhookSecretRef);
+    }
 
-  const connection: CipherPayConnection = existingConnection
-    ? {
-        ...existingConnection,
-        network: input.network,
-        api_base_url: apiBaseUrl,
-        checkout_base_url: checkoutBaseUrl,
-        cipherpay_api_secret_ref: apiSecretRef,
-        cipherpay_webhook_secret_ref: webhookSecretRef,
-        status: "pending_validation",
-        last_validated_at: null,
-        last_validation_error: null,
-        updated_at: timestamp,
-      }
-    : {
-        cipherpay_connection_id: randomUUID(),
-        tenant_id: input.tenant_id,
-        calendar_connection_id: input.calendar_connection_id,
-        network: input.network,
-        api_base_url: apiBaseUrl,
-        checkout_base_url: checkoutBaseUrl,
-        cipherpay_api_secret_ref: apiSecretRef,
-        cipherpay_webhook_secret_ref: webhookSecretRef,
-        status: "pending_validation",
-        last_validated_at: null,
-        last_validation_error: null,
-        created_at: timestamp,
-        updated_at: timestamp,
-      };
+    const connection: CipherPayConnection = existingConnection
+      ? {
+          ...existingConnection,
+          network: input.network,
+          api_base_url: apiBaseUrl,
+          checkout_base_url: checkoutBaseUrl,
+          cipherpay_api_secret_ref: apiSecretRef,
+          cipherpay_webhook_secret_ref: webhookSecretRef,
+          status: "pending_validation",
+          last_validated_at: null,
+          last_validation_error: null,
+          updated_at: timestamp,
+        }
+      : {
+          cipherpay_connection_id: randomUUID(),
+          tenant_id: input.tenant_id,
+          calendar_connection_id: input.calendar_connection_id,
+          network: input.network,
+          api_base_url: apiBaseUrl,
+          checkout_base_url: checkoutBaseUrl,
+          cipherpay_api_secret_ref: apiSecretRef,
+          cipherpay_webhook_secret_ref: webhookSecretRef,
+          status: "pending_validation",
+          last_validated_at: null,
+          last_validation_error: null,
+          created_at: timestamp,
+          updated_at: timestamp,
+        };
 
-  const saved = await putCipherPayConnection(connection);
+    saved = await putCipherPayConnection(connection);
+  } catch (error) {
+    await cleanupSecretRefsBestEffort(
+      secretStore,
+      createdSecretRefs,
+      "failed CipherPay connection save",
+    );
+    throw error;
+  }
   await refreshTenantOnboardingProgress(input.tenant_id);
   return saved;
 }

@@ -320,6 +320,22 @@ describe("createCalendarConnection", () => {
     expect(result.luma_webhook_secret_ref).toBeNull();
     expect(result.luma_webhook_token_ref).toBeNull();
   });
+
+  it("cleans up the created Luma API secret when the calendar save fails", async () => {
+    mockSetSecret.mockResolvedValue("secret://luma-api");
+    mockPutCalendarConnection.mockRejectedValue(new Error("DynamoDB write failed"));
+
+    await expect(
+      createCalendarConnection({
+        tenant_id: "tenant_123",
+        display_name: "Demo Calendar",
+        slug: "",
+        luma_api_key: "luma_api_key",
+      }),
+    ).rejects.toThrow("DynamoDB write failed");
+
+    expect(mockDeleteSecret).toHaveBeenCalledWith("secret://luma-api");
+  });
 });
 
 describe("setTenantStatus", () => {
@@ -505,6 +521,31 @@ describe("updateCalendarConnectionLumaKey", () => {
     expect(result.last_validated_at).toBeNull();
     expect(result.last_synced_at).toBe("2026-03-24T12:30:00.000Z");
     expect(result.last_sync_error).toBeNull();
+    expect(mockDeleteSecret).toHaveBeenCalledWith("secret://luma-webhook-existing");
+    expect(mockDeleteSecret).toHaveBeenCalledWith("local-secret/luma-webhook-token");
+  });
+
+  it("cleans up a newly created Luma API secret when the update save fails", async () => {
+    const existingConnection = makeCalendarConnection({
+      luma_api_secret_ref: null,
+      luma_webhook_secret_ref: "secret://luma-webhook-existing",
+    });
+
+    mockGetCalendarConnection.mockResolvedValue(existingConnection);
+    mockSetSecret.mockResolvedValue("secret://luma-new");
+    mockPutCalendarConnection.mockRejectedValue(new Error("DynamoDB write failed"));
+
+    await expect(
+      updateCalendarConnectionLumaKey(
+        existingConnection.calendar_connection_id,
+        "new_luma_api_key",
+      ),
+    ).rejects.toThrow("DynamoDB write failed");
+
+    expect(mockDeleteSecret).toHaveBeenCalledWith("secret://luma-new");
+    expect(mockDeleteSecret).not.toHaveBeenCalledWith(
+      "secret://luma-webhook-existing",
+    );
   });
 
   it("throws when the calendar connection cannot be found", async () => {
@@ -544,6 +585,10 @@ describe("disableCalendarConnection", () => {
     expect(result.luma_webhook_secret_ref).toBeNull();
     expect(result.luma_webhook_token_ref).toBeNull();
     expect(result.last_sync_error).toBeNull();
+    expect(mockDeleteSecret).toHaveBeenCalledWith("secret://luma-webhook-existing");
+    expect(mockDeleteSecret).toHaveBeenCalledWith(
+      "secret://luma-webhook-token-existing",
+    );
   });
 
   it("still disables locally if the upstream webhook is already gone", async () => {
@@ -566,6 +611,10 @@ describe("disableCalendarConnection", () => {
     expect(result.luma_webhook_id).toBeNull();
     expect(result.luma_webhook_secret_ref).toBeNull();
     expect(result.luma_webhook_token_ref).toBeNull();
+    expect(mockDeleteSecret).toHaveBeenCalledWith("secret://luma-webhook-existing");
+    expect(mockDeleteSecret).toHaveBeenCalledWith(
+      "secret://luma-webhook-token-existing",
+    );
   });
 
   it("does not reopen onboarding after the tenant has already completed it once", async () => {
@@ -921,6 +970,29 @@ describe("createCipherPayConnection", () => {
 
     expect(result.api_base_url).toBe("https://cipherpay.example.com");
     expect(result.checkout_base_url).toBe("https://checkout.example.com");
+  });
+
+  it("cleans up newly created CipherPay secrets when the connection save fails", async () => {
+    mockGetCipherPayConnectionByCalendar.mockResolvedValue(null);
+    mockSetSecret
+      .mockResolvedValueOnce("secret://api-new")
+      .mockResolvedValueOnce("secret://webhook-new");
+    mockPutCipherPayConnection.mockRejectedValue(new Error("DynamoDB write failed"));
+
+    await expect(
+      createCipherPayConnection({
+        tenant_id: "tenant_123",
+        calendar_connection_id: "calendar_123",
+        network: "testnet",
+        api_base_url: "",
+        checkout_base_url: "",
+        cipherpay_api_key: "cpay_sk_new",
+        cipherpay_webhook_secret: "whsec_new",
+      }),
+    ).rejects.toThrow("DynamoDB write failed");
+
+    expect(mockDeleteSecret).toHaveBeenCalledWith("secret://api-new");
+    expect(mockDeleteSecret).toHaveBeenCalledWith("secret://webhook-new");
   });
 });
 

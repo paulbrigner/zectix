@@ -25,6 +25,7 @@ import {
 import type { LumaWebhook } from "@/lib/luma";
 import { logEvent } from "@/lib/observability";
 import { getSecretStore } from "@/lib/secrets";
+import type { SecretStore } from "@/lib/secrets/types";
 
 function requireLumaApiSecretRef(ref: string | null) {
   if (!ref) {
@@ -32,6 +33,27 @@ function requireLumaApiSecretRef(ref: string | null) {
   }
 
   return ref;
+}
+
+function uniqueSecretRefs(refs: Array<string | null | undefined>) {
+  return Array.from(
+    new Set(refs.map((ref) => ref?.trim()).filter(Boolean) as string[]),
+  );
+}
+
+async function cleanupSecretRefsBestEffort(
+  secretStore: SecretStore,
+  refs: Array<string | null | undefined>,
+  reason: string,
+) {
+  for (const ref of uniqueSecretRefs(refs)) {
+    try {
+      await secretStore.deleteSecret(ref);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.warn(`Skipping secret cleanup for ${ref} after ${reason}: ${message}`);
+    }
+  }
 }
 
 function safeJsonHash(value: unknown) {
@@ -249,66 +271,105 @@ export async function ensureCalendarConnectionWebhookSubscription(
   let webhookId = connection.luma_webhook_id;
   let webhookSecretRef = connection.luma_webhook_secret_ref;
   let webhookTokenRef = connection.luma_webhook_token_ref;
+  const createdSecretRefs: string[] = [];
+  let createdWebhookId: string | null = null;
 
-  if (!matchedWebhook) {
-    const createdWebhook = await createLumaWebhook({
-      apiKey: lumaApiKey,
-      url: callbackUrl,
-      eventTypes: desiredEventTypes,
-    });
-    if (!createdWebhook.secret) {
-      throw new Error("Luma did not return a webhook signing secret.");
-    }
-
-    webhookId = createdWebhook.id;
-    webhookSecretRef = await secretStore.setSecret(
-      connection.luma_webhook_secret_ref,
-      createdWebhook.secret,
-    );
-    webhookTokenRef = await secretStore.setSecret(
-      connection.luma_webhook_token_ref,
-      callbackToken,
-    );
-  } else {
-    if (
-      matchedWebhook.status !== "active" ||
-      !eventTypesMatch(matchedWebhook.event_types, desiredEventTypes)
-    ) {
-      await updateLumaWebhook({
+  try {
+    if (!matchedWebhook) {
+      const createdWebhook = await createLumaWebhook({
         apiKey: lumaApiKey,
-        id: matchedWebhook.id,
+        url: callbackUrl,
         eventTypes: desiredEventTypes,
-        status: "active",
       });
-    }
+      if (!createdWebhook.secret) {
+        throw new Error("Luma did not return a webhook signing secret.");
+      }
 
-    webhookId = matchedWebhook.id;
-    if (matchedWebhook.secret) {
+      createdWebhookId = createdWebhook.id;
+      webhookId = createdWebhook.id;
       webhookSecretRef = await secretStore.setSecret(
         connection.luma_webhook_secret_ref,
-        matchedWebhook.secret,
+        createdWebhook.secret,
       );
+      if (!connection.luma_webhook_secret_ref) {
+        createdSecretRefs.push(webhookSecretRef);
+      }
+      webhookTokenRef = await secretStore.setSecret(
+        connection.luma_webhook_token_ref,
+        callbackToken,
+      );
+      if (!connection.luma_webhook_token_ref) {
+        createdSecretRefs.push(webhookTokenRef);
+      }
+    } else {
+      if (
+        matchedWebhook.status !== "active" ||
+        !eventTypesMatch(matchedWebhook.event_types, desiredEventTypes)
+      ) {
+        await updateLumaWebhook({
+          apiKey: lumaApiKey,
+          id: matchedWebhook.id,
+          eventTypes: desiredEventTypes,
+          status: "active",
+        });
+      }
+
+      webhookId = matchedWebhook.id;
+      if (matchedWebhook.secret) {
+        webhookSecretRef = await secretStore.setSecret(
+          connection.luma_webhook_secret_ref,
+          matchedWebhook.secret,
+        );
+        if (!connection.luma_webhook_secret_ref) {
+          createdSecretRefs.push(webhookSecretRef);
+        }
+      }
+      webhookTokenRef = await secretStore.setSecret(
+        connection.luma_webhook_token_ref,
+        callbackToken,
+      );
+      if (!connection.luma_webhook_token_ref) {
+        createdSecretRefs.push(webhookTokenRef);
+      }
     }
-    webhookTokenRef = await secretStore.setSecret(
-      connection.luma_webhook_token_ref,
-      callbackToken,
+
+    const nextConnection = {
+      ...connection,
+      luma_webhook_id: webhookId || null,
+      luma_webhook_secret_ref: webhookSecretRef || null,
+      luma_webhook_token_ref: webhookTokenRef || null,
+      updated_at: nowIso(),
+    };
+    await putCalendarConnection(nextConnection);
+
+    return {
+      connection: nextConnection,
+      callback_url: callbackUrl,
+      event_types: desiredEventTypes,
+    };
+  } catch (error) {
+    await cleanupSecretRefsBestEffort(
+      secretStore,
+      createdSecretRefs,
+      "failed Luma webhook subscription save",
     );
+    if (createdWebhookId) {
+      try {
+        await deleteLumaWebhook({
+          apiKey: lumaApiKey,
+          id: createdWebhookId,
+        });
+      } catch (deleteError) {
+        const message =
+          deleteError instanceof Error ? deleteError.message : String(deleteError);
+        console.warn(
+          `Skipping Luma webhook cleanup for ${createdWebhookId} after failed subscription save: ${message}`,
+        );
+      }
+    }
+
+    throw error;
   }
-
-  const nextConnection = {
-    ...connection,
-    luma_webhook_id: webhookId || null,
-    luma_webhook_secret_ref: webhookSecretRef || null,
-    luma_webhook_token_ref: webhookTokenRef || null,
-    updated_at: nowIso(),
-  };
-  await putCalendarConnection(nextConnection);
-
-  return {
-    connection: nextConnection,
-    callback_url: callbackUrl,
-    event_types: desiredEventTypes,
-  };
 }
 
 export async function syncCalendarConnection(calendarConnectionId: string) {

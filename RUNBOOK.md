@@ -116,6 +116,7 @@ Production operations are AWS-native:
 
 - EventBridge schedules can invoke the registration worker endpoint.
 - the worker calls `/api/ops/process-registration-tasks` using `OPS_AUTOMATION_SECRET`.
+- EventBridge can invoke `zectix-cleanup-orphaned-secrets` daily to schedule deletion for active `zectix` and `zectix-staging` Secrets Manager entries that are no longer referenced by DynamoDB. Run `AWS_PROFILE=zodldashboard npm run ops:cleanup-secrets -- --dry-run` before any manual cleanup.
 - CloudWatch alarms can publish to the configured SNS topic.
 
 Required production values:
