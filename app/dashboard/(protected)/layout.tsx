@@ -13,11 +13,9 @@ export default async function TenantLayout({
 
   return (
     <main className="page console-shell">
-      <section className="card console-card-shell">
-        <DashboardProtectedHeader />
+      <DashboardProtectedHeader />
 
-        <div className="console-content">{children}</div>
-      </section>
+      <div className="console-content">{children}</div>
     </main>
   );
 }

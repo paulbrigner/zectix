@@ -1,6 +1,7 @@
 import { SESv2Client, SendEmailCommand } from "@aws-sdk/client-sesv2";
 import { appUrl } from "@/lib/app-paths";
 import { getTenantAuthFromEmail } from "@/lib/tenant-auth";
+import { isProductionRuntime } from "@/lib/runtime-env";
 
 let cachedSesClient: SESv2Client | null = null;
 
@@ -91,6 +92,14 @@ export async function sendTenantMagicLinkEmail(email: string, token: string) {
     throw new Error("APP_PUBLIC_ORIGIN must be configured for tenant email sign-in.");
   }
 
+  if (!isProductionRuntime()) {
+    console.log("\n╔══════════════════════════════════════════════════════════╗");
+    console.log("║  [DEV] Tenant magic-link — click to sign in:           ║");
+    console.log("╚══════════════════════════════════════════════════════════╝");
+    console.log(`→ ${verifyUrl}\n`);
+    return;
+  }
+
   const { subject, text, html } = buildTenantMagicLinkEmail(verifyUrl);
 
   await getSesClient().send(
@@ -130,6 +139,14 @@ export async function sendTenantContactEmailChangeConfirmationEmail(
   const verifyUrl = buildTenantMagicLinkUrl(token);
   if (!verifyUrl) {
     throw new Error("APP_PUBLIC_ORIGIN must be configured for tenant email sign-in.");
+  }
+
+  if (!isProductionRuntime()) {
+    console.log("\n╔══════════════════════════════════════════════════════════╗");
+    console.log("║  [DEV] Email change confirmation — click to confirm:   ║");
+    console.log("╚══════════════════════════════════════════════════════════╝");
+    console.log(`→ ${verifyUrl}\n`);
+    return;
   }
 
   const { subject, text, html } = buildTenantEmailChangeConfirmationEmail(

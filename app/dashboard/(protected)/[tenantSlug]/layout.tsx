@@ -1,10 +1,10 @@
 import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
 import { TenantDashboardShellHeader } from "@/components/TenantDashboardShellHeader";
-import { getTenantBySlug } from "@/lib/app-state/state";
 import { normalizeEmailAddress } from "@/lib/app-state/utils";
 import { hasCompletedTenantOnboarding } from "@/lib/tenant-self-serve";
 import { requireTenantPageAccess } from "@/lib/tenant-auth-server";
+import { getTenantSelfServeDetailBySlug } from "@/lib/tenancy/service";
 
 export const runtime = "nodejs";
 
@@ -17,14 +17,12 @@ export default async function TenantScopedLayout({
 }>) {
   const email = await requireTenantPageAccess();
   const { tenantSlug } = await params;
-  const tenant = await getTenantBySlug(tenantSlug);
-  if (
-    !tenant ||
-    normalizeEmailAddress(tenant.contact_email) !== normalizeEmailAddress(email)
-  ) {
+  const detail = await getTenantSelfServeDetailBySlug(tenantSlug, email);
+  if (!detail) {
     notFound();
   }
 
+  const tenant = detail.tenant;
   const basePath = `/dashboard/${encodeURIComponent(tenant.slug)}`;
   const onboardingIncomplete = !hasCompletedTenantOnboarding(tenant);
 

@@ -135,7 +135,6 @@ const {
   getTenantSelfServeDetailBySlug,
   listSelfServeTenantsForEmail,
   OutstandingBillingBalanceError,
-  setEventPublicCheckoutRequested,
   setTenantStatus,
   setTicketOperatorAssertions,
   syncCalendarEventForOps,
@@ -956,6 +955,7 @@ describe("updateCalendarEmbedSettings", () => {
       embed_enabled: true,
       embed_allowed_origins:
         "https://events.example.com\nhttps://app.example.com/page",
+      embed_dynamic_height: false,
       embed_default_height_px: "920",
       embed_show_branding: false,
       embed_theme: {
@@ -972,6 +972,7 @@ describe("updateCalendarEmbedSettings", () => {
       "https://events.example.com",
       "https://app.example.com",
     ]);
+    expect(result.embed_dynamic_height).toBe(false);
     expect(result.embed_default_height_px).toBe(920);
     expect(result.embed_show_branding).toBe(false);
     expect(result.embed_theme).toEqual({
@@ -1120,41 +1121,6 @@ describe("syncCalendarEventForOps", () => {
     expect(result.review.tickets_added).toBe(1);
     expect(result.review.enabled_ticket_count).toBe(1);
     expect(result.review.public_checkout_enabled).toBe(true);
-  });
-});
-
-describe("setEventPublicCheckoutRequested", () => {
-  it("does not override ticket-driven visibility when tickets are already enabled", async () => {
-    const event = makeEventMirror({
-      calendar_connection_id: "calendar_123",
-      event_api_id: "event_123",
-      public_checkout_requested: true,
-      zcash_enabled: true,
-    });
-    const tickets = [
-      makeTicketMirror({
-        event_api_id: event.event_api_id,
-        zcash_enabled: true,
-      }),
-    ];
-
-    mockGetEventMirror.mockResolvedValue(event);
-    mockListTicketMirrorsByEvent.mockResolvedValue(tickets);
-
-    await setEventPublicCheckoutRequested({
-      calendar_connection_id: event.calendar_connection_id,
-      event_api_id: event.event_api_id,
-      public_checkout_requested: false,
-    });
-
-    expect(mockPutEventMirror).toHaveBeenCalledWith(
-      expect.objectContaining({
-        event_api_id: event.event_api_id,
-        public_checkout_requested: true,
-        zcash_enabled: true,
-        zcash_enabled_reason: "At least one ticket is enabled for Zcash checkout.",
-      }),
-    );
   });
 });
 

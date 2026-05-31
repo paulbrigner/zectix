@@ -104,6 +104,7 @@ export default async function CheckoutPage({
               <span>
                 {calendar?.display_name || session.public_calendar_slug}
               </span>
+              <span className="public-brand-context">Checkout</span>
             </div>
             {!embedMode ? (
               <div className="event-page-actions">
@@ -129,9 +130,10 @@ export default async function CheckoutPage({
         ) : null}
 
         <div className="status-page-heading">
-          {!embedMode ? <p className="eyebrow">Checkout</p> : null}
           <h1>{session.event_name}</h1>
-          <p className="subtle-text">Ticket for {session.attendee_name}</p>
+          <p className="subtle-text">
+            {session.ticket_type_name || "Ticket"} · {session.attendee_name}
+          </p>
         </div>
 
         <CheckoutStatusCard

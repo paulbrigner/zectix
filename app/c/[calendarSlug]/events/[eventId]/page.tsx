@@ -97,6 +97,7 @@ export default async function PublicEventPage({
               <span>
                 {embedMode ? data.calendar.display_name : data.tenant.name}
               </span>
+              <span className="public-brand-context">Checkout</span>
             </div>
             {!embedMode ? (
               <div className="button-row">

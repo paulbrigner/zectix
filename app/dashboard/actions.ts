@@ -41,7 +41,6 @@ import {
   listSelfServeTenantsForEmail,
   OutstandingBillingBalanceError,
   setTenantStatus,
-  setEventPublicCheckoutRequested,
   setTicketOperatorAssertions,
   syncCalendarEventForOps,
   updateCalendarConnectionLumaKey,
@@ -693,6 +692,10 @@ export async function updateCalendarEmbedSettingsAction(formData: FormData) {
   const calendarConnectionId = String(formData.get("calendar_connection_id") || "");
   await requireCalendarTenantAccess(tenant.tenant_id, calendarConnectionId);
   const embedEnabled = asBoolean(formData.get("embed_enabled"));
+  const embedDynamicHeight = asBoolean(
+    formData.get("embed_dynamic_height"),
+    true,
+  );
   const embedShowBranding = asBoolean(formData.get("embed_show_branding"));
   await runAuditedTenantDashboardMutation({
     action: "update_calendar_embed_settings",
@@ -700,6 +703,7 @@ export async function updateCalendarEmbedSettingsAction(formData: FormData) {
     context: {
       calendar_connection_id: calendarConnectionId,
       embed_enabled: embedEnabled,
+      embed_dynamic_height: embedDynamicHeight,
       embed_show_branding: embedShowBranding,
     },
     mutation: () =>
@@ -707,6 +711,7 @@ export async function updateCalendarEmbedSettingsAction(formData: FormData) {
         calendar_connection_id: calendarConnectionId,
         embed_enabled: embedEnabled,
         embed_allowed_origins: String(formData.get("embed_allowed_origins") || ""),
+        embed_dynamic_height: embedDynamicHeight,
         embed_default_height_px: asString(formData.get("embed_default_height_px")),
         embed_show_branding: embedShowBranding,
         embed_theme: {
@@ -744,6 +749,7 @@ export async function submitSupportRequestAction(formData: FormData) {
       : null;
 
   const parsed = parseSupportRequestSubmission({
+    category: asString(formData.get("category")),
     email: sessionEmail,
     organization: requestedTenant?.name || null,
     subject: String(formData.get("subject") || ""),
@@ -946,42 +952,6 @@ export async function setTicketAssertionsAction(formData: FormData) {
       setTicketOperatorAssertions({
         event_api_id: eventApiId,
         ticket_type_api_id: ticketTypeApiId,
-        public_checkout_requested: publicCheckoutRequested,
-      }),
-    sessionEmail,
-    tenantId: tenant.tenant_id,
-    tenantSlug: tenant.slug,
-  });
-  await redirectAfterTenantMutation(formData, {
-    eventApiId,
-    fallback: `/dashboard/${encodeURIComponent(tenant.slug)}/events`,
-    sessionEmail,
-    tenantSlug: tenant.slug,
-    wasComplete,
-  });
-}
-
-export async function setEventPublicCheckoutAction(formData: FormData) {
-  const tenantSlug = String(formData.get("tenant_slug") || "");
-  const { detail: beforeDetail, sessionEmail, tenant } =
-    await requireTenantMutationContext(tenantSlug);
-  const calendarConnectionId = String(formData.get("calendar_connection_id") || "");
-  await requireCalendarTenantAccess(tenant.tenant_id, calendarConnectionId);
-  const wasComplete = onboardingChecklistComplete(beforeDetail);
-  const eventApiId = String(formData.get("event_api_id") || "");
-  const publicCheckoutRequested = asBoolean(formData.get("public_checkout_requested"));
-  await runAuditedTenantDashboardMutation({
-    action: "set_event_public_checkout",
-    beforeDetail,
-    context: {
-      calendar_connection_id: calendarConnectionId,
-      event_api_id: eventApiId,
-      public_checkout_requested: publicCheckoutRequested,
-    },
-    mutation: () =>
-      setEventPublicCheckoutRequested({
-        calendar_connection_id: calendarConnectionId,
-        event_api_id: eventApiId,
         public_checkout_requested: publicCheckoutRequested,
       }),
     sessionEmail,

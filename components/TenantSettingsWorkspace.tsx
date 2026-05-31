@@ -1,14 +1,11 @@
+import Link from "next/link";
 import {
   deleteTenantAccountAction,
-  redirectToTenantBillingAction,
   updateTenantContactEmailAction,
 } from "@/app/dashboard/actions";
 import { ConsoleConfirmDialog } from "@/components/ConsoleConfirmDialog";
-import { ConsoleFieldLabel } from "@/components/ConsoleFieldLabel";
-import { ConsoleForm } from "@/components/ConsoleForm";
-import { ConsoleFormPendingNote } from "@/components/ConsoleFormPendingNote";
 import { ConsoleSection } from "@/components/ConsoleSection";
-import { ConsoleSubmitButton } from "@/components/ConsoleSubmitButton";
+import { SettingsEmailForm } from "@/components/SettingsEmailForm";
 import { formatZecAmount } from "@/lib/app-state/utils";
 import type { TenantOpsDetail } from "@/lib/tenancy/service";
 
@@ -44,7 +41,7 @@ export function TenantSettingsWorkspace({
   const deleteError = readSearchValue(searchParams.delete_error);
 
   return (
-    <div className="console-page-body">
+    <div className="console-page-body settings-page-body">
       {emailPending ? (
         <ConsoleSection
           className="tenant-onboarding-complete-banner"
@@ -108,94 +105,53 @@ export function TenantSettingsWorkspace({
 
       <ConsoleSection
         description="This email receives organizer sign-in links for this account."
-        title="Settings"
+        title="Account email"
       >
-        <div className="console-card-grid">
-          <article className="console-detail-card">
-            <p className="console-kpi-label">Current account email</p>
-            <h3>{detail.tenant.contact_email}</h3>
-            <p className="subtle-text">
-              This is the address currently allowed to sign in to this organizer dashboard.
-            </p>
-          </article>
+        <dl className="tenant-summary-list">
+          <div>
+            <dt>Current sign-in email</dt>
+            <dd>{detail.tenant.contact_email}</dd>
+          </div>
+        </dl>
 
-          <article className="console-detail-card">
-            <p className="console-kpi-label">Change account email</p>
-            <ConsoleForm action={updateTenantContactEmailAction}>
-              <input name="tenant_slug" type="hidden" value={detail.tenant.slug} />
-              <input name="redirect_to" type="hidden" value={settingsBasePath} />
-              <label className="console-field">
-                <ConsoleFieldLabel
-                  info="We will send a confirmation link to the new address. The current sign-in email stays active until you confirm the change."
-                  label="New account email"
-                />
-                <input
-                  className="console-input"
-                  defaultValue={detail.tenant.contact_email}
-                  name="contact_email"
-                  required
-                  type="email"
-                />
-              </label>
-              <div className="button-row">
-                <ConsoleSubmitButton
-                  className="button"
-                  label="Send confirmation email"
-                  pendingLabel="Sending confirmation email..."
-                />
-              </div>
-              <ConsoleFormPendingNote pendingLabel="Sending an email confirmation link..." />
-            </ConsoleForm>
-          </article>
-        </div>
+        <SettingsEmailForm
+          action={updateTenantContactEmailAction}
+          currentEmail={detail.tenant.contact_email}
+          redirectTo={settingsBasePath}
+          tenantSlug={detail.tenant.slug}
+        />
       </ConsoleSection>
 
       <ConsoleSection
-        description="Permanently delete your account and all data. This cannot be undone. You must settle any outstanding billing balance above the settlement threshold before deleting."
-        title="DANGER ZONE"
+        description="Permanently delete your account and all data. This cannot be undone."
+        title="Danger zone"
       >
-        <article className="console-detail-card">
-          {deletionBlockedByBalance ? (
-            <p className="subtle-text">
-              Current outstanding balance: {formatZecAmount(outstandingZatoshis)}
+        {deletionBlockedByBalance ? (
+          <div className="settings-balance-warning">
+            <p>
+              You must settle your outstanding balance of{" "}
+              <strong>{formatZecAmount(outstandingZatoshis)}</strong> before deleting
+              this account.
             </p>
-          ) : null}
-          <div className="button-row">
-            {deletionBlockedByBalance ? (
-              <ConsoleConfirmDialog
-                action={redirectToTenantBillingAction}
-                body={
-                  <p className="subtle-text">
-                    This account still has an outstanding balance of{" "}
-                    {formatZecAmount(outstandingZatoshis)}, which is above the deletion
-                    threshold of {formatZecAmount(settlementThresholdZatoshis)}. Settle it
-                    in Billing first, then return here to delete the account.
-                  </p>
-                }
-                confirmClassName="button button-small"
-                confirmLabel="Open billing"
-                description="You must settle balances above the settlement threshold before deleting."
-                title="Settle outstanding balance first"
-                triggerClassName="button button-danger button-small"
-                triggerLabel="Delete account"
-              >
-                <input name="tenant_slug" type="hidden" value={detail.tenant.slug} />
-              </ConsoleConfirmDialog>
-            ) : (
-              <ConsoleConfirmDialog
-                action={deleteTenantAccountAction}
-                confirmLabel="Delete account"
-                description="This permanently deletes the account and all associated organizer data."
-                title={`Delete ${detail.tenant.name}?`}
-                triggerClassName="button button-danger button-small"
-                triggerLabel="Delete account"
-              >
-                <input name="tenant_slug" type="hidden" value={detail.tenant.slug} />
-                <input name="redirect_to" type="hidden" value={settingsBasePath} />
-              </ConsoleConfirmDialog>
-            )}
+            <Link className="button button-small" href={`${tenantBasePath}/billing`}>
+              Go to billing
+            </Link>
           </div>
-        </article>
+        ) : (
+          <div className="button-row">
+            <ConsoleConfirmDialog
+              action={deleteTenantAccountAction}
+              confirmLabel="Delete account"
+              description="This permanently deletes the account and all associated organizer data."
+              title={`Delete ${detail.tenant.name}?`}
+              triggerClassName="button button-danger button-small"
+              triggerLabel="Delete account"
+            >
+              <input name="tenant_slug" type="hidden" value={detail.tenant.slug} />
+              <input name="redirect_to" type="hidden" value={settingsBasePath} />
+            </ConsoleConfirmDialog>
+          </div>
+        )}
       </ConsoleSection>
     </div>
   );

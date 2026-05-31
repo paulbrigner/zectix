@@ -13,16 +13,42 @@ import { createSessionViewerToken } from "@/lib/session-viewer";
 import { formatFiatAmount } from "@/lib/app-state/utils";
 import type { TenantOpsDetail } from "@/lib/tenancy/service";
 import {
+  buildOnboardingChecklist,
   buildWorkspaceOverview,
   calendarConnectionHealthLabel,
+  hasCompletedTenantOnboarding,
   recentSessionsForDashboard,
   summarizeCalendarInventory,
+  type TenantOnboardingChecklistItem,
 } from "@/lib/tenant-self-serve";
 
-function registrationStatusClassName(status: string) {
-  if (status === "registered") return "console-valid-text";
-  if (status === "failed") return "console-error-text";
-  return "subtle-text";
+function onboardingStepHref(
+  stepId: TenantOnboardingChecklistItem["stepId"],
+  basePath: string,
+) {
+  const connectionsPath = `${basePath}/connections`;
+
+  switch (stepId) {
+    case "draft_organizer_created":
+      return `${connectionsPath}?tab=setup#setup-checklist`;
+    case "connect_luma_calendar":
+      return `${connectionsPath}?tab=luma#connect-luma-calendar`;
+    case "attach_cipherpay":
+      return `${connectionsPath}?tab=cipherpay#connect-cipherpay`;
+    case "publish_event_and_ticket":
+      return `${basePath}/events#event-review-queue`;
+    case "activate_public_checkout":
+      return `${connectionsPath}?tab=setup#activate-public-checkout`;
+    default:
+      return connectionsPath;
+  }
+}
+
+function registrationLabel(status: string) {
+  if (status === "registered") return { icon: "✓", text: "Registered" };
+  if (status === "failed") return { icon: "!", text: "Failed" };
+  if (status === "pending") return { icon: "–", text: "Pending" };
+  return { icon: "–", text: status };
 }
 
 function invalidWebhookSummary(invalidWebhooks: number) {
@@ -47,23 +73,19 @@ function hostedCalendarHref(slug: string) {
 
 export function TenantOverviewWorkspace({
   detail,
+  basePath,
 }: {
   detail: TenantOpsDetail;
+  basePath: string;
 }) {
   const summary = buildWorkspaceOverview(detail);
   const recentSessions = recentSessionsForDashboard(detail.sessions);
   const singleCalendarOverview = detail.calendars.length === 1;
-  const primaryCalendar = detail.calendars[0] || null;
-  const primaryCalendarPreview = primaryCalendar
-    ? detail.calendar_secret_previews.get(primaryCalendar.calendar_connection_id)
-    : null;
-  const primaryCalendarHealth = primaryCalendar
-    ? calendarConnectionHealthLabel(
-        primaryCalendar,
-        Boolean(primaryCalendarPreview?.luma.has_value),
-      )
-    : "Not connected";
-
+  const onboardingComplete = hasCompletedTenantOnboarding(detail.tenant);
+  const checklist = onboardingComplete ? null : buildOnboardingChecklist(detail);
+  const completedCount = checklist
+    ? checklist.filter((item) => item.complete).length
+    : 0;
   const recentCheckoutsContent = !recentSessions.length ? (
     <div className="console-preview-empty">
       <strong>No checkout sessions yet</strong>
@@ -79,7 +101,7 @@ export function TenantOverviewWorkspace({
           <ConsoleTableHeader>Attendee</ConsoleTableHeader>
           <ConsoleTableHeader>Payment</ConsoleTableHeader>
           <ConsoleTableHeader>Registration</ConsoleTableHeader>
-          <ConsoleTableHeader>Amount</ConsoleTableHeader>
+          <ConsoleTableHeader className="console-table-cell-right">Amount</ConsoleTableHeader>
           <ConsoleTableHeader>Updated</ConsoleTableHeader>
           <ConsoleTableHeader>Action</ConsoleTableHeader>
         </ConsoleTableRow>
@@ -109,12 +131,11 @@ export function TenantOverviewWorkspace({
                 <ConsoleStatusPill status={session.status} />
               </ConsoleTableCell>
               <ConsoleTableCell>
-                <span
-                  className={registrationStatusClassName(
-                    session.registration_status,
-                  )}
-                >
-                  {session.registration_status}
+                <span className="console-registration-inline">
+                  <span className={`console-registration-icon console-registration-icon-${session.registration_status === "registered" ? "ok" : session.registration_status === "failed" ? "err" : "wait"}`}>
+                    {registrationLabel(session.registration_status).icon}
+                  </span>
+                  {registrationLabel(session.registration_status).text}
                 </span>
                 {session.registration_error ? (
                   <p className="subtle-text console-table-note">
@@ -122,7 +143,7 @@ export function TenantOverviewWorkspace({
                   </p>
                 ) : null}
               </ConsoleTableCell>
-              <ConsoleTableCell>
+              <ConsoleTableCell className="console-table-cell-right">
                 {formatFiatAmount(session.amount, session.currency)}
               </ConsoleTableCell>
               <ConsoleTableCell>
@@ -134,14 +155,16 @@ export function TenantOverviewWorkspace({
               </ConsoleTableCell>
               <ConsoleTableCell>
                 <Link
-                  className="button button-secondary button-small"
+                  className="console-table-link"
                   href={
                     viewerToken
                       ? `/checkout/${encodeURIComponent(session.session_id)}?t=${encodeURIComponent(viewerToken)}`
                       : `/checkout/${encodeURIComponent(session.session_id)}`
                   }
+                  target="_blank"
+                  rel="noopener noreferrer"
                 >
-                  Open
+                  View →
                 </Link>
               </ConsoleTableCell>
             </ConsoleTableRow>
@@ -153,192 +176,197 @@ export function TenantOverviewWorkspace({
 
   return (
     <div className="console-page-body">
-      <section className="console-section tenant-overview-hero">
-        <div className="console-kpi-grid tenant-overview-metrics">
-          <article className="console-kpi-card">
-            <p className="console-kpi-label">Luma sync</p>
-            <p className="console-kpi-value">{primaryCalendarHealth}</p>
-            <p className="subtle-text console-kpi-detail">
-              {primaryCalendar?.last_synced_at ? (
-                <>
-                  Last synced{" "}
-                  <LocalDateTime iso={primaryCalendar.last_synced_at} />
-                </>
-              ) : primaryCalendar ? (
-                "Run Connect and sync to refresh mirrored events."
-              ) : (
-                "Connect your Luma calendar to begin mirroring events."
-              )}
-            </p>
-          </article>
-          <article className="console-kpi-card">
-            <p className="console-kpi-label">Upcoming events</p>
-            <p className="console-kpi-value">{summary.upcomingEvents.length}</p>
-            <p className="subtle-text console-kpi-detail">
-              {summary.liveEvents.length} currently visible on public checkout
-            </p>
-          </article>
-          <article className="console-kpi-card">
-            <p className="console-kpi-label">Pending checkouts</p>
-            <p className="console-kpi-value">{summary.pendingSessions}</p>
-            <p className="subtle-text console-kpi-detail">
-              {summary.trackedSessions} total tracked sessions
-            </p>
-          </article>
-          <article className="console-kpi-card">
-            <p className="console-kpi-label">Registered</p>
-            <p className="console-kpi-value">{summary.registeredSessions}</p>
-            <p className="subtle-text console-kpi-detail">
-              {invalidWebhookSummary(summary.invalidWebhooks)}
-            </p>
-          </article>
-        </div>
-      </section>
+      {checklist ? (
+        <section className="console-section onboarding-tracker">
+          <div className="onboarding-tracker-header">
+            <h3>Getting started</h3>
+            <span className="onboarding-tracker-count">
+              {completedCount}/{checklist.length} complete
+            </span>
+          </div>
+          <ol className="onboarding-tracker-steps">
+            {checklist.map((item, index) => (
+              <li
+                className={`onboarding-tracker-step${item.complete ? " onboarding-tracker-step-done" : ""}`}
+                key={item.stepId}
+              >
+                <span className="onboarding-tracker-marker" aria-hidden="true">
+                  {item.complete ? "✓" : String(index + 1)}
+                </span>
+                <Link
+                  className="onboarding-tracker-link"
+                  href={onboardingStepHref(item.stepId, basePath)}
+                >
+                  {item.label}
+                </Link>
+              </li>
+            ))}
+          </ol>
+        </section>
+      ) : null}
 
-      <section className="console-section">
-        {!detail.calendars.length ? (
+      {detail.calendars.length > 0 ? (
+        <section className="console-section">
+          <div className="console-kpi-grid">
+            <article className="console-kpi-card">
+              <p className="console-kpi-label">Upcoming events</p>
+              <p className="console-kpi-value">{summary.upcomingEvents.length}</p>
+              <p className="subtle-text console-kpi-detail">
+                {summary.liveEvents.length} live on checkout
+              </p>
+            </article>
+            <article className="console-kpi-card">
+              <p className="console-kpi-label">Pending checkouts</p>
+              <p className="console-kpi-value">{summary.pendingSessions}</p>
+              <p className="subtle-text console-kpi-detail">
+                {summary.trackedSessions} total sessions
+              </p>
+            </article>
+            <article className="console-kpi-card">
+              <p className="console-kpi-label">Registered attendees</p>
+              <p className="console-kpi-value">{summary.registeredSessions}</p>
+              <p className="subtle-text console-kpi-detail">
+                {invalidWebhookSummary(summary.invalidWebhooks)}
+              </p>
+            </article>
+          </div>
+        </section>
+      ) : null}
+
+      {!detail.calendars.length ? (
+        <section className="console-section">
           <div className="console-preview-empty">
             <strong>No calendar connections yet</strong>
             <p className="subtle-text">
-              Add your first Luma calendar on the Connections page to start
-              mirroring events.
+              Add your first Luma calendar on the Connections page.
             </p>
           </div>
-        ) : detail.calendars.length === 1 ? (
-          (() => {
-            const calendar = detail.calendars[0];
-            const connectionHealth = calendarConnectionHealthLabel(
-              calendar,
-              Boolean(
-                detail.calendar_secret_previews.get(
-                  calendar.calendar_connection_id,
-                )?.luma.has_value,
-              ),
-            );
+        </section>
+      ) : detail.calendars.length === 1 ? (
+        (() => {
+          const calendar = detail.calendars[0];
 
-            return (
-              <div className="tenant-summary-card">
-                <div className="tenant-summary-card-head">
-                  <div>
-                    <p className="console-kpi-label">{calendar.display_name}</p>
-                    <div className="tenant-summary-status-line">
-                      <h3>{connectionHealth}</h3>
-                      <Link
-                        className="tenant-summary-public-link"
-                        href={hostedCalendarHref(calendar.slug)}
-                      >
-                        /c/{calendar.slug}
-                      </Link>
-                    </div>
-                  </div>
-                  <div className="console-mini-pill-row">
-                    <span className={calendarStatusPillClassName(calendar.status)}>
-                      {calendar.status}
-                    </span>
-                    <span
-                      className={`console-mini-pill${calendar.embed_enabled ? " console-mini-pill-info" : ""}`}
-                    >
-                      {calendar.embed_enabled ? "Embed on" : "Embed off"}
-                    </span>
-                  </div>
+          return (
+            <>
+              <section className="console-section overview-connection-strip">
+                <h2>Luma calendar</h2>
+                <div className="overview-connection-row">
+                  <span className={`overview-connection-dot${calendar.status === "active" ? " overview-connection-dot-active" : ""}`} />
+                  <span className="overview-connection-name">{calendar.display_name}</span>
+                  <span className="overview-connection-detail">
+                    {calendar.embed_enabled ? "Embed enabled" : "Embed disabled"}
+                  </span>
+                  <Link
+                    className="tenant-summary-public-link"
+                    href={hostedCalendarHref(calendar.slug)}
+                  >
+                    /c/{calendar.slug}
+                  </Link>
+                  <span className="overview-connection-sync">
+                    {calendar.last_synced_at ? (
+                      <>
+                        Synced <LocalDateTime iso={calendar.last_synced_at} />
+                      </>
+                    ) : (
+                      "Not synced yet"
+                    )}
+                  </span>
                 </div>
+              </section>
 
-                <div className="tenant-summary-checkouts">
-                  <h4>Recent checkouts</h4>
-                  {recentCheckoutsContent}
-                </div>
-              </div>
-            );
-          })()
-        ) : (
-          <div className="console-card-grid">
-            {detail.calendars.map((calendar) => {
-              const previews = detail.calendar_secret_previews.get(
-                calendar.calendar_connection_id,
-              );
-              const activeConnection =
-                detail.active_cipherpay_connections_by_calendar.get(
+              <section className="console-section">
+                <h2>Recent checkouts</h2>
+                {recentCheckoutsContent}
+              </section>
+            </>
+          );
+        })()
+      ) : (
+        <>
+          <div className="console-section">
+            <div className="console-card-grid">
+              {detail.calendars.map((calendar) => {
+                const previews = detail.calendar_secret_previews.get(
                   calendar.calendar_connection_id,
-                ) || null;
-              const inventory = summarizeCalendarInventory(detail, calendar);
-              const connectionHealth = calendarConnectionHealthLabel(
-                calendar,
-                Boolean(previews?.luma.has_value),
-              );
+                );
+                const activeConnection =
+                  detail.active_cipherpay_connections_by_calendar.get(
+                    calendar.calendar_connection_id,
+                  ) || null;
+                const inventory = summarizeCalendarInventory(detail, calendar);
+                const connectionHealth = calendarConnectionHealthLabel(
+                  calendar,
+                  Boolean(previews?.luma.has_value),
+                );
 
-              return (
-                <article
-                  className="console-detail-card tenant-summary-card"
-                  key={calendar.calendar_connection_id}
-                >
-                  <div className="tenant-summary-card-head">
-                    <div>
-                      <p className="console-kpi-label">
-                        {calendar.display_name}
-                      </p>
-                      <div className="tenant-summary-status-line">
-                        <h3>{connectionHealth}</h3>
-                        <Link
-                          className="tenant-summary-public-link"
-                          href={hostedCalendarHref(calendar.slug)}
+                return (
+                  <article
+                    className="console-detail-card tenant-summary-card"
+                    key={calendar.calendar_connection_id}
+                  >
+                    <div className="tenant-summary-card-head">
+                      <div>
+                        <p className="console-kpi-label">
+                          {calendar.display_name}
+                        </p>
+                        <div className="tenant-summary-status-line">
+                          <h3>{connectionHealth}</h3>
+                          <Link
+                            className="tenant-summary-public-link"
+                            href={hostedCalendarHref(calendar.slug)}
+                          >
+                            /c/{calendar.slug}
+                          </Link>
+                        </div>
+                      </div>
+                      <div className="console-mini-pill-row">
+                        <span className={calendarStatusPillClassName(calendar.status)}>
+                          {calendar.status}
+                        </span>
+                        <span
+                          className={`console-mini-pill${calendar.embed_enabled ? " console-mini-pill-info" : ""}`}
                         >
-                          /c/{calendar.slug}
-                        </Link>
+                          {calendar.embed_enabled ? "Embed on" : "Embed off"}
+                        </span>
                       </div>
                     </div>
-                    <div className="console-mini-pill-row">
-                      <span className={calendarStatusPillClassName(calendar.status)}>
-                        {calendar.status}
-                      </span>
-                      <span
-                        className={`console-mini-pill${calendar.embed_enabled ? " console-mini-pill-info" : ""}`}
-                      >
-                        {calendar.embed_enabled ? "Embed on" : "Embed off"}
-                      </span>
-                    </div>
-                  </div>
 
-                  <dl className="tenant-summary-list">
-                    <div>
-                      <dt>Luma</dt>
-                      <dd>{previews?.luma.preview || "No key saved yet"}</dd>
-                    </div>
-                    <div>
-                      <dt>CipherPay</dt>
-                      <dd>
-                        {activeConnection
-                          ? `${activeConnection.network} · ${activeConnection.status}`
-                          : "Not connected"}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>Inventory</dt>
-                      <dd>
-                        {inventory.futureMirroredEvents.length} future event
-                        {inventory.futureMirroredEvents.length === 1
-                          ? ""
-                          : "s"}{" "}
-                        · {inventory.enabledEvents.length} live
-                      </dd>
-                    </div>
-                  </dl>
-                </article>
-              );
-            })}
+                    <dl className="tenant-summary-list">
+                      <div>
+                        <dt>Luma</dt>
+                        <dd>{previews?.luma.preview || "No key saved yet"}</dd>
+                      </div>
+                      <div>
+                        <dt>CipherPay</dt>
+                        <dd>
+                          {activeConnection
+                            ? `${activeConnection.network} · ${activeConnection.status}`
+                            : "Not connected"}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Inventory</dt>
+                        <dd>
+                          {inventory.futureMirroredEvents.length} future event
+                          {inventory.futureMirroredEvents.length === 1
+                            ? ""
+                            : "s"}{" "}
+                          · {inventory.enabledEvents.length} live
+                        </dd>
+                      </div>
+                    </dl>
+                  </article>
+                );
+              })}
+            </div>
           </div>
-        )}
-      </section>
 
-      {!singleCalendarOverview ? (
-        <section className="console-section">
-        <div className="console-section-header">
-          <div>
+          <section className="console-section">
             <h2>Recent checkouts</h2>
-          </div>
-        </div>
-        {recentCheckoutsContent}
-      </section>
-      ) : null}
+            {recentCheckoutsContent}
+          </section>
+        </>
+      )}
     </div>
   );
 }

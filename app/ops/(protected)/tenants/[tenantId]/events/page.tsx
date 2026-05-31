@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  setEventPublicCheckoutAction,
   setTicketAssertionsAction,
   syncCalendarEventAction,
   validateAndSyncCalendarAction,
@@ -715,61 +714,6 @@ export default async function TenantEventsPage({
                       </p>
                     </div>
                   </div>
-
-                  <section className="tenant-events-publish-section">
-                    <div className="console-section-header">
-                      <div>
-                        <h4>Event visibility</h4>
-                        <p className="subtle-text">
-                          Decide whether this event should be allowed on public
-                          checkout at all. Ticket assertions only matter when
-                          this toggle stays on.
-                        </p>
-                      </div>
-                    </div>
-
-                    <form
-                      action={setEventPublicCheckoutAction}
-                      className="tenant-event-publish-form"
-                    >
-                      <input
-                        name="calendar_connection_id"
-                        type="hidden"
-                        value={calendar.calendar_connection_id}
-                      />
-                      <input
-                        name="event_api_id"
-                        type="hidden"
-                        value={event.event_api_id}
-                      />
-                      <input
-                        name="redirect_to"
-                        type="hidden"
-                        value={`/ops/tenants/${tenantId}/events`}
-                      />
-
-                      <ConsoleSwitch
-                        className="tenant-ticket-review-check"
-                        defaultChecked={event.public_checkout_requested}
-                        description="Keep this on only when the event itself should be available on public checkout."
-                        label="Allow this event on public checkout"
-                        name="public_checkout_requested"
-                      />
-
-                      <p className="subtle-text">
-                        {event.public_checkout_requested
-                          ? "This event can go live once at least one ticket is also allowed and passes review."
-                          : "This event stays hidden even if individual tickets are ready."}
-                      </p>
-
-                      <button
-                        className="button button-secondary button-small"
-                        type="submit"
-                      >
-                        Save event visibility
-                      </button>
-                    </form>
-                  </section>
 
                   <div className="console-card-grid console-ticket-assertion-grid">
                     {mirroredTickets.map((ticket) => (

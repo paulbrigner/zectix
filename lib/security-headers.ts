@@ -29,6 +29,7 @@ export function buildSecurityHeaders(input: {
   pathname: string;
   searchParams?: URLSearchParams;
   isProduction?: boolean;
+  nonce?: string | null;
 }) {
   const headers = new Headers();
   const embedMode =
@@ -38,7 +39,7 @@ export function buildSecurityHeaders(input: {
   headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   headers.set(
     "Permissions-Policy",
-    "camera=(), microphone=(), geolocation=(), browsing-topics=()",
+    "camera=(), microphone=(), geolocation=()",
   );
   headers.set("X-Content-Type-Options", "nosniff");
 
@@ -50,9 +51,12 @@ export function buildSecurityHeaders(input: {
   }
 
   if (embedMode) {
+    const scriptSrc = input.nonce
+      ? `'self' 'nonce-${input.nonce}' 'strict-dynamic'`
+      : "'self'";
     headers.set(
       "Content-Security-Policy",
-      "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:; frame-ancestors *; upgrade-insecure-requests",
+      `default-src 'self'; script-src ${scriptSrc}; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:; frame-ancestors *; upgrade-insecure-requests`,
     );
   } else {
     headers.set("X-Frame-Options", "DENY");

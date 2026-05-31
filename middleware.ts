@@ -14,10 +14,18 @@ function shouldDisableCaching(pathname: string) {
 }
 
 export function middleware(request: NextRequest) {
-  const response = NextResponse.next();
+  const nonce = crypto.randomUUID().replace(/-/g, "");
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-nonce", nonce);
+  const response = NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  });
   const headers = buildSecurityHeaders({
     pathname: request.nextUrl.pathname,
     searchParams: request.nextUrl.searchParams,
+    nonce,
   });
 
   headers.forEach((value, key) => {

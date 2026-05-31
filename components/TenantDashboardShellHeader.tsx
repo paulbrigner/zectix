@@ -11,7 +11,7 @@ export function TenantDashboardShellHeader({
   onboardingIncomplete: boolean;
 }) {
   return (
-    <header className="console-section tenant-dashboard-header">
+    <header className="tenant-dashboard-header">
       <div className="tenant-dashboard-header-top">
         <div className="tenant-dashboard-header-brand">
           <h2 className="tenant-dashboard-header-name">{organizationName}</h2>

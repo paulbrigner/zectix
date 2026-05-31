@@ -28,122 +28,71 @@
   will-change: transform, opacity;
 }
 
+/* Mesh layer 1 — wide warm wash, top-left anchor */
 .glow-orb-1 {
-  width: 750px;
-  height: 750px;
-  top: -18%;
-  left: -12%;
-  background: radial-gradient(
-    circle,
-    rgba(247, 147, 26, 0.45) 0%,
-    rgba(247, 147, 26, 0.12) 50%,
-    transparent 70%
-  );
-  filter: blur(80px);
-  animation: orb-drift-1 12s ease-in-out infinite;
-}
-
-.glow-orb-2 {
-  width: 600px;
-  height: 600px;
-  top: 2%;
-  right: -10%;
-  background: radial-gradient(
-    circle,
-    rgba(212, 146, 10, 0.38) 0%,
-    rgba(212, 146, 10, 0.1) 50%,
-    transparent 70%
-  );
-  filter: blur(70px);
-  animation: orb-drift-2 16s ease-in-out infinite;
-}
-
-.glow-orb-3 {
-  width: 520px;
+  width: 900px;
   height: 520px;
-  top: 38%;
-  left: 22%;
+  top: -14%;
+  left: -8%;
   background: radial-gradient(
-    circle,
-    rgba(255, 203, 69, 0.32) 0%,
-    rgba(255, 203, 69, 0.08) 50%,
-    transparent 70%
+    ellipse 100% 80% at 30% 40%,
+    rgba(247, 147, 26, 0.52) 0%,
+    rgba(212, 146, 10, 0.22) 40%,
+    rgba(255, 203, 69, 0.08) 70%,
+    transparent 100%
   );
-  filter: blur(80px);
-  animation: orb-drift-3 10s ease-in-out infinite;
+  filter: blur(38px);
+  animation: mesh-drift-1 14s ease-in-out infinite;
 }
 
-.glow-orb-4 {
-  width: 400px;
-  height: 400px;
-  top: 55%;
-  right: 12%;
+/* Mesh layer 2 — tall narrow band, right side */
+.glow-orb-2 {
+  width: 480px;
+  height: 720px;
+  top: 5%;
+  right: -6%;
   background: radial-gradient(
-    circle,
-    rgba(234, 88, 12, 0.25) 0%,
-    rgba(234, 88, 12, 0.06) 50%,
-    transparent 70%
+    ellipse 70% 100% at 60% 35%,
+    rgba(212, 146, 10, 0.42) 0%,
+    rgba(247, 147, 26, 0.15) 45%,
+    transparent 80%
   );
-  filter: blur(60px);
-  animation: orb-drift-4 14s ease-in-out infinite;
+  filter: blur(40px);
+  animation: mesh-drift-2 18s ease-in-out infinite;
 }
 
-@keyframes orb-drift-1 {
-  0%,
-  100% {
-    transform: translate(0, 0) scale(1);
-  }
-  25% {
-    transform: translate(180px, -100px) scale(1.2);
-  }
-  50% {
-    transform: translate(60px, 140px) scale(0.9);
-  }
-  75% {
-    transform: translate(-120px, 50px) scale(1.1);
-  }
+/* Mesh layer 3 — low wide glow, center-bottom */
+.glow-orb-3 {
+  width: 700px;
+  height: 380px;
+  top: 42%;
+  left: 15%;
+  background: radial-gradient(
+    ellipse 100% 70% at 50% 50%,
+    rgba(255, 203, 69, 0.38) 0%,
+    rgba(234, 88, 12, 0.14) 50%,
+    transparent 85%
+  );
+  filter: blur(35px);
+  animation: mesh-drift-3 12s ease-in-out infinite;
 }
 
-@keyframes orb-drift-2 {
-  0%,
-  100% {
-    transform: translate(0, 0) scale(1);
-  }
-  25% {
-    transform: translate(-150px, 120px) scale(1.15);
-  }
-  50% {
-    transform: translate(80px, -90px) scale(0.85);
-  }
-  75% {
-    transform: translate(-100px, -130px) scale(1.08);
-  }
+@keyframes mesh-drift-1 {
+  0%, 100% { transform: translate(0, 0) scaleX(1) scaleY(1); }
+  30%      { transform: translate(120px, -60px) scaleX(1.12) scaleY(0.92); }
+  60%      { transform: translate(-40px, 80px) scaleX(0.94) scaleY(1.08); }
 }
 
-@keyframes orb-drift-3 {
-  0%,
-  100% {
-    transform: translate(0, 0) scale(1) rotate(0deg);
-  }
-  33% {
-    transform: translate(140px, 100px) scale(1.18) rotate(8deg);
-  }
-  66% {
-    transform: translate(-120px, -80px) scale(0.82) rotate(-5deg);
-  }
+@keyframes mesh-drift-2 {
+  0%, 100% { transform: translate(0, 0) scaleX(1) scaleY(1); }
+  35%      { transform: translate(-100px, 90px) scaleX(1.1) scaleY(0.88); }
+  70%      { transform: translate(60px, -70px) scaleX(0.9) scaleY(1.14); }
 }
 
-@keyframes orb-drift-4 {
-  0%,
-  100% {
-    transform: translate(0, 0) scale(1);
-  }
-  30% {
-    transform: translate(-80px, -150px) scale(1.22);
-  }
-  60% {
-    transform: translate(120px, 60px) scale(0.85);
-  }
+@keyframes mesh-drift-3 {
+  0%, 100% { transform: translate(0, 0) scaleX(1) scaleY(1) rotate(0deg); }
+  40%      { transform: translate(80px, 50px) scaleX(1.15) scaleY(0.85) rotate(4deg); }
+  75%      { transform: translate(-60px, -40px) scaleX(0.88) scaleY(1.1) rotate(-2deg); }
 }
 
 /* Mouse-following spotlight with smooth lerp */
@@ -236,8 +185,21 @@
 .landing-nav-actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   justify-content: flex-end;
-  gap: 0.75rem;
+  gap: 1rem;
+}
+
+.landing-nav-signin {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-body);
+  text-decoration: none;
+  transition: color 150ms;
+}
+
+.landing-nav-signin:hover {
+  color: var(--text-dark);
 }
 
 .landing-nav-links a {
@@ -265,7 +227,7 @@
   text-align: center;
   max-width: 1100px;
   margin: 0 auto;
-  padding: 8rem 2rem 7rem;
+  padding: 6rem 2rem 5rem;
 }
 
 .landing-badge {
@@ -435,7 +397,7 @@
    ════════════════════════ */
 
 .landing-label {
-  margin: 0 0 0.75rem;
+  margin: 0 0 var(--space-2);
   font-size: 0.82rem;
   font-weight: 600;
   letter-spacing: 0.1em;
@@ -444,7 +406,7 @@
 }
 
 .landing-section-title {
-  margin: 0 0 3rem;
+  margin: 0 0 var(--space-5);
   font-family: var(--font-display);
   font-size: clamp(1.75rem, 4vw, 2.75rem);
   font-weight: 700;
@@ -455,7 +417,7 @@
 }
 
 .landing-section-desc {
-  margin: -2rem 0 3rem;
+  margin: 0 0 var(--space-7);
   color: var(--text-body);
   font-size: 1.05rem;
   line-height: 1.6;
@@ -483,8 +445,9 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  padding: 2rem;
+  padding: 2.25rem 2rem 2.25rem 2.25rem;
   border: 1px solid rgba(255, 255, 255, 0.4);
+  border-left: 3px solid var(--accent-border);
   border-radius: var(--radius-xl);
   background: rgba(255, 255, 255, 0.45);
   backdrop-filter: blur(16px);
@@ -575,11 +538,20 @@
 }
 
 .landing-step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--radius-full);
+  background: var(--accent-subtle);
+  border: 1px solid var(--accent-border);
   font-family: var(--font-display);
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   font-weight: 700;
   color: var(--accent-text);
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
 }
 
 .landing-step-title {
@@ -602,7 +574,7 @@
 
 .landing-reasons {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 1.25rem;
 }
 
@@ -970,6 +942,17 @@
   margin: 0;
 }
 
+.landing-footer-link {
+  color: var(--text-body);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 150ms;
+}
+
+.landing-footer-link:hover {
+  color: var(--text-dark);
+}
+
 /* ════════════════════════
    Reduced motion
    ════════════════════════ */
@@ -1005,22 +988,19 @@
   }
 
   .glow-orb-1 {
-    width: 400px;
-    height: 400px;
-    filter: blur(70px);
+    width: 480px;
+    height: 280px;
+    filter: blur(45px);
   }
   .glow-orb-2 {
-    width: 320px;
-    height: 320px;
-    filter: blur(60px);
+    width: 260px;
+    height: 400px;
+    filter: blur(40px);
   }
   .glow-orb-3 {
-    width: 280px;
-    height: 280px;
-    filter: blur(70px);
-  }
-  .glow-orb-4 {
-    display: none;
+    width: 380px;
+    height: 200px;
+    filter: blur(40px);
   }
 
   .glow-spotlight {
@@ -1059,23 +1039,13 @@
     align-items: flex-start;
   }
 
-  .landing-nav-links {
-    display: none;
-  }
-
   .landing-nav {
     flex-wrap: wrap;
     gap: 1rem;
   }
 
   .landing-nav-actions {
-    width: 100%;
-    justify-content: flex-start;
-  }
-
-  .landing-nav-actions .landing-btn {
-    flex: 1 1 100%;
-    justify-content: center;
+    gap: 0.75rem;
   }
 
   .landing-footer {

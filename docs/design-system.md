@@ -15,7 +15,7 @@ Design tokens, conventions, and guidelines for ZecTix UI.
 
 ## Tokens
 
-All design tokens live in `:root` in `globals.css`. Use `var(--token-name)` in CSS.
+All design tokens live in `:root` in `app/styles/tokens.css`. Use `var(--token-name)` in CSS.
 
 ### Accent (amber/gold — from the Z logo)
 
@@ -114,7 +114,7 @@ Headlines use negative letter-spacing (`-0.03em` to `-0.04em`).
 
 ## Color rules
 
-- **Amber accent is for labels and small highlights only** — section eyebrows, step numbers, active nav indicators. Never for large buttons or hero backgrounds.
+- **Amber accent is for labels and small highlights only** — section eyebrows, step number badges (`--accent-subtle` bg + `--accent-border`), active nav indicators. Never for large buttons or hero backgrounds.
 - **Primary buttons use dark background** (`--surface-dark`) — not amber. This keeps the page clean and lets the content lead.
 - **No pink.** The original pink gradient CTAs have been replaced. Don't reintroduce them.
 - **Semantic colors are for state only** — success green for confirmed, danger red for errors, warning yellow for pending. Don't use them decoratively.
@@ -123,12 +123,16 @@ Headlines use negative letter-spacing (`-0.03em` to `-0.04em`).
 
 ## CSS architecture
 
-- **Landing page:** `landing-*` namespace in `globals.css`
+- **Landing page:** `landing-*` namespace in `app/styles/landing.css`
 - **Checkout pages:** `checkout-*` namespace
 - **Ops console:** `console-*` namespace
 - **Marketing (legacy):** `home-*`, `marketing-*` — these are from the original homepage and may be cleaned up over time.
 
 New styles should use the `landing-*` pattern: scoped, flat, token-based. Avoid deep nesting.
+
+**Spacing rules:**
+- Use spacing tokens (`var(--space-N)`) for margins and padding — never hardcode `rem` values for structural spacing.
+- Section flow: `landing-label` (mb `--space-2`) → `landing-section-title` (mb `--space-5`) → optional `landing-section-desc` (mb `--space-7`) → content grid.
 
 ---
 
@@ -137,7 +141,7 @@ New styles should use the `landing-*` pattern: scoped, flat, token-based. Avoid 
 No formal component library yet. When building new React components:
 
 1. Use semantic HTML elements (`<section>`, `<nav>`, `<article>`)
-2. Style with CSS classes from `globals.css`, not inline styles
+2. Style with CSS classes from `app/styles/` files, not inline styles
 3. Reference design tokens via CSS custom properties
 4. Keep components small — one responsibility per file
 5. Use the existing class naming convention: `{namespace}-{element}` (e.g., `landing-hero`, `console-kpi-card`)
