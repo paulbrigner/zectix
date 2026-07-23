@@ -40,11 +40,11 @@ If you plan to use it in production, you should still perform your own engineeri
 1. Ops creates a tenant and sets the tenant contact email.
 2. Organizers can also start a draft tenant through `/dashboard/start`, which emails the first sign-in link to the owner contact.
 3. The tenant signs in through `/dashboard/login` with a one-time email link.
-4. During onboarding, the organizer is guided through `Connections > Setup` to connect and sync a Luma calendar, attach CipherPay, publish at least one ticket-backed event, and activate public checkout.
-5. The Connections workspace owns onboarding progress, Luma connection health, CipherPay connection health, and public-checkout activation.
+4. During onboarding, the Overview workspace shows a five-step getting-started tracker while keeping the rest of the tenant dashboard available.
+5. The Connections workspace defaults to the Luma tab, provides separate Luma and CipherPay tabs, and exposes the Setup step when the organizer is ready to activate public checkout.
 6. The Events workspace manages mirrored events and ticket availability. An event becomes publicly visible when at least one mirrored ticket is allowed on public checkout.
 7. Public checkout happens under `/c/[calendarSlug]` and `/c/[calendarSlug]/events/[eventId]`.
-8. The Embed workspace manages iframe mode per calendar with allowed origins, default height, branding visibility, and compact theme overrides.
+8. The Embed workspace manages iframe mode per calendar with allowed origins, dynamic or fixed height, branding visibility, compact theme overrides, and generated parent-page resize code.
 9. The Settings workspace manages organizer account email confirmation and account deletion, including outstanding-balance checks before deletion is allowed.
 10. CipherPay webhooks update payment state and immediately attempt registration once payment is detected in the mempool.
 11. The registration worker processes any follow-up retries through `/api/ops/process-registration-tasks` or the ops recovery UI.
@@ -131,13 +131,23 @@ docker compose up -d
 npm run db:init
 ```
 
-### 5. Start the dev server
+### 5. Optionally seed realistic local demo data
+
+```sh
+npm run db:seed
+```
+
+The seed command replaces data for the fixed local `Test Org` tenant and writes mock secrets to the local secret store. Before running it, verify that `.env.local` points `DYNAMODB_ENDPOINT` at DynamoDB Local. The seed script does not independently block an AWS-backed endpoint.
+
+### 6. Start the dev server
 
 ```sh
 npm run dev
 ```
 
-### 6. Open the app
+In non-production runtimes, operator, organizer, and organizer-email-change magic links are printed to the server console instead of being sent through SES.
+
+### 7. Open the app
 
 The local base path is usually `/zectix`, so the most useful URLs are:
 
@@ -216,7 +226,8 @@ Optional organizer support inbox:
 - operator auth can run in password mode or emailed one-time-link mode. Email mode uses the configured admin email, stores one-time verification tokens in DynamoDB, and sends the link through SES.
 - `/dashboard/start` creates a draft tenant for self-serve onboarding and emails the first one-time sign-in link.
 - `/dashboard` is the tenant self-serve surface. Organizer sign-in uses the tenant `contact_email` as the active login identity and sends one-time login links through SES.
-- `/dashboard/[tenantSlug]/connections` is the primary organizer onboarding surface and keeps the user focused on setup until onboarding is marked complete.
+- `/dashboard/[tenantSlug]` shows the organizer's getting-started tracker until onboarding is complete; dashboard navigation remains available throughout onboarding.
+- `/dashboard/[tenantSlug]/connections` defaults to Luma configuration, with separate Luma and CipherPay tabs. The Setup step is reserved for final public-checkout activation.
 - `/dashboard/[tenantSlug]/events` is the day-to-day organizer review surface for mirrored events and mirrored ticket availability.
 - `/dashboard/[tenantSlug]/embed` owns iframe configuration and generated snippets for public checkout embeds.
 - `/dashboard/[tenantSlug]/settings` owns account email changes and organizer account deletion.
@@ -235,8 +246,11 @@ Optional organizer support inbox:
 - the tenant settings page sends email-change confirmations before a new organizer login address becomes active.
 - organizer account deletion logs the organizer out, blocks only when the outstanding balance is above the settlement threshold, disables active Luma webhooks, and schedules AWS Secrets Manager cleanup with a 30-day recovery window when `SECRET_STORE_BACKEND=aws-secrets-manager`.
 - orphaned AWS Secrets Manager entries can be audited with `npm run ops:cleanup-secrets -- --dry-run` and scheduled for deletion with `-- --apply`; the AWS handler in `ops/aws/cleanup-orphaned-secrets-handler.mjs` uses DynamoDB secret refs as the source of truth and never reads secret values.
+- the orphan-cleanup command defaults to both `zectix` and `zectix-staging` tables/prefixes, a 200-secret deletion cap, and a 7-day recovery window. Use explicit `--table`, `--prefix`, `--max-deletes`, and `--recovery-days` arguments when narrowing a manual run, and always review a dry run first.
+- the cleanup handler is Lambda-compatible but this repository does not provision its Lambda function, IAM role, or EventBridge schedule.
 - the public event form shows only ticket tiers that are active and enabled for managed Zcash checkout.
 - embedded checkout reuses the mirrored public event and checkout pages, adds a compact shell, and emits `postMessage` events for resize and checkout state updates.
+- newly copied dynamic-height snippets include an inline parent-page script that validates the iframe origin and `event.source` before resizing. Existing copied snippets are not rewritten automatically, and host sites with a restrictive CSP or CMS sanitizer must allow or externalize that script.
 - the checkout page centers the attendee-facing payment/pass states: pay with Zcash, preparing your pass, pass ready, open on Luma, and save pass.
 - `/api/luma/webhook` verifies the raw request body before refreshing mirrored Luma events.
 - `/api/ops/process-registration-tasks` is protected by `OPS_AUTOMATION_SECRET`.
@@ -250,7 +264,19 @@ Optional organizer support inbox:
 npm run lint
 npm test
 npm run typecheck
+npm run build
 ```
+
+All four checks should pass before a release. The Amplify build specification runs `npm ci` and `npm run build`; it does not run the repository's lint, test, or standalone typecheck commands.
+
+## Deployment
+
+AWS Amplify receives GitHub push webhooks for the deployment branches:
+
+- `staging` builds the staging environment at `https://staging.zectix.com`
+- `main` builds the production environment at `https://zectix.com`
+
+Before advancing `main`, verify the exact candidate SHA on `staging`, run the complete verification suite above, inspect the successful Amplify staging job, and smoke-test the public, organizer, operator, and embedded-checkout paths. After the production build, verify `/api/health`, `/api/ready`, and the live asset/version fingerprint.
 
 ## Related Docs
 

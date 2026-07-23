@@ -50,6 +50,15 @@ When something looks off, check these in order:
 2. Check `/api/ready` to confirm the app can read tenant data and see whether `tenant_traffic_ready` is `true`.
 3. If `/api/ready` reports `tenant_traffic_ready: false`, the environment is healthy but no tenants are live yet. Finish onboarding through `/dashboard/start` or `/ops/tenants`.
 4. If `/api/ready` shows DynamoDB errors, verify the AWS role and table permissions.
+5. Confirm the deployed asset/build fingerprint matches the intended Git SHA; do not assume the current remote branch tip is the version still serving.
+
+### Embedded checkout clips or changes height unexpectedly
+
+1. Confirm the calendar's allowed-origin list includes the exact parent origin.
+2. Confirm the copied snippet includes the parent-page resize listener when dynamic height is intended.
+3. Check whether the host site's CSP or CMS sanitizer removed or blocked the inline listener.
+4. Remember that previously copied snippets are not updated when embed settings change; recopy the snippet after changing its height mode or theme.
+5. Verify calendar, event, and checkout navigation inside the iframe because each page emits its own resize messages.
 
 ### Luma integration inquiries are not arriving
 
@@ -116,7 +125,8 @@ Production operations are AWS-native:
 
 - EventBridge schedules can invoke the registration worker endpoint.
 - the worker calls `/api/ops/process-registration-tasks` using `OPS_AUTOMATION_SECRET`.
-- EventBridge can invoke `zectix-cleanup-orphaned-secrets` daily to schedule deletion for active `zectix` and `zectix-staging` Secrets Manager entries that are no longer referenced by DynamoDB. Run `AWS_PROFILE=zodldashboard npm run ops:cleanup-secrets -- --dry-run` before any manual cleanup.
+- EventBridge can invoke a separately provisioned `zectix-cleanup-orphaned-secrets` Lambda to schedule deletion for active `zectix` and `zectix-staging` Secrets Manager entries that are no longer referenced by DynamoDB. This repository supplies the handler but does not provision the Lambda, IAM role, or schedule.
+- Before any manual cleanup, run `AWS_PROFILE=zodldashboard npm run ops:cleanup-secrets -- --dry-run`. The defaults cover both production and staging tables/prefixes, cap deletion at 200 secrets, and use a 7-day recovery window; narrow the scope explicitly before `--apply`.
 - CloudWatch alarms can publish to the configured SNS topic.
 
 Required production values:
@@ -147,6 +157,14 @@ Optional production values for tenant billing defaults:
 
 - `TENANT_DEFAULT_SERVICE_FEE_BPS`
 - `TENANT_DEFAULT_SETTLEMENT_THRESHOLD_ZATOSHIS`
+
+## Release Checklist
+
+1. Treat `staging` as the candidate for the Amplify staging environment and `main` as the production-triggering branch.
+2. Run `npm run lint`, `npm test`, `npm run typecheck`, and `npm run build` locally. Amplify runs the build only and will not catch a red test or standalone typecheck suite.
+3. Confirm the intended SHA completed successfully on staging and smoke-test public checkout, organizer login/dashboard, operator login/recovery, and an allowlisted iframe flow.
+4. Advance `main` only after the candidate is green and the production build impact is understood.
+5. After deployment, verify `/api/health`, `/api/ready`, the live asset/version fingerprint, and at least one known public calendar route.
 
 ## Probes
 
