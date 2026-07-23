@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { SecretListEntry } from "@aws-sdk/client-secrets-manager";
 import {
   collectSecretRefs,
   findOrphanedSecrets,
@@ -49,7 +50,9 @@ describe("cleanup orphaned secrets handler helpers", () => {
       ["zectix"],
     );
 
-    expect(orphaned.map((secret) => secret.Name)).toEqual(["zectix/orphaned"]);
+    expect(orphaned.map((secret: SecretListEntry) => secret.Name)).toEqual([
+      "zectix/orphaned",
+    ]);
   });
 
   it("normalizes cleanup options with bounded recovery windows", () => {

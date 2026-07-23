@@ -167,10 +167,11 @@ describe("buildOnboardingChecklist", () => {
 
   it("requires a future public event with at least one public ticket", () => {
     const calendar = makeCalendarConnection();
+    const futureStartAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
     const event = makeEventMirror({
       calendar_connection_id: calendar.calendar_connection_id,
       event_api_id: "event_live",
-      start_at: "2026-04-24T18:00:00.000Z",
+      start_at: futureStartAt,
       zcash_enabled: true,
     });
     const hiddenTicket = makeTicketMirror({

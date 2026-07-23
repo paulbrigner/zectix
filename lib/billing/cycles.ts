@@ -91,6 +91,13 @@ export function deriveBillingCycleStatus(
     return "invoiced";
   }
 
+  if (
+    cycle.outstanding_zatoshis <= 0 &&
+    (cycle.invoiced_at || cycle.invoice_reference)
+  ) {
+    return "paid";
+  }
+
   const nowMs = new Date(referenceTime).getTime();
   const graceUntilMs = new Date(cycle.grace_until).getTime();
   if (Number.isFinite(nowMs) && Number.isFinite(graceUntilMs) && nowMs > graceUntilMs) {

@@ -18,6 +18,7 @@ describe("support request helper", () => {
     expect(result).toEqual({
       ok: true,
       data: {
+        category: null,
         email: "organizer@example.com",
         organization: "PGP for Crypto",
         subject: "Embed origin question",
@@ -44,6 +45,7 @@ describe("support request helper", () => {
 
   it("builds a readable support email payload", () => {
     const result = buildSupportRequestEmail({
+      category: null,
       email: "organizer@example.com",
       organization: "ZecTix Demo Org",
       subject: "Billing question",

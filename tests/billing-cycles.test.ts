@@ -149,6 +149,8 @@ describe("deriveBillingCycleStatus", () => {
       outstanding_zatoshis: 0,
     });
 
-    expect(deriveBillingCycleStatus(cycle, "active")).toBe("paid");
+    expect(
+      deriveBillingCycleStatus(cycle, "active", "2026-04-09T00:00:00.000Z"),
+    ).toBe("paid");
   });
 });
