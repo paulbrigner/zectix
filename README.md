@@ -31,7 +31,7 @@ If you plan to use it in production, you should still perform your own engineeri
 - TypeScript
 - Tailwind CSS 4
 - Custom components with Radix UI primitives
-- AWS SDK v3 for DynamoDB and Secrets Manager
+- AWS SDK v3 for DynamoDB, Secrets Manager, and SES
 - Luma API
 - CipherPay API and webhooks
 
@@ -53,6 +53,7 @@ If you plan to use it in production, you should still perform your own engineeri
 ## Main Routes
 
 - `/` service landing page
+- `/luma-integration` public Luma integration information and interest form
 - `/c/[calendarSlug]` public event list for one organizer/calendar
 - `/c/[calendarSlug]/events/[eventId]` public checkout entry page
 - `/checkout/[sessionId]` payment and registration status page
@@ -82,11 +83,14 @@ API routes:
 - `/api/cipherpay/webhook`
 - `/api/dashboard/login`
 - `/api/dashboard/logout`
+- `/api/dashboard/start`
+- `/api/luma-integration-interest`
 - `/api/luma/webhook`
 - `/api/ops/login`
 - `/api/ops/logout`
 - `/api/ops/process-registration-tasks`
 - `/api/ops/reports`
+- `/api/ops/retry-registration`
 - `/api/health`
 - `/api/ready`
 
@@ -106,6 +110,8 @@ Local development stores secret values on disk in a JSON file under `.zectix-loc
 Production stores only secret references in DynamoDB and resolves the actual values from AWS Secrets Manager.
 
 ## Local Development
+
+Node.js 22.x is required.
 
 ### 1. Install dependencies
 
@@ -267,16 +273,20 @@ npm run typecheck
 npm run build
 ```
 
-All four checks should pass before a release. The Amplify build specification runs `npm ci` and `npm run build`; it does not run the repository's lint, test, or standalone typecheck commands.
+All four checks should pass before a release. GitHub CI runs `npm ci`, lint, tests, and the production build for branch pushes and pull requests. It does not run the standalone typecheck, so `npm run typecheck` remains a required local release check.
+
+The dependency-review pull-request workflow also requires GitHub's Dependency Graph to be enabled for the repository. Without it, the review job stops before analyzing the dependency diff.
+
+The Amplify build specification runs `npm ci` and `npm run build`; it does not run the repository's test suite or standalone typecheck.
 
 ## Deployment
 
-AWS Amplify receives GitHub push webhooks for the deployment branches:
+AWS Amplify has branch connections for both deployment environments, but automatic builds are intentionally disabled:
 
-- `staging` builds the staging environment at `https://staging.zectix.com`
-- `main` builds the production environment at `https://zectix.com`
+- `staging` is the candidate branch and GitHub CI gate. `https://staging.zectix.com` changes only when an explicit staging Amplify release is started.
+- `main` is the production source branch for `https://zectix.com`. A production Amplify release is started manually after the exact commit passes CI on both `staging` and `main`.
 
-Before advancing `main`, verify the exact candidate SHA on `staging`, run the complete verification suite above, inspect the successful Amplify staging job, and smoke-test the public, organizer, operator, and embedded-checkout paths. After the production build, verify `/api/health`, `/api/ready`, and the live asset/version fingerprint.
+Before advancing `main`, verify the exact candidate SHA on `staging` and run the complete verification suite above. A staging-site deployment is optional and should be started explicitly only when that environment is needed. Fast-forward `main`, wait for its CI run, then manually start the production Amplify release. After Amplify's build, deploy, and verify phases succeed, check `/api/health`, `/api/ready`, the live asset/version fingerprint, a known public calendar, both login surfaces, and an allowlisted embedded-checkout parent page.
 
 ## Related Docs
 

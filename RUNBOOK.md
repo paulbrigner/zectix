@@ -160,11 +160,22 @@ Optional production values for tenant billing defaults:
 
 ## Release Checklist
 
-1. Treat `staging` as the candidate for the Amplify staging environment and `main` as the production-triggering branch.
-2. Run `npm run lint`, `npm test`, `npm run typecheck`, and `npm run build` locally. Amplify runs the build only and will not catch a red test or standalone typecheck suite.
-3. Confirm the intended SHA completed successfully on staging and smoke-test public checkout, organizer login/dashboard, operator login/recovery, and an allowlisted iframe flow.
-4. Advance `main` only after the candidate is green and the production build impact is understood.
-5. After deployment, verify `/api/health`, `/api/ready`, the live asset/version fingerprint, and at least one known public calendar route.
+1. Treat `staging` as the candidate Git branch and GitHub CI gate. Automatic Amplify builds are disabled for both `staging` and `main`; do not assume a push updated either hosted environment.
+2. Run `npm run lint`, `npm test`, `npm run typecheck`, and `npm run build` locally. GitHub CI repeats install, lint, tests, and build, but not the standalone typecheck. Amplify runs the install and production build only.
+3. Confirm the exact candidate SHA passed GitHub CI on `staging`. Start an explicit staging Amplify release and smoke-test it only when the staging environment is needed; otherwise do not treat `https://staging.zectix.com` as current release evidence.
+4. Fast-forward `main` to the validated `staging` SHA, push it, and confirm the matching `main` GitHub CI run succeeds.
+5. Start the production release manually in Amplify. For the current AWS deployment, the CLI form is:
+
+   ```sh
+   aws amplify start-job \
+     --app-id dgyu9me1olweu \
+     --branch-name main \
+     --job-type RELEASE \
+     --profile zodldashboard \
+     --region us-east-1
+   ```
+
+6. Wait for Amplify's build, deploy, and verify phases to succeed. Then verify `/api/health`, `/api/ready`, the live asset/version fingerprint, a known public calendar route, organizer and operator login, and an allowlisted iframe flow.
 
 ## Probes
 
