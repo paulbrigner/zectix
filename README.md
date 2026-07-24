@@ -96,8 +96,6 @@ API routes:
 
 ## Secret Storage
 
-Secrets are no longer stored as one global mutable runtime config.
-
 Supported backends:
 
 - `local` for development and tests
